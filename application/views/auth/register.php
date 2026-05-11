@@ -109,9 +109,13 @@
             </div>
         </div>
         <div class="mb-3">
-            <label class="form-label">Email sinh viên *</label>
-            <input type="email" class="form-control" name="email" required
-                   placeholder="nguyenvana@student.hcmue.edu.vn">
+            <label class="form-label">Email sinh viên (Mã số sinh viên) *</label>
+            <div class="input-group">
+                <input type="text" class="form-control" name="email_prefix" required
+                       placeholder="Ví dụ: 4901104131">
+                <span class="input-group-text bg-light text-muted fw-bold">@student.hcmue.edu.vn</span>
+            </div>
+            <p class="tip-text mt-1">Chỉ cần nhập phần đầu của email (MSSV).</p>
         </div>
         <div class="mb-3">
             <label class="form-label">Mật khẩu *</label>

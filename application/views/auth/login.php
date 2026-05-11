@@ -119,6 +119,8 @@
     <h1 class="auth-title">Chào mừng trở lại!</h1>
     <p class="auth-subtitle">Đăng nhập vào <strong>HCMUE Pass Sách</strong></p>
 
+    <div id="dynamic-alert"></div>
+
     <?php if ($this->session->flashdata('error')): ?>
         <div class="alert alert-danger alert-dismissible fade show mb-3" role="alert">
             <i class="fas fa-exclamation-circle me-2"></i><?= $this->session->flashdata('error') ?>
@@ -132,7 +134,7 @@
         </div>
     <?php endif; ?>
 
-    <form action="<?= site_url('auth/login_post') ?>" method="POST">
+    <form id="loginForm" action="<?= site_url('auth/login_post') ?>" method="POST">
         <div class="mb-3">
             <label class="form-label">Email sinh viên</label>
             <input type="email" class="form-control" name="email" required
@@ -172,6 +174,57 @@ function togglePwd() {
         pwd.type = 'password'; icon.className = 'fas fa-eye';
     }
 }
+
+document.getElementById('loginForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const form = this;
+    const btn = form.querySelector('.btn-login');
+    const originalBtnContent = btn.innerHTML;
+    const alertContainer = document.getElementById('dynamic-alert');
+    
+    // Đang loading
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Đang đăng nhập...';
+    alertContainer.innerHTML = ''; // Xoá thông báo cũ
+
+    const formData = new FormData(form);
+
+    fetch(form.action, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            // Đăng nhập thành công, chuyển hướng
+            window.location.href = data.redirect;
+        } else {
+            // Sai tài khoản mật khẩu: Không load trang, hiện alert đỏ
+            alertContainer.innerHTML = `
+                <div class="alert alert-danger alert-dismissible fade show mb-3" role="alert">
+                    <i class="fas fa-exclamation-circle me-2"></i>${data.message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `;
+            btn.disabled = false;
+            btn.innerHTML = originalBtnContent;
+        }
+    })
+    .catch(error => {
+        alertContainer.innerHTML = `
+            <div class="alert alert-danger alert-dismissible fade show mb-3" role="alert">
+                <i class="fas fa-wifi me-2"></i>Đã xảy ra lỗi hệ thống, vui lòng thử lại!
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        `;
+        btn.disabled = false;
+        btn.innerHTML = originalBtnContent;
+    });
+});
 </script>
 </body>
 </html>

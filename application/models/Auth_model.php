@@ -39,4 +39,10 @@ class Auth_model extends CI_Model {
         $this->db->where('id', $id);
         return $this->db->update('users', ['phone_visible' => $current ? 0 : 1]);
     }
+
+    // Xóa tài khoản
+    public function delete_user($id) {
+        $this->db->where('id', $id);
+        return $this->db->delete('users');
+    }
 }

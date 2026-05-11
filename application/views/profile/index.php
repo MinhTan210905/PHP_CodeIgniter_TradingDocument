@@ -196,6 +196,49 @@
         </div>
     </div>
 
+    <!-- === Vùng nguy hiểm: Xóa tài khoản === -->
+    <div class="card border-0 rounded-4 shadow-sm p-4 mt-4" style="border: 1.5px solid #FEE2E2 !important;">
+        <div class="d-flex align-items-center justify-content-between">
+            <div>
+                <h6 class="fw-bold mb-1" style="color:#DC2626;"><i class="fas fa-exclamation-triangle me-2"></i>Vùng nguy hiểm</h6>
+                <p class="text-muted mb-0" style="font-size:0.82rem;">Xóa tài khoản sẽ xóa vĩnh viễn toàn bộ dữ liệu của bạn (bài đăng, tin nhắn...) và không thể hoàn tác.</p>
+            </div>
+            <button class="btn btn-danger rounded-3 fw-bold ms-4 flex-shrink-0" style="font-size:0.85rem;padding:8px 18px;"
+                    data-bs-toggle="modal" data-bs-target="#deleteAccountModal">
+                <i class="fas fa-trash me-2"></i>Xóa tài khoản
+            </button>
+        </div>
+    </div>
+
+</div>
+
+<!-- Modal xác nhận xóa tài khoản -->
+<div class="modal fade" id="deleteAccountModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 rounded-4 shadow">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold" style="color:#DC2626;">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Xác nhận xóa tài khoản
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="<?= site_url('profile/delete_account') ?>" method="POST">
+                <div class="modal-body">
+                    <div class="alert alert-danger border-0 rounded-3" style="font-size:0.85rem;">
+                        <strong>Cảnh báo!</strong> Hành động này sẽ xóa vĩnh viễn tài khoản và toàn bộ dữ liệu của bạn. Bạn sẽ không thể đăng nhập lại.
+                    </div>
+                    <label class="form-label fw-semibold" style="font-size:0.85rem;">Nhập mật khẩu để xác nhận:</label>
+                    <input type="password" class="form-control rounded-3" name="confirm_delete_password" required placeholder="Mật khẩu hiện tại của bạn">
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-light rounded-3 fw-semibold" data-bs-dismiss="modal">Huỷ bỏ</button>
+                    <button type="submit" class="btn btn-danger rounded-3 fw-bold">
+                        <i class="fas fa-trash me-2"></i>Xóa vĩnh viễn
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
 
 <style>

@@ -92,4 +92,67 @@ class Admin extends CI_Controller {
         }
         redirect('admin/users');
     }
+
+    // Admin sửa thông tin user
+    public function edit_user_post($id) {
+        $this->require_admin();
+        // Không cho sửa chính mình qua form này
+        if ($id == $this->session->userdata('user_id')) {
+            $this->session->set_flashdata('error', 'Không thể sửa thông tin chính mình qua trang quản lý!');
+            redirect('admin/users');
+            return;
+        }
+
+        $data = [
+            'full_name' => $this->input->post('full_name', TRUE),
+            'username'  => $this->input->post('username', TRUE),
+            'email'     => $this->input->post('email', TRUE),
+            'phone'     => $this->input->post('phone', TRUE),
+            'role'      => $this->input->post('role', TRUE),
+        ];
+
+        // Nếu admin nhập mật khẩu mới thì đổi luôn
+        $new_password = $this->input->post('new_password');
+        if (!empty($new_password)) {
+            $data['password'] = password_hash($new_password, PASSWORD_DEFAULT);
+        }
+
+        $this->Auth_model->update_user($id, $data);
+        $this->session->set_flashdata('success', 'Đã cập nhật thông tin người dùng #' . $id . '!');
+        redirect('admin/users');
+    }
+
+    // Admin xóa tài khoản user
+    public function delete_user($id) {
+        $this->require_admin();
+        if ($id == $this->session->userdata('user_id')) {
+            $this->session->set_flashdata('error', 'Không thể tự xóa tài khoản Admin của chính mình!');
+            redirect('admin/users');
+            return;
+        }
+        $this->Auth_model->delete_user($id);
+        $this->session->set_flashdata('success', 'Đã xóa tài khoản người dùng!');
+        redirect('admin/users');
+    }
+
+    // Admin chặn (ban) tài khoản user
+    public function ban_user($id) {
+        $this->require_admin();
+        if ($id == $this->session->userdata('user_id')) {
+            $this->session->set_flashdata('error', 'Không thể tự chặn tài khoản của chính mình!');
+            redirect('admin/users');
+            return;
+        }
+        $this->Auth_model->update_user($id, ['is_banned' => 1]);
+        $this->session->set_flashdata('success', 'Đã chặn (ban) tài khoản người dùng!');
+        redirect('admin/users');
+    }
+
+    // Admin bỏ chặn (unban) tài khoản user
+    public function unban_user($id) {
+        $this->require_admin();
+        $this->Auth_model->update_user($id, ['is_banned' => 0]);
+        $this->session->set_flashdata('success', 'Đã bỏ chặn tài khoản người dùng!');
+        redirect('admin/users');
+    }
 }

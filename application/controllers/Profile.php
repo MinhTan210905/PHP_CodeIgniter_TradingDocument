@@ -63,4 +63,26 @@ class Profile extends CI_Controller {
         $this->session->set_flashdata('success', 'Đã cập nhật số điện thoại!');
         redirect('profile');
     }
+
+    // Người dùng tự xóa tài khoản
+    public function delete_account() {
+        $this->require_login();
+        $user_id = $this->session->userdata('user_id');
+
+        // Xác nhận mật khẩu trước khi xóa
+        $password = $this->input->post('confirm_delete_password');
+        $user     = $this->Auth_model->get_user_by_id($user_id);
+
+        if (!$user || !password_verify($password, $user['password'])) {
+            $this->session->set_flashdata('error', 'Mật khẩu xác nhận không đúng!');
+            redirect('profile');
+            return;
+        }
+
+        // Xóa tài khoản và huỷ session
+        $this->Auth_model->delete_user($user_id);
+        $this->session->sess_destroy();
+        $this->session->set_flashdata('success', 'Tài khoản của bạn đã được xóa vĩnh viễn.');
+        redirect('auth');
+    }
 }
