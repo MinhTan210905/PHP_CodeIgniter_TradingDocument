@@ -1,27 +1,27 @@
 <!-- Hero Banner -->
-<div style="background:linear-gradient(145deg, #1E3A8A 0%, #1D4ED8 60%, #3B82F6 100%);padding:40px 0 36px;position:relative;overflow:hidden;">
-    <div style="position:absolute;inset:0;background-image:radial-gradient(rgba(255,255,255,0.04) 1px,transparent 1px);background-size:28px 28px;"></div>
+<div style="background:#ffffff;padding:40px 0 36px;position:relative;overflow:hidden;border-bottom:1px solid #E2E8F0;">
+    <div style="position:absolute;inset:0;background-image:radial-gradient(rgba(30,64,175,0.05) 1px,transparent 1px);background-size:28px 28px;"></div>
     <div class="container position-relative" style="z-index:1;">
         <div class="row align-items-center">
             <div class="col-lg-7">
-                <h1 style="font-size:2rem;font-weight:900;color:#fff;line-height:1.2;letter-spacing:-0.5px;margin-bottom:10px;">
+                <h1 style="font-size:2rem;font-weight:900;color:#0F172A;line-height:1.2;letter-spacing:-0.5px;margin-bottom:10px;">
                     Trao đổi tài liệu<br>dễ dàng & nhanh chóng 📚
                 </h1>
-                <p style="font-size:0.92rem;color:rgba(255,255,255,0.72);max-width:480px;line-height:1.7;margin-bottom:20px;">
+                <p style="font-size:0.92rem;color:#64748B;max-width:480px;line-height:1.7;margin-bottom:20px;">
                     Nền tảng mua bán sách, giáo trình và tài liệu học tập dành riêng cho sinh viên Đại học Sư phạm TP.HCM.
                 </p>
                 <div class="d-flex gap-3 flex-wrap">
                     <div class="d-flex align-items-center gap-2">
-                        <div style="width:32px;height:32px;background:rgba(255,255,255,0.15);border-radius:10px;display:flex;align-items:center;justify-content:center;"><i class="fas fa-book" style="color:#fff;font-size:13px;"></i></div>
-                        <span style="font-size:0.82rem;color:rgba(255,255,255,0.85);font-weight:600;"><?= count($posts) ?>+ tài liệu</span>
+                        <div style="width:32px;height:32px;background:rgba(37,99,235,0.1);border-radius:10px;display:flex;align-items:center;justify-content:center;"><i class="fas fa-book" style="color:#2563EB;font-size:13px;"></i></div>
+                        <span style="font-size:0.82rem;color:#334155;font-weight:600;"><?= count($posts) ?>+ tài liệu</span>
                     </div>
                     <div class="d-flex align-items-center gap-2">
-                        <div style="width:32px;height:32px;background:rgba(255,255,255,0.15);border-radius:10px;display:flex;align-items:center;justify-content:center;"><i class="fas fa-users" style="color:#fff;font-size:13px;"></i></div>
-                        <span style="font-size:0.82rem;color:rgba(255,255,255,0.85);font-weight:600;">Cộng đồng HCMUE</span>
+                        <div style="width:32px;height:32px;background:rgba(37,99,235,0.1);border-radius:10px;display:flex;align-items:center;justify-content:center;"><i class="fas fa-users" style="color:#2563EB;font-size:13px;"></i></div>
+                        <span style="font-size:0.82rem;color:#334155;font-weight:600;">Cộng đồng HCMUE</span>
                     </div>
                     <div class="d-flex align-items-center gap-2">
-                        <div style="width:32px;height:32px;background:rgba(255,255,255,0.15);border-radius:10px;display:flex;align-items:center;justify-content:center;"><i class="fas fa-shield-alt" style="color:#fff;font-size:13px;"></i></div>
-                        <span style="font-size:0.82rem;color:rgba(255,255,255,0.85);font-weight:600;">An toàn & Tin cậy</span>
+                        <div style="width:32px;height:32px;background:rgba(37,99,235,0.1);border-radius:10px;display:flex;align-items:center;justify-content:center;"><i class="fas fa-shield-alt" style="color:#2563EB;font-size:13px;"></i></div>
+                        <span style="font-size:0.82rem;color:#334155;font-weight:600;">An toàn & Tin cậy</span>
                     </div>
                 </div>
             </div>

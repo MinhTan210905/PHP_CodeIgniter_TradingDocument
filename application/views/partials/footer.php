@@ -1,4 +1,4 @@
-<footer class="footer-hcmue-dark mt-auto pt-5">
+<footer class="footer-hcmue-dark mt-auto pt-5" style="background: linear-gradient(145deg, #1E3A8A 0%, #1D4ED8 60%, #3B82F6 100%) !important; border-top: none;">
     <div class="container pb-5">
         <div class="row g-4">
             <!-- Cột trái: Thông tin dự án -->

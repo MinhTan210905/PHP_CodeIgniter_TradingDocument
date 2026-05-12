@@ -11,16 +11,33 @@
     <link rel="icon" type="image/png" href="<?= base_url('assets/images/logo_hcmue.png') ?>">
     <style>
         :root {
-            --nav-height: 72px;
+            --nav-height: 76px;
             --primary: #1E40AF;
             --primary-mid: #2563EB;
             --accent: #F59E0B;
-            --text-dark: #0F172A;
-            --text-muted: #64748B;
-            --border: #E2E8F0;
             --bg-page: #F7F8FC;
         }
         body { padding-top: var(--nav-height); }
+        .navbar-hcmue {
+            background: linear-gradient(145deg, #1E3A8A 0%, #1D4ED8 60%, #3B82F6 100%) !important;
+            box-shadow: 0 4px 12px rgba(30,64,175,0.15) !important;
+            border-bottom: none !important;
+        }
+        .navbar-hcmue .brand-main {
+            color: #ffffff !important;
+        }
+        .navbar-hcmue .brand-sub {
+            color: rgba(255,255,255,0.7) !important;
+        }
+        .navbar-hcmue .nav-icon-btn {
+            color: rgba(255,255,255,0.85) !important;
+            border-color: rgba(255,255,255,0.2) !important;
+        }
+        .navbar-hcmue .nav-icon-btn:hover {
+            background: rgba(255,255,255,0.1) !important;
+            color: #ffffff !important;
+            border-color: rgba(255,255,255,0.4) !important;
+        }
     </style>
     <link rel="stylesheet" href="<?= base_url('assets/css/style.css?v=' . time()) ?>">
 </head>
