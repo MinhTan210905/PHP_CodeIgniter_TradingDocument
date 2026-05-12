@@ -1,5 +1,5 @@
 <!-- Hero Banner -->
-<div style="background:#ffffff;padding:40px 0 36px;position:relative;overflow:hidden;border-bottom:1px solid #E2E8F0;">
+<div style="background:#ffffff;padding:40px 0 36px;position:relative;overflow:hidden;border-bottom:1px solid #E2E8F0;flex-shrink:0;">
     <div style="position:absolute;inset:0;background-image:radial-gradient(rgba(30,64,175,0.05) 1px,transparent 1px);background-size:28px 28px;"></div>
     <div class="container position-relative" style="z-index:1;">
         <div class="row align-items-center">
