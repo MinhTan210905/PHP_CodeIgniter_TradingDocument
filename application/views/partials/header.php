@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HCMUE Pass Sách | Chợ Tài Liệu Sinh Viên Sư Phạm</title>
-    <meta name="description" content="Trao đổi, mua bán tài liệu, sách giáo trình sinh viên HCMUE - Đại học Sư phạm TP.HCM">
+    <title>HCMUE BookSwap | Trao Đổi Tài Liệu Sinh Viên Sư Phạm</title>
+    <meta name="description" content="Nền tảng trao đổi sách và tài liệu học tập dành cho sinh viên HCMUE - Đại học Sư phạm TP.HCM">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -33,8 +33,8 @@
         <a href="<?= site_url('trade') ?>" class="brand-logo flex-shrink-0">
             <img src="<?= base_url('assets/images/logo_hcmue.png') ?>" class="brand-icon-img" alt="Logo HCMUE">
             <div class="brand-text">
-                <div class="brand-main">HCMUE Pass Sách</div>
-                <div class="brand-sub">Đại học Sư phạm TP.HCM</div>
+                <div class="brand-main">HCMUE BookSwap</div>
+                <div class="brand-sub">Trao đổi tài liệu sinh viên</div>
             </div>
         </a>
 

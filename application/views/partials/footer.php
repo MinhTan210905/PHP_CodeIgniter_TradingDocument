@@ -7,7 +7,7 @@
                     <img src="<?= base_url('assets/images/logo_hcmue.png') ?>" 
                          style="width: 90px; height: auto; object-fit: contain;" 
                          alt="HCMUE Logo">
-                    <div class="brand-title">HCMUE Pass Sách</div>
+                    <div class="brand-title">HCMUE BookSwap</div>
                 </div>
                 
                 <p class="brand-tagline mt-3">

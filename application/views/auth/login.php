@@ -238,10 +238,14 @@
 <div class="auth-panel-right">
     <div class="auth-form-wrap">
 
-        <div class="auth-logo-top">
+        <a href="<?= base_url() ?>" class="auth-logo-top" style="text-decoration:none;">
             <img src="<?= base_url('assets/images/logo_hcmue.png') ?>" alt="Logo">
-            <span>HCMUE Pass Sách</span>
-        </div>
+            <span>HCMUE BookSwap</span>
+        </a>
+
+        <a href="<?= base_url() ?>" style="display:inline-flex;align-items:center;gap:6px;font-size:0.82rem;color:var(--text-muted);text-decoration:none;margin-bottom:24px;transition:all 0.2s;">
+            <i class="fas fa-arrow-left" style="font-size:11px;"></i> Về trang chủ
+        </a>
 
         <h1 class="auth-title">Đăng nhập</h1>
         <p class="auth-subtitle">Nhập thông tin tài khoản của bạn để tiếp tục.</p>

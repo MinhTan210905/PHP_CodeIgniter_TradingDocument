@@ -1,3 +1,34 @@
+<!-- Hero Banner -->
+<div style="background:linear-gradient(135deg,#1E3A8A 0%,#2563EB 100%);padding:40px 0 36px;position:relative;overflow:hidden;">
+    <div style="position:absolute;inset:0;background-image:radial-gradient(rgba(255,255,255,0.04) 1px,transparent 1px);background-size:28px 28px;"></div>
+    <div class="container position-relative" style="z-index:1;">
+        <div class="row align-items-center">
+            <div class="col-lg-7">
+                <h1 style="font-size:2rem;font-weight:900;color:#fff;line-height:1.2;letter-spacing:-0.5px;margin-bottom:10px;">
+                    Trao đổi tài liệu<br>dễ dàng & nhanh chóng 📚
+                </h1>
+                <p style="font-size:0.92rem;color:rgba(255,255,255,0.72);max-width:480px;line-height:1.7;margin-bottom:20px;">
+                    Nền tảng mua bán sách, giáo trình và tài liệu học tập dành riêng cho sinh viên Đại học Sư phạm TP.HCM.
+                </p>
+                <div class="d-flex gap-3 flex-wrap">
+                    <div class="d-flex align-items-center gap-2">
+                        <div style="width:32px;height:32px;background:rgba(255,255,255,0.15);border-radius:10px;display:flex;align-items:center;justify-content:center;"><i class="fas fa-book" style="color:#fff;font-size:13px;"></i></div>
+                        <span style="font-size:0.82rem;color:rgba(255,255,255,0.85);font-weight:600;"><?= count($posts) ?>+ tài liệu</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <div style="width:32px;height:32px;background:rgba(255,255,255,0.15);border-radius:10px;display:flex;align-items:center;justify-content:center;"><i class="fas fa-users" style="color:#fff;font-size:13px;"></i></div>
+                        <span style="font-size:0.82rem;color:rgba(255,255,255,0.85);font-weight:600;">Cộng đồng HCMUE</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <div style="width:32px;height:32px;background:rgba(255,255,255,0.15);border-radius:10px;display:flex;align-items:center;justify-content:center;"><i class="fas fa-shield-alt" style="color:#fff;font-size:13px;"></i></div>
+                        <span style="font-size:0.82rem;color:rgba(255,255,255,0.85);font-weight:600;">An toàn & Tin cậy</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Search & Filter Bar (API-driven) -->
 <div class="search-section">
     <div class="container">
@@ -56,7 +87,7 @@
                       $cur_cat = reset($cur_cat); ?>
                 <?= $cur_cat ? $cur_cat['category_name'] : 'Danh mục' ?>
             <?php else: ?>
-                Sách đang được Pass
+                Tài liệu đang được trao đổi
             <?php endif; ?>
         </h2>
         <!-- id="resultCount" để JS cập nhật số lượng kết quả -->
@@ -78,10 +109,10 @@
     <div id="loading-state" class="row g-4">
         <?php for($i=0;$i<4;$i++): ?>
         <div class="col-12 col-sm-6 col-lg-4 col-xl-3">
-            <div class="card p-3" style="border-radius:12px;">
-                <div style="height:160px;background:#F1F5F9;border-radius:8px;animation:pulse 1.2s infinite;"></div>
-                <div style="height:14px;background:#F1F5F9;border-radius:4px;margin-top:12px;animation:pulse 1.2s infinite;"></div>
-                <div style="height:14px;background:#F1F5F9;border-radius:4px;margin-top:8px;width:60%;animation:pulse 1.2s infinite;"></div>
+            <div class="card border-0 p-3" style="border-radius:var(--card-radius);box-shadow:var(--shadow-sm);">
+                <div style="height:160px;background:#EFF6FF;border-radius:12px;animation:pulse 1.2s infinite;"></div>
+                <div style="height:14px;background:#EFF6FF;border-radius:4px;margin-top:14px;animation:pulse 1.2s infinite;"></div>
+                <div style="height:14px;background:#EFF6FF;border-radius:4px;margin-top:8px;width:60%;animation:pulse 1.2s infinite;"></div>
             </div>
         </div>
         <?php endfor; ?>
@@ -90,9 +121,6 @@
 </div>
 
 <style>
-.link-hcmue { color:#0052B4;font-weight:600;text-decoration:none; }
-.link-hcmue:hover { text-decoration:underline; }
-
 /* Skeleton loading animation */
 @keyframes pulse {
     0%, 100% { opacity: 1; }
@@ -191,7 +219,7 @@
                                     post.title +
                                 '</a>' +
                                 '<div class="d-flex align-items-center gap-1 mb-2" style="font-size:0.78rem;color:#6B7280;">' +
-                                    '<i class="fas fa-user-circle" style="color:#003F8A;"></i>' +
+                                    '<i class="fas fa-user-circle" style="color:#2563EB;"></i>' +
                                     '<span>' + (post.full_name || post.username) + '</span>' +
                                     '<span class="mx-1">·</span>' +
                                     '<span class="star-display">' + rating + '</span>' +
