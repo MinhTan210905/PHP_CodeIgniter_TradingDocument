@@ -44,7 +44,24 @@
                     </div>
                 <?php endif; ?>
 
-                <?php $is_mine = ($msg['sender_id'] == $cur_uid); ?>
+                <?php 
+                $is_mine = ($msg['sender_id'] == $cur_uid); 
+                
+                // PARSE TỰ ĐỘNG: Lọc link Đơn hàng để làm giao diện gọn đẹp
+                $content = $msg['content'];
+                $has_order_link = preg_match('/https?:\/\/[^\s]+orders\/detail\/(\d+)/i', $content, $matches);
+                $order_id = $has_order_link ? $matches[1] : null;
+                
+                if ($has_order_link) {
+                    // Xoá bỏ hoàn toàn chuỗi URL thô để giao diện sạch đẹp
+                    $content = preg_replace('/https?:\/\/[^\s]+/i', '', $content);
+                    // Làm sạch các tiền tố thừa thãi
+                    $content = str_replace('Vào trang Đơn hàng để xác nhận:', '', $content);
+                    $content = str_replace('Hãy liên hệ để hẹn giao nhận sách nhé! Xem chi tiết:', '', $content);
+                    $content = str_replace('Xem chi tiết:', '', $content);
+                    $content = trim($content);
+                }
+                ?>
                 <div style="display:flex;flex-direction:column;align-items:<?= $is_mine ? 'flex-end' : 'flex-start' ?>;">
                     <div style="
                         max-width:72%;
@@ -57,7 +74,21 @@
                         box-shadow:0 2px 8px rgba(0,0,0,0.06);
                         word-break:break-word;
                     ">
-                        <?= nl2br(htmlspecialchars($msg['content'])) ?>
+                        <?= nl2br(htmlspecialchars($content)) ?>
+                        
+                        <!-- Nếu có mã Đơn hàng đi kèm, vẽ Nút hành động cực đẹp -->
+                        <?php if ($order_id): ?>
+                            <div class="mt-2 pt-2 border-top" style="border-color:rgba(255,255,255,0.2) !important;">
+                                <a href="<?= site_url('orders/detail/' . $order_id) ?>" 
+                                   class="btn btn-sm w-100 rounded-3 fw-bold py-1"
+                                   style="background:<?= $is_mine ? '#fff' : 'var(--hcmue-blue)' ?>; 
+                                          color:<?= $is_mine ? 'var(--hcmue-blue)' : '#fff' ?>; 
+                                          font-size:0.78rem; 
+                                          border:1px solid rgba(0,0,0,0.05);">
+                                    <i class="fas fa-shopping-bag me-1"></i> Xem chi tiết Đơn hàng
+                                </a>
+                            </div>
+                        <?php endif; ?>
                     </div>
                     <span style="font-size:0.68rem;color:#9CA3AF;margin-top:3px;">
                         <?= date('H:i d/m', strtotime($msg['created_at'])) ?>
