@@ -221,7 +221,7 @@ $active_tab = $active_tab ?? 'buy';
                                     <i class="fas fa-times me-1"></i>Từ chối
                                 </button>
                             <?php endif; ?>
-                            <?php if (in_array($o['status'], ['pending', 'confirmed'])): ?>
+                            <?php if ($o['status'] === 'confirmed'): ?>
                                 <a href="<?= site_url('orders/cancel/' . $o['id']) ?>"
                                    class="btn btn-sm btn-outline-secondary rounded-3" style="font-size:0.78rem;"
                                    onclick="return confirm('Hủy đơn hàng này?');">

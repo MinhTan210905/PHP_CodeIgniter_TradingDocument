@@ -151,25 +151,129 @@ $cur_step = $timeline[$order['status']] ?? 1;
 
     <!-- Actions -->
     <div class="d-flex gap-2 flex-wrap">
-        <a href="<?= site_url('orders') ?>" class="btn btn-outline-secondary rounded-3">
+        <!-- Nút Quay lại bảo toàn Tab đã xem -->
+        <a href="<?= site_url('orders?tab=' . ($is_buyer ? 'buy' : 'sell')) ?>" class="btn btn-outline-secondary rounded-3">
             <i class="fas fa-arrow-left me-1"></i>Quay lại
         </a>
+
+        <!-- === CÁC NÚT HÀNH ĐỘNG DÀNH CHO NGƯỜI MUA === -->
         <?php if ($is_buyer): ?>
+            <!-- Nút Nhắn tin -->
             <a href="<?= site_url('message/conversation/' . $order['seller_id']) ?>"
-               class="btn btn-primary-hcmue rounded-3">
+               class="btn btn-outline-primary rounded-3">
                 <i class="fas fa-comment-dots me-1"></i>Nhắn tin người bán
             </a>
+
+            <!-- Hành động Pending -->
+            <?php if ($order['status'] === 'pending'): ?>
+                <a href="<?= site_url('orders/cancel/' . $order['id']) ?>" 
+                   class="btn btn-outline-danger rounded-3 fw-semibold"
+                   onclick="return confirm('Hủy yêu cầu mua này?');">
+                    <i class="fas fa-times-circle me-1"></i>Hủy yêu cầu
+                </a>
+            <?php endif; ?>
+
+            <!-- Hành động Confirmed -->
+            <?php if ($order['status'] === 'confirmed'): ?>
+                <a href="<?= site_url('orders/received/' . $order['id']) ?>"
+                   class="btn btn-success rounded-3 fw-bold"
+                   onclick="return confirm('Xác nhận bạn đã thực sự nhận được tài liệu này từ người bán?');">
+                    <i class="fas fa-check me-1"></i>Đã nhận hàng
+                </a>
+                <button class="btn btn-outline-danger rounded-3 fw-semibold"
+                        data-bs-toggle="modal" data-bs-target="#disputeModalDetail">
+                    <i class="fas fa-exclamation-triangle me-1"></i>Chưa nhận được
+                </button>
+            <?php endif; ?>
+
+            <!-- Hành động Completed -->
+            <?php if ($order['status'] === 'completed'): ?>
+                <a href="<?= site_url('orders/rate/' . $order['id']) ?>"
+                   class="btn rounded-3 fw-bold text-dark" style="background:var(--hcmue-gold);">
+                    <i class="fas fa-star me-1"></i>Đánh giá người bán
+                </a>
+            <?php endif; ?>
+
+        <!-- === CÁC NÚT HÀNH ĐỘNG DÀNH CHO NGƯỜI BÁN === -->
         <?php else: ?>
+            <!-- Nút Nhắn tin -->
             <a href="<?= site_url('message/conversation/' . $order['buyer_id']) ?>"
-               class="btn btn-primary-hcmue rounded-3">
+               class="btn btn-outline-primary rounded-3">
                 <i class="fas fa-comment-dots me-1"></i>Nhắn tin người mua
             </a>
-        <?php endif; ?>
-        <?php if ($order['status'] === 'completed' && $is_buyer): ?>
-            <a href="<?= site_url('orders/rate/' . $order['id']) ?>"
-               class="btn rounded-3 fw-bold" style="background:var(--hcmue-gold);color:var(--hcmue-blue);">
-                <i class="fas fa-star me-1"></i>Đánh giá người bán
-            </a>
+
+            <!-- Hành động Pending -->
+            <?php if ($order['status'] === 'pending'): ?>
+                <a href="<?= site_url('orders/confirm/' . $order['id']) ?>"
+                   class="btn btn-success rounded-3 fw-bold"
+                   onclick="return confirm('Xác nhận đơn hàng này?');">
+                    <i class="fas fa-check-circle me-1"></i>Xác nhận đơn
+                </a>
+                <button class="btn btn-danger rounded-3 fw-semibold"
+                        data-bs-toggle="modal" data-bs-target="#rejectModalDetail">
+                    <i class="fas fa-times-circle me-1"></i>Từ chối bán
+                </button>
+            <?php endif; ?>
+
+            <!-- Hành động Confirmed (Chỉ hiện nút Hủy sau khi đã chốt) -->
+            <?php if ($order['status'] === 'confirmed'): ?>
+                <a href="<?= site_url('orders/cancel/' . $order['id']) ?>"
+                   class="btn btn-outline-danger rounded-3 fw-semibold"
+                   onclick="return confirm('Bạn chắc chắn muốn hủy đơn hàng đã chốt này chứ?');">
+                    <i class="fas fa-ban me-1"></i>Hủy đơn
+                </a>
+            <?php endif; ?>
         <?php endif; ?>
     </div>
 </div>
+
+<!-- ========================================== -->
+<!-- === CÁC MODALS PHỤC VỤ HÀNH ĐỘNG TRONG CHI TIẾT === -->
+<!-- ========================================== -->
+
+<!-- Modal Từ chối bán (Cho Người bán) -->
+<div class="modal fade" id="rejectModalDetail" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 rounded-4 shadow">
+            <div class="modal-header" style="background:linear-gradient(135deg,var(--hcmue-blue),var(--hcmue-blue-light));border-radius:16px 16px 0 0;">
+                <h5 class="modal-title text-white fw-bold"><i class="fas fa-times-circle me-2"></i>Từ chối đơn hàng</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="<?= site_url('orders/reject/' . $order['id']) ?>" method="POST">
+                <div class="modal-body p-4">
+                    <p class="text-muted" style="font-size:0.88rem;">Hãy để lại lý do từ chối bán tài liệu này (người mua sẽ nhận được thông báo này):</p>
+                    <textarea class="form-control" name="reject_reason" rows="3" style="border-radius:12px; font-size:0.88rem;"
+                              placeholder="VD: Tài liệu hiện đã hết hoặc không đủ số lượng cung cấp..." required></textarea>
+                </div>
+                <div class="modal-footer border-top-0 pt-0">
+                    <button type="button" class="btn btn-light rounded-3" data-bs-dismiss="modal">Đóng</button>
+                    <button type="submit" class="btn btn-danger rounded-3 fw-bold px-4">Xác nhận từ chối</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Khiếu nại / Báo tranh chấp (Cho Người mua) -->
+<div class="modal fade" id="disputeModalDetail" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 rounded-4 shadow">
+            <div class="modal-header" style="background:linear-gradient(135deg,#D93025,#E53935);border-radius:16px 16px 0 0;">
+                <h5 class="modal-title text-white fw-bold"><i class="fas fa-exclamation-triangle me-2"></i>Báo cáo vấn đề</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="<?= site_url('orders/dispute/' . $order['id']) ?>" method="POST">
+                <div class="modal-body p-4">
+                    <p class="text-muted" style="font-size:0.88rem;">Vui lòng mô tả chi tiết vấn đề bạn gặp phải (Quản trị viên sẽ vào cuộc xem xét):</p>
+                    <textarea class="form-control" name="dispute_reason" rows="3" style="border-radius:12px; font-size:0.88rem;"
+                              placeholder="VD: Chưa nhận được sách như đã hẹn, hoặc tài liệu không đúng mô tả..." required></textarea>
+                </div>
+                <div class="modal-footer border-top-0 pt-0">
+                    <button type="button" class="btn btn-light rounded-3" data-bs-dismiss="modal">Đóng</button>
+                    <button type="submit" class="btn btn-danger rounded-3 fw-bold px-4">Gửi phản hồi</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
