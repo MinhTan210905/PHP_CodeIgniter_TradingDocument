@@ -133,6 +133,10 @@ $active_tab = $active_tab ?? 'buy';
                                     <i class="fas fa-times me-1"></i>Hủy yêu cầu
                                 </a>
                             <?php endif; ?>
+                            <a href="<?= site_url('message/conversation/' . $o['seller_id']) ?>"
+                               class="btn btn-sm btn-primary-hcmue rounded-3" style="font-size:0.78rem;">
+                                <i class="fas fa-comment me-1"></i>Nhắn tin
+                            </a>
                         </div>
                     </div>
                 </div>
