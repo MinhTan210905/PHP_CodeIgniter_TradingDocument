@@ -2,264 +2,327 @@
 defined('BASEPATH') OR exit('No direct script access allowed');
 
 /**
- * ============================================================
- * API Controller — Campus Trade Hub
- * ============================================================
- * Tuân theo nguyên tắc Single Responsibility (SRP):
- *   - Mỗi hàm public chỉ xử lý đúng một endpoint.
- *   - Logic trả về JSON được tách riêng vào helper _response_json().
- *   - Controller KHÔNG chứa câu SQL hay logic nghiệp vụ;
- *     tất cả được uỷ quyền cho Trade_model.
- *
+ * REST API Controller — HCMUE Pass Sách
+ * 
  * Endpoints:
- *   GET    /api/posts              → Lấy tất cả bài đăng đã duyệt
- *   GET    /api/posts/search       → Lọc bài đăng theo danh mục / từ khoá
- *   GET    /api/posts/detail/:id   → Lấy chi tiết 1 bài đăng
- *   POST   /api/posts/create       → Tạo bài đăng mới qua API
- *   DELETE /api/posts/delete/:id   → Xóa bài đăng qua API
+ *   === AUTH ===
+ *   POST   /api/auth/login           → Đăng nhập, trả về token (session)
+ *   POST   /api/auth/register        → Đăng ký tài khoản
  *
- * @property CI_Output          $output
- * @property CI_Input           $input
- * @property CI_Form_validation $form_validation
- * @property Trade_model        $Trade_model
+ *   === POSTS (Sách) ===
+ *   GET    /api/posts                → Danh sách sách đang bán
+ *   GET    /api/posts/search?q=&cat= → Tìm kiếm sách
+ *   GET    /api/posts/detail/:id     → Chi tiết sách
+ *   POST   /api/posts/create         → Đăng sách mới
+ *   DELETE /api/posts/delete/:id     → Xóa sách
+ *
+ *   === ORDERS (Đơn hàng) ===
+ *   GET    /api/orders               → Đơn hàng của tôi
+ *   GET    /api/orders/detail/:id    → Chi tiết đơn
+ *   POST   /api/orders/request/:id   → Gửi yêu cầu mua
+ *   PUT    /api/orders/confirm/:id   → Xác nhận đơn (seller)
+ *   PUT    /api/orders/reject/:id    → Từ chối đơn (seller)
+ *   PUT    /api/orders/received/:id  → Đã nhận hàng (buyer)
+ *   PUT    /api/orders/dispute/:id   → Báo tranh chấp (buyer)
+ *   PUT    /api/orders/cancel/:id    → Hủy đơn
+ *   POST   /api/orders/rate/:id      → Đánh giá đơn hàng
+ *
+ *   === SELLER (Sàn người bán) ===
+ *   GET    /api/seller/:id           → Thông tin sàn người bán
+ *   GET    /api/seller/:id/posts     → Sách của người bán
+ *   GET    /api/seller/:id/ratings   → Đánh giá người bán
  */
 class Api extends CI_Controller {
 
-    // -----------------------------------------------------------------------
-    // KHỞI TẠO
-    // -----------------------------------------------------------------------
-
     public function __construct() {
         parent::__construct();
-
-        // Bước 1: Load model và thư viện cần dùng
-        $this->load->model('Trade_model');
-        $this->load->library('form_validation');
-
-        // Bước 2: Khai báo Content-Type mặc định là JSON cho toàn bộ Controller
+        $this->load->model(['Trade_model', 'Order_model', 'Seller_model', 'Rating_model', 'Message_model']);
+        $this->load->library(['form_validation', 'session']);
+        $this->load->helper('url');
         $this->output->set_content_type('application/json');
 
-        // Bước 3: Cấu hình CORS — cho phép mọi client gọi API này
+        // CORS
         header('Access-Control-Allow-Origin: *');
-        header('Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS');
+        header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
         header('Access-Control-Allow-Headers: Content-Type, Authorization');
-
-        // Bước 4: Xử lý preflight request (trình duyệt gửi OPTIONS trước khi POST/DELETE)
-        if ($this->input->server('REQUEST_METHOD') === 'OPTIONS') {
-            exit(0);
-        }
+        if ($this->input->server('REQUEST_METHOD') === 'OPTIONS') { exit(0); }
     }
 
-    // -----------------------------------------------------------------------
-    // HELPER PRIVATE — Trả về JSON chuẩn hoá
-    // -----------------------------------------------------------------------
-
-    /**
-     * Xuất JSON và gắn HTTP Status Code tương ứng.
-     *
-     * @param  array  $data        Mảng dữ liệu cần trả về
-     * @param  int    $status_code HTTP Status Code (200, 201, 400, 404, ...)
-     * @return void
-     */
-    private function _response_json(array $data, int $status_code = 200): void {
-        // Gắn status code vào HTTP response header
-        $this->output->set_status_header($status_code);
-
-        // Xuất JSON, giữ nguyên ký tự Unicode (tiếng Việt)
+    // ── Helper ──────────────────────────────────────────────
+    private function _json($data, $code = 200) {
+        $this->output->set_status_header($code);
         echo json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
     }
 
-    // -----------------------------------------------------------------------
-    // GET /api/posts
-    // Lấy toàn bộ danh sách bài đăng đã được duyệt (status = available/sold)
-    // -----------------------------------------------------------------------
-
-    public function posts(): void {
-        // Gọi Model — Controller không tự truy vấn DB
-        $posts = $this->Trade_model->get_all_posts();
-
-        if (empty($posts)) {
-            $this->_response_json([
-                'status'  => 404,
-                'message' => 'Không tìm thấy bài đăng nào.',
-                'data'    => [],
-            ], 404);
-            return;
+    private function _require_auth() {
+        if (!$this->session->userdata('logged_in')) {
+            $this->_json(['status' => 401, 'message' => 'Chưa đăng nhập. Vui lòng gọi /api/auth/login trước.'], 401);
+            return false;
         }
-
-        $this->_response_json([
-            'status'  => 200,
-            'message' => 'Thành công',
-            'total'   => count($posts),
-            'data'    => $posts,
-        ]);
+        return true;
     }
 
-    // -----------------------------------------------------------------------
-    // GET /api/posts/search?cat=1&q=keyword
-    // Lọc bài đăng theo danh mục (cat) và / hoặc từ khoá tìm kiếm (q)
-    // Tách riêng khỏi posts() để đảm bảo SRP — mỗi hàm một nhiệm vụ
-    // -----------------------------------------------------------------------
-
-    public function search(): void {
-        // Đọc tham số từ query string
-        $category_id = $this->input->get('cat');
-        $keyword     = $this->input->get('q');
-
-        // Tái sử dụng get_all_posts() vì model đã hỗ trợ filter tham số
-        $posts = $this->Trade_model->get_all_posts($category_id, $keyword);
-
-        if (empty($posts)) {
-            $this->_response_json([
-                'status'  => 404,
-                'message' => 'Không tìm thấy bài đăng phù hợp.',
-                'filters' => ['category_id' => $category_id, 'keyword' => $keyword],
-                'data'    => [],
-            ], 404);
-            return;
-        }
-
-        $this->_response_json([
-            'status'  => 200,
-            'message' => 'Thành công',
-            'total'   => count($posts),
-            'filters' => ['category_id' => $category_id, 'keyword' => $keyword],
-            'data'    => $posts,
-        ]);
+    private function _uid() {
+        return (int) $this->session->userdata('user_id');
     }
 
-    // -----------------------------------------------------------------------
-    // GET /api/posts/detail/:id
-    // Lấy thông tin chi tiết của một bài đăng theo ID
-    // -----------------------------------------------------------------------
+    // ═══════════════════════════════════════════════════════
+    //  AUTH
+    // ═══════════════════════════════════════════════════════
 
-    public function detail(int $id): void {
-        // Kiểm tra ID hợp lệ trước khi gọi Model
-        if (!$id || $id <= 0) {
-            $this->_response_json([
-                'status'  => 400,
-                'message' => 'ID bài đăng không hợp lệ.',
-            ], 400);
-            return;
-        }
-
-        $post = $this->Trade_model->get_post_detail($id);
-
-        if (empty($post)) {
-            $this->_response_json([
-                'status'  => 404,
-                'message' => 'Không tìm thấy bài đăng với ID = ' . $id,
-            ], 404);
-            return;
-        }
-
-        $this->_response_json([
-            'status'  => 200,
-            'message' => 'Thành công',
-            'data'    => $post,
-        ]);
-    }
-
-    // -----------------------------------------------------------------------
-    // POST /api/posts/create
-    // Tạo bài đăng mới qua API (nhận dữ liệu dạng application/x-www-form-urlencoded)
-    // -----------------------------------------------------------------------
-
-    public function create_post_api(): void {
-        // Bước 1: Chỉ chấp nhận phương thức POST
+    public function login() {
         if ($this->input->server('REQUEST_METHOD') !== 'POST') {
-            $this->_response_json([
-                'status'  => 405,
-                'message' => 'Phương thức không được phép. Chỉ chấp nhận POST.',
-            ], 405);
-            return;
+            $this->_json(['status' => 405, 'message' => 'Chỉ chấp nhận POST.'], 405); return;
         }
+        $username = $this->input->post('username');
+        $password = $this->input->post('password');
+        if (!$username || !$password) {
+            $this->_json(['status' => 400, 'message' => 'Thiếu username hoặc password.'], 400); return;
+        }
+        $user = $this->db->get_where('users', ['username' => $username])->row_array();
+        if (!$user || !password_verify($password, $user['password'])) {
+            $this->_json(['status' => 401, 'message' => 'Sai tài khoản hoặc mật khẩu.'], 401); return;
+        }
+        $this->session->set_userdata([
+            'user_id' => $user['id'], 'username' => $user['username'],
+            'full_name' => $user['full_name'], 'role' => $user['role'], 'logged_in' => TRUE
+        ]);
+        $this->_json(['status' => 200, 'message' => 'Đăng nhập thành công!', 'data' => [
+            'id' => $user['id'], 'username' => $user['username'],
+            'full_name' => $user['full_name'], 'role' => $user['role']
+        ]]);
+    }
 
-        // Bước 2: Khai báo luật kiểm tra dữ liệu đầu vào (Validation Rules)
-        $this->form_validation->set_rules('user_id',     'ID người dùng', 'required|integer');
-        $this->form_validation->set_rules('category_id', 'Danh mục',      'required|integer');
-        $this->form_validation->set_rules('title',       'Tiêu đề',       'required|min_length[5]|max_length[255]');
-        $this->form_validation->set_rules('description', 'Mô tả',         'required|min_length[10]');
-        $this->form_validation->set_rules('price',       'Giá',           'required|decimal');
-
-        // Bước 3: Chạy kiểm tra — nếu thất bại, trả về danh sách lỗi dạng JSON
+    public function register() {
+        if ($this->input->server('REQUEST_METHOD') !== 'POST') {
+            $this->_json(['status' => 405, 'message' => 'Chỉ chấp nhận POST.'], 405); return;
+        }
+        $this->form_validation->set_rules('full_name', 'Họ tên', 'required|min_length[2]');
+        $this->form_validation->set_rules('username', 'Username', 'required|min_length[3]|is_unique[users.username]');
+        $this->form_validation->set_rules('email', 'Email', 'required|valid_email|is_unique[users.email]');
+        $this->form_validation->set_rules('password', 'Mật khẩu', 'required|min_length[6]');
         if (!$this->form_validation->run()) {
-            $this->_response_json([
-                'status'  => 400,
-                'message' => 'Dữ liệu đầu vào không hợp lệ.',
-                'errors'  => $this->form_validation->error_array(),
-            ], 400);
-            return;
+            $this->_json(['status' => 400, 'message' => 'Dữ liệu không hợp lệ.', 'errors' => $this->form_validation->error_array()], 400); return;
         }
+        $this->db->insert('users', [
+            'full_name' => $this->input->post('full_name', TRUE),
+            'username'  => $this->input->post('username', TRUE),
+            'email'     => $this->input->post('email', TRUE),
+            'password'  => password_hash($this->input->post('password'), PASSWORD_DEFAULT),
+            'role'      => 'user'
+        ]);
+        $this->_json(['status' => 201, 'message' => 'Đăng ký thành công!', 'data' => ['id' => $this->db->insert_id()]], 201);
+    }
 
-        // Bước 4: Thu thập và làm sạch dữ liệu hợp lệ (XSS clean = TRUE)
-        $post_data = [
-            'user_id'     => (int) $this->input->post('user_id'),
+    // ═══════════════════════════════════════════════════════
+    //  POSTS (Sách)
+    // ═══════════════════════════════════════════════════════
+
+    public function posts() {
+        $posts = $this->Trade_model->get_all_posts();
+        $this->_json(['status' => 200, 'total' => count($posts), 'data' => $posts]);
+    }
+
+    public function search() {
+        $cat = $this->input->get('cat');
+        $q   = $this->input->get('q');
+        $posts = $this->Trade_model->get_all_posts($cat, $q);
+        $this->_json(['status' => 200, 'total' => count($posts), 'filters' => ['cat' => $cat, 'q' => $q], 'data' => $posts]);
+    }
+
+    public function detail($id = 0) {
+        if ($id <= 0) { $this->_json(['status' => 400, 'message' => 'ID không hợp lệ.'], 400); return; }
+        $post = $this->Trade_model->get_post_detail($id);
+        if (!$post) { $this->_json(['status' => 404, 'message' => 'Không tìm thấy bài đăng.'], 404); return; }
+        $this->_json(['status' => 200, 'data' => $post]);
+    }
+
+    public function create_post_api() {
+        if (!$this->_require_auth()) return;
+        if ($this->input->server('REQUEST_METHOD') !== 'POST') {
+            $this->_json(['status' => 405, 'message' => 'Chỉ chấp nhận POST.'], 405); return;
+        }
+        $this->form_validation->set_rules('category_id', 'Danh mục', 'required|integer');
+        $this->form_validation->set_rules('title', 'Tiêu đề', 'required|min_length[5]');
+        $this->form_validation->set_rules('price', 'Giá', 'required|numeric');
+        if (!$this->form_validation->run()) {
+            $this->_json(['status' => 400, 'errors' => $this->form_validation->error_array()], 400); return;
+        }
+        $id = $this->Trade_model->insert_post([
+            'user_id'     => $this->_uid(),
             'category_id' => (int) $this->input->post('category_id'),
-            'title'       => $this->input->post('title',       TRUE),
+            'title'       => $this->input->post('title', TRUE),
             'description' => $this->input->post('description', TRUE),
             'price'       => (float) $this->input->post('price'),
-            'image_url'   => '',        // API version không hỗ trợ upload file
-            'status'      => 'pending', // Bài đăng qua API luôn chờ duyệt
-        ];
-
-        // Bước 5: Uỷ quyền cho Model thực hiện INSERT — Controller không tự viết SQL
-        $inserted = $this->Trade_model->insert_post($post_data);
-
-        if (!$inserted) {
-            $this->_response_json([
-                'status'  => 500,
-                'message' => 'Lỗi máy chủ: Không thể tạo bài đăng. Vui lòng thử lại.',
-            ], 500);
-            return;
-        }
-
-        $this->_response_json([
-            'status'  => 201,
-            'message' => 'Tạo bài đăng thành công! Bài đang chờ Admin duyệt.',
-        ], 201);
+            'quantity'    => max(1, (int) $this->input->post('quantity')),
+            'image_url'   => '',
+            'status'      => ($this->session->userdata('role') === 'admin') ? 'available' : 'pending'
+        ]);
+        $this->_json(['status' => 201, 'message' => 'Đăng sách thành công!', 'data' => ['id' => $id]], 201);
     }
 
-    // -----------------------------------------------------------------------
-    // DELETE /api/posts/delete/:id
-    // Xóa một bài đăng theo ID (minh hoạ đầy đủ RESTful CRUD qua API)
-    // -----------------------------------------------------------------------
-
-    public function delete_post_api(int $id): void {
-        // Bước 1: Chỉ chấp nhận phương thức DELETE
+    public function delete_post_api($id = 0) {
+        if (!$this->_require_auth()) return;
         if ($this->input->server('REQUEST_METHOD') !== 'DELETE') {
-            $this->_response_json([
-                'status'  => 405,
-                'message' => 'Phương thức không được phép. Chỉ chấp nhận DELETE.',
-            ], 405);
-            return;
+            $this->_json(['status' => 405, 'message' => 'Chỉ chấp nhận DELETE.'], 405); return;
         }
-
-        // Bước 2: Kiểm tra bài đăng có tồn tại không trước khi xóa
         $post = $this->Trade_model->get_post_by_id($id);
-
-        if (empty($post)) {
-            $this->_response_json([
-                'status'  => 404,
-                'message' => 'Không tìm thấy bài đăng với ID = ' . $id,
-            ], 404);
-            return;
+        if (!$post) { $this->_json(['status' => 404, 'message' => 'Không tìm thấy bài đăng.'], 404); return; }
+        if ($post['user_id'] != $this->_uid() && $this->session->userdata('role') !== 'admin') {
+            $this->_json(['status' => 403, 'message' => 'Không có quyền xóa bài này.'], 403); return;
         }
+        $this->Trade_model->delete_post($id);
+        $this->_json(['status' => 200, 'message' => 'Xóa thành công.']);
+    }
 
-        // Bước 3: Uỷ quyền cho Model thực hiện DELETE
-        $deleted = $this->Trade_model->delete_post($id);
+    // ═══════════════════════════════════════════════════════
+    //  ORDERS (Đơn hàng)
+    // ═══════════════════════════════════════════════════════
 
-        if (!$deleted) {
-            $this->_response_json([
-                'status'  => 500,
-                'message' => 'Lỗi máy chủ: Không thể xóa bài đăng.',
-            ], 500);
-            return;
+    public function orders_list() {
+        if (!$this->_require_auth()) return;
+        $uid = $this->_uid();
+        $this->_json(['status' => 200, 'data' => [
+            'as_buyer'  => $this->Order_model->get_orders_as_buyer($uid),
+            'as_seller' => $this->Order_model->get_orders_as_seller($uid),
+        ]]);
+    }
+
+    public function order_detail($id = 0) {
+        if (!$this->_require_auth()) return;
+        $order = $this->Order_model->get_order_by_id($id);
+        if (!$order) { $this->_json(['status' => 404, 'message' => 'Đơn hàng không tồn tại.'], 404); return; }
+        $uid = $this->_uid();
+        if ($order['seller_id'] != $uid && $order['buyer_id'] != $uid) {
+            $this->_json(['status' => 403, 'message' => 'Không có quyền xem đơn này.'], 403); return;
         }
+        $this->_json(['status' => 200, 'data' => $order]);
+    }
 
-        $this->_response_json([
-            'status'  => 200,
-            'message' => 'Xóa bài đăng ID = ' . $id . ' thành công.',
+    public function order_request($post_id = 0) {
+        if (!$this->_require_auth()) return;
+        if ($this->input->server('REQUEST_METHOD') !== 'POST') {
+            $this->_json(['status' => 405, 'message' => 'Chỉ chấp nhận POST.'], 405); return;
+        }
+        $uid  = $this->_uid();
+        $post = $this->Trade_model->get_post_by_id($post_id);
+        if (!$post) { $this->_json(['status' => 404, 'message' => 'Bài đăng không tồn tại.'], 404); return; }
+        if ($post['user_id'] == $uid) { $this->_json(['status' => 400, 'message' => 'Không thể tự mua sách của mình.'], 400); return; }
+        if ($post['status'] !== 'available') { $this->_json(['status' => 400, 'message' => 'Sách đã hết hàng.'], 400); return; }
+        if ($this->Order_model->has_active_order($post_id, $uid)) {
+            $this->_json(['status' => 409, 'message' => 'Bạn đã có đơn đang chờ cho sách này.'], 409); return;
+        }
+        $qty = max(1, (int) $this->input->post('quantity'));
+        if ($qty > (int) $post['quantity']) {
+            $this->_json(['status' => 400, 'message' => 'Số lượng vượt tồn kho (' . $post['quantity'] . ').'], 400); return;
+        }
+        $order_id = $this->Order_model->create_order([
+            'post_id' => $post_id, 'seller_id' => $post['user_id'], 'buyer_id' => $uid,
+            'quantity' => $qty, 'note' => $this->input->post('note', TRUE),
         ]);
+        $this->_json(['status' => 201, 'message' => 'Gửi yêu cầu mua thành công!', 'data' => ['order_id' => $order_id]], 201);
+    }
+
+    public function order_confirm($id = 0) {
+        if (!$this->_require_auth()) return;
+        $order = $this->Order_model->get_order_by_id($id);
+        if (!$order || $order['seller_id'] != $this->_uid() || $order['status'] !== 'pending') {
+            $this->_json(['status' => 400, 'message' => 'Không thể xác nhận đơn này.'], 400); return;
+        }
+        $this->Order_model->update_status($id, 'confirmed');
+        $this->_json(['status' => 200, 'message' => 'Đã xác nhận đơn hàng.']);
+    }
+
+    public function order_reject($id = 0) {
+        if (!$this->_require_auth()) return;
+        $order = $this->Order_model->get_order_by_id($id);
+        if (!$order || $order['seller_id'] != $this->_uid() || $order['status'] !== 'pending') {
+            $this->_json(['status' => 400, 'message' => 'Không thể từ chối đơn này.'], 400); return;
+        }
+        $reason = $this->input->post('reason', TRUE) ?: 'Người bán từ chối.';
+        $this->Order_model->update_status($id, 'rejected', ['reject_reason' => $reason]);
+        $this->_json(['status' => 200, 'message' => 'Đã từ chối đơn hàng.']);
+    }
+
+    public function order_received($id = 0) {
+        if (!$this->_require_auth()) return;
+        $order = $this->Order_model->get_order_by_id($id);
+        if (!$order || $order['buyer_id'] != $this->_uid() || $order['status'] !== 'confirmed') {
+            $this->_json(['status' => 400, 'message' => 'Không thể xác nhận nhận hàng.'], 400); return;
+        }
+        $this->Order_model->update_status($id, 'completed');
+        $this->Trade_model->decrement_quantity($order['post_id'], $order['quantity']);
+        $this->_json(['status' => 200, 'message' => 'Đã xác nhận nhận hàng! Hãy đánh giá người bán.']);
+    }
+
+    public function order_dispute($id = 0) {
+        if (!$this->_require_auth()) return;
+        $order = $this->Order_model->get_order_by_id($id);
+        if (!$order || $order['buyer_id'] != $this->_uid() || $order['status'] !== 'confirmed') {
+            $this->_json(['status' => 400, 'message' => 'Không thể báo tranh chấp.'], 400); return;
+        }
+        $reason = $this->input->post('reason', TRUE) ?: 'Chưa nhận được hàng.';
+        $this->Order_model->update_status($id, 'disputed', ['reject_reason' => $reason]);
+        $this->_json(['status' => 200, 'message' => 'Đã báo tranh chấp.']);
+    }
+
+    public function order_cancel($id = 0) {
+        if (!$this->_require_auth()) return;
+        $uid   = $this->_uid();
+        $order = $this->Order_model->get_order_by_id($id);
+        if (!$order) { $this->_json(['status' => 404, 'message' => 'Đơn không tồn tại.'], 404); return; }
+        $can = ($order['buyer_id'] == $uid && $order['status'] === 'pending')
+            || ($order['seller_id'] == $uid && in_array($order['status'], ['pending', 'confirmed']));
+        if (!$can) { $this->_json(['status' => 400, 'message' => 'Không thể hủy đơn này.'], 400); return; }
+        $this->Order_model->update_status($id, 'cancelled');
+        $this->_json(['status' => 200, 'message' => 'Đã hủy đơn hàng.']);
+    }
+
+    public function order_rate($id = 0) {
+        if (!$this->_require_auth()) return;
+        if ($this->input->server('REQUEST_METHOD') !== 'POST') {
+            $this->_json(['status' => 405, 'message' => 'Chỉ chấp nhận POST.'], 405); return;
+        }
+        $uid   = $this->_uid();
+        $order = $this->Order_model->get_order_by_id($id);
+        if (!$order || $order['buyer_id'] != $uid || $order['status'] !== 'completed') {
+            $this->_json(['status' => 400, 'message' => 'Chưa thể đánh giá đơn này.'], 400); return;
+        }
+        if ($this->Rating_model->has_rated_order($id, $uid)) {
+            $this->_json(['status' => 409, 'message' => 'Bạn đã đánh giá đơn này rồi.'], 409); return;
+        }
+        $stars = (int) $this->input->post('stars');
+        if ($stars < 1 || $stars > 5) {
+            $this->_json(['status' => 400, 'message' => 'Số sao phải từ 1 đến 5.'], 400); return;
+        }
+        $this->Rating_model->add_rating([
+            'reviewer_id' => $uid, 'seller_id' => $order['seller_id'],
+            'post_id' => $order['post_id'], 'order_id' => $id,
+            'stars' => $stars, 'comment' => $this->input->post('comment', TRUE),
+        ]);
+        $this->_json(['status' => 201, 'message' => 'Đánh giá thành công!'], 201);
+    }
+
+    // ═══════════════════════════════════════════════════════
+    //  SELLER (Sàn người bán)
+    // ═══════════════════════════════════════════════════════
+
+    public function seller_info($id = 0) {
+        $seller = $this->Seller_model->get_seller_info($id);
+        if (!$seller) { $this->_json(['status' => 404, 'message' => 'Người bán không tồn tại.'], 404); return; }
+        $stats = $this->Seller_model->get_stats($id);
+        unset($seller['password']); // Không lộ mật khẩu
+        $this->_json(['status' => 200, 'data' => ['seller' => $seller, 'stats' => $stats]]);
+    }
+
+    public function seller_posts($id = 0) {
+        $this->_json(['status' => 200, 'data' => [
+            'active' => $this->Seller_model->get_active_posts($id),
+            'sold'   => $this->Seller_model->get_sold_posts($id),
+        ]]);
+    }
+
+    public function seller_ratings($id = 0) {
+        $this->_json(['status' => 200, 'data' => $this->Seller_model->get_ratings($id)]);
     }
 }

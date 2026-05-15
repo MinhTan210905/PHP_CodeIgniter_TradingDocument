@@ -15,6 +15,14 @@
             <h2 style="font-size:1.2rem;font-weight:800;color:var(--hcmue-blue);margin:0;">Quản trị Admin</h2>
             <span class="text-muted" style="font-size:0.8rem;">HCMUE Pass Sách</span>
         </div>
+        <div class="ms-auto d-flex gap-2">
+            <a href="<?= site_url('admin/users') ?>" class="btn btn-primary-hcmue rounded-3 fw-bold" style="font-size:0.85rem;">
+                <i class="fas fa-users me-1"></i> Quản lý Người dùng
+            </a>
+            <a href="<?= site_url('admin/categories') ?>" class="btn btn-outline-secondary rounded-3 fw-bold" style="font-size:0.85rem;">
+                <i class="fas fa-tags me-1"></i> Quản lý Danh mục
+            </a>
+        </div>
     </div>
 
     <!-- Stat Cards -->
@@ -39,6 +47,47 @@
             </div>
         </div>
         <?php endforeach; ?>
+    </div>
+
+    <!-- ===== CẤU HÌNH HỆ THỐNG ===== -->
+    <div class="card border-0 rounded-4 shadow-sm mb-4 p-4">
+        <div class="d-flex justify-content-between align-items-center">
+            <h6 class="fw-bold mb-0" style="color:var(--primary);">
+                <i class="fas fa-tools me-2"></i>Cấu hình hệ thống (Admin Only)
+            </h6>
+        </div>
+        <hr class="my-3" style="border-color:#F1F5F9;">
+        <form action="<?= site_url('admin/update_settings') ?>" method="POST">
+            <div class="row align-items-center">
+                <div class="col-md-4 mb-3 mb-md-0">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" name="auto_approve_new" id="autoApproveNew" value="1"
+                               <?= (isset($app_settings['auto_approve_new']) && $app_settings['auto_approve_new'] == '1') ? 'checked' : '' ?>>
+                        <label class="form-check-label fw-600" for="autoApproveNew" style="font-size:0.88rem;">
+                            Tự động duyệt bài đăng mới
+                        </label>
+                    </div>
+                    <small class="text-muted d-block" style="font-size:0.75rem;">Bật: Khỏi cần Admin bấm duyệt</small>
+                </div>
+                
+                <div class="col-md-4 mb-3 mb-md-0">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" name="auto_approve_edit" id="autoApproveEdit" value="1"
+                               <?= (isset($app_settings['auto_approve_edit']) && $app_settings['auto_approve_edit'] == '1') ? 'checked' : '' ?>>
+                        <label class="form-check-label fw-600" for="autoApproveEdit" style="font-size:0.88rem;">
+                            Tự động duyệt khi sửa bài
+                        </label>
+                    </div>
+                    <small class="text-muted d-block" style="font-size:0.75rem;">Tắt: Đưa bài về chờ duyệt lại</small>
+                </div>
+
+                <div class="col-md-4 text-md-end">
+                    <button type="submit" class="btn btn-primary-hcmue px-4 fw-bold" style="border-radius:10px;font-size:0.85rem;">
+                        Lưu Cấu Hình
+                    </button>
+                </div>
+            </div>
+        </form>
     </div>
 
     <!-- ===== KHU DUYỆT BÀI ===== -->

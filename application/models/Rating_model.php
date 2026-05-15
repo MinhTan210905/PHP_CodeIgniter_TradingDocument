@@ -28,6 +28,14 @@ class Rating_model extends CI_Model {
         ])->num_rows() > 0;
     }
 
+    // Kiểm tra đã đánh giá theo order_id (Shopee-style)
+    public function has_rated_order($order_id, $reviewer_id) {
+        return $this->db->get_where('ratings', [
+            'order_id'    => $order_id,
+            'reviewer_id' => $reviewer_id
+        ])->num_rows() > 0;
+    }
+
     // Thêm đánh giá
     public function add_rating($data) {
         return $this->db->insert('ratings', $data);
@@ -35,7 +43,7 @@ class Rating_model extends CI_Model {
 
     // Lấy danh sách đánh giá của người bán (kèm thông tin người đánh giá)
     public function get_ratings_for_seller($seller_id) {
-        $this->db->select('ratings.*, users.username, users.full_name, posts.title as post_title');
+        $this->db->select('ratings.*, users.username, users.full_name, users.avatar, posts.title as post_title');
         $this->db->from('ratings');
         $this->db->join('users', 'users.id = ratings.reviewer_id', 'left');
         $this->db->join('posts', 'posts.id = ratings.post_id', 'left');

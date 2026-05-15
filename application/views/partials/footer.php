@@ -1,4 +1,4 @@
-<footer class="footer-hcmue-dark mt-auto pt-5">
+<footer class="footer-hcmue-dark mt-auto pt-5" style="background: linear-gradient(145deg, #1E3A8A 0%, #1D4ED8 60%, #3B82F6 100%) !important; border-top: none;">
     <div class="container pb-5">
         <div class="row g-4">
             <!-- Cột trái: Thông tin dự án -->
@@ -7,7 +7,7 @@
                     <img src="<?= base_url('assets/images/logo_hcmue.png') ?>" 
                          style="width: 90px; height: auto; object-fit: contain;" 
                          alt="HCMUE Logo">
-                    <div class="brand-title">HCMUE Pass Sách</div>
+                    <div class="brand-title">HCMUE BookSwap</div>
                 </div>
                 
                 <p class="brand-tagline mt-3">
@@ -15,10 +15,10 @@
                 </p>
 
                 <div class="social-icons mb-4">
-                    <a href="#" class="social-btn" title="Facebook"><i class="fab fa-facebook-f"></i></a>
-                    <a href="#" class="social-btn" title="Instagram"><i class="fab fa-instagram"></i></a>
-                    <a href="#" class="social-btn" title="TikTok"><i class="fab fa-tiktok"></i></a>
-                    <a href="#" class="social-btn" title="YouTube"><i class="fab fa-youtube"></i></a>
+                    <a href="javascript:void(0)" class="social-btn" title="Facebook"><i class="fab fa-facebook-f"></i></a>
+                    <a href="javascript:void(0)" class="social-btn" title="Instagram"><i class="fab fa-instagram"></i></a>
+                    <a href="javascript:void(0)" class="social-btn" title="TikTok"><i class="fab fa-tiktok"></i></a>
+                    <a href="javascript:void(0)" class="social-btn" title="YouTube"><i class="fab fa-youtube"></i></a>
                 </div>
 
                 <div class="info-text d-flex align-items-center gap-2 mb-2" style="color: rgba(255,255,255,0.75);">
@@ -39,7 +39,7 @@
                         Nhận thông báo ngay khi có người đăng Pass các loại sách hoặc tài liệu bạn đang quan tâm.
                     </p>
                     
-                    <form action="#" method="POST" class="newsletter-form">
+                    <form action="<?= current_url() ?>" method="POST" class="newsletter-form">
                         <input type="email" class="newsletter-input" 
                                placeholder="Email của bạn..." required>
                         <button type="submit" class="newsletter-btn">

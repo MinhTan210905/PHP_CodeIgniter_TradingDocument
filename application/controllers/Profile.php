@@ -14,7 +14,7 @@ class Profile extends CI_Controller {
     public function __construct() {
         parent::__construct();
         $this->load->model(['Auth_model', 'Trade_model', 'Rating_model', 'Message_model']);
-        $this->load->library('session');
+        $this->load->library(['session', 'upload']);
         $this->load->helper(['url', 'form']);
     }
 
@@ -40,6 +40,59 @@ class Profile extends CI_Controller {
         $this->load->view('partials/footer');
     }
 
+    // Cập nhật thông tin cơ bản (Tên, Avatar, SĐT...)
+    public function update_info() {
+        $this->require_login();
+        $user_id = $this->session->userdata('user_id');
+        
+        $full_name = $this->input->post('full_name', TRUE);
+        $phone     = $this->input->post('phone', TRUE);
+        
+        $update_data = [];
+        if ($full_name) $update_data['full_name'] = $full_name;
+        if ($phone !== NULL) $update_data['phone'] = $phone;
+
+        // Xử lý upload avatar mới nếu có
+        if (!empty($_FILES['avatar']['name'])) {
+            $upload_dir = FCPATH . 'assets/uploads/avatars/';
+            if (!is_dir($upload_dir)) {
+                mkdir($upload_dir, 0777, TRUE);
+            }
+
+            $config['upload_path']   = $upload_dir;
+            $config['allowed_types'] = 'gif|jpg|png|jpeg|webp';
+            $config['max_size']      = 2048; // 2MB
+            $config['encrypt_name']  = TRUE;
+
+            $this->upload->initialize($config);
+
+            if ($this->upload->do_upload('avatar')) {
+                $data = $this->upload->data();
+                $update_data['avatar'] = 'assets/uploads/avatars/' . $data['file_name'];
+            } else {
+                $this->session->set_flashdata('error', 'Lỗi tải lên ảnh đại diện: ' . strip_tags($this->upload->display_errors()));
+                redirect('profile');
+                return;
+            }
+        }
+
+        if (!empty($update_data)) {
+            $this->Auth_model->update_user($user_id, $update_data);
+            
+            // Cập nhật cả session data cho full_name, avatar nếu nó vừa đổi
+            if (isset($update_data['full_name'])) {
+                $this->session->set_userdata('full_name', $update_data['full_name']);
+            }
+            if (isset($update_data['avatar'])) {
+                $this->session->set_userdata('avatar', $update_data['avatar']);
+            }
+            
+            $this->session->set_flashdata('success', 'Đã cập nhật thông tin cá nhân thành công!');
+        }
+        
+        redirect('profile');
+    }
+
     // Bật / tắt hiển thị SĐT
     public function toggle_phone() {
         $this->require_login();
@@ -53,7 +106,7 @@ class Profile extends CI_Controller {
         redirect('profile');
     }
 
-    // Cập nhật số điện thoại
+    // Cập nhật số điện thoại (Legacy support, keep if UI form still uses it, but UI should be replaced)
     public function update_phone() {
         $this->require_login();
         $user_id = $this->session->userdata('user_id');
@@ -61,6 +114,61 @@ class Profile extends CI_Controller {
 
         $this->Auth_model->update_user($user_id, ['phone' => $phone]);
         $this->session->set_flashdata('success', 'Đã cập nhật số điện thoại!');
+        redirect('profile');
+    }
+
+    // Người dùng tự xóa tài khoản
+    public function delete_account() {
+        $this->require_login();
+        $user_id = $this->session->userdata('user_id');
+
+        // Xác nhận mật khẩu trước khi xóa
+        $password = $this->input->post('confirm_delete_password');
+        $user     = $this->Auth_model->get_user_by_id($user_id);
+
+        if (!$user || !password_verify($password, $user['password'])) {
+            $this->session->set_flashdata('error', 'Mật khẩu xác nhận không đúng!');
+            redirect('profile');
+            return;
+        }
+
+        // Xóa tài khoản và huỷ session
+        $this->Auth_model->delete_user($user_id);
+        $this->session->sess_destroy();
+        $this->session->set_flashdata('success', 'Tài khoản của bạn đã được xóa vĩnh viễn.');
+        redirect('auth');
+    }
+
+    // Cập nhật mật khẩu
+    public function change_password() {
+        $this->require_login();
+        $user_id = $this->session->userdata('user_id');
+        
+        $old_password = $this->input->post('old_password');
+        $new_password = $this->input->post('new_password');
+        $confirm_password = $this->input->post('confirm_password');
+
+        if (empty($old_password) || empty($new_password) || empty($confirm_password)) {
+            $this->session->set_flashdata('error', 'Vui lòng nhập đầy đủ các trường mật khẩu!');
+            redirect('profile');
+            return;
+        }
+
+        if ($new_password !== $confirm_password) {
+            $this->session->set_flashdata('error', 'Mật khẩu xác nhận không khớp!');
+            redirect('profile');
+            return;
+        }
+
+        $user = $this->Auth_model->get_user_by_id($user_id);
+        if (!password_verify($old_password, $user['password'])) {
+            $this->session->set_flashdata('error', 'Mật khẩu cũ không chính xác!');
+            redirect('profile');
+            return;
+        }
+
+        $this->Auth_model->update_user($user_id, ['password' => password_hash($new_password, PASSWORD_DEFAULT)]);
+        $this->session->set_flashdata('success', '✅ Đã thay đổi mật khẩu thành công!');
         redirect('profile');
     }
 }

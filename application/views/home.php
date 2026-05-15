@@ -1,3 +1,4 @@
+
 <!-- Search & Filter Bar (API-driven) -->
 <div class="search-section">
     <div class="container">
@@ -9,16 +10,47 @@
                        value="<?= htmlspecialchars($keyword ?? '') ?>"
                        placeholder="Tìm sách, giáo trình...">
             </div>
-            <!-- Nút lọc danh mục: data-cat-id để JS đọc giá trị -->
-            <div class="filter-scroll flex-grow-1" id="catFilterBar">
-                <button type="button" class="cat-filter-btn active" data-cat-id="">
-                    <i class="fas fa-th-large me-1"></i> Tất cả
-                </button>
-                <?php foreach($categories as $cat): ?>
-                    <button type="button" class="cat-filter-btn" data-cat-id="<?= $cat['id'] ?>">
-                        <i class="<?= $cat['icon'] ?> me-1"></i> <?= $cat['category_name'] ?>
+            <!-- Nút lọc danh mục: Phân nhóm "Xem thêm" cho giao diện cực sang xịn -->
+            <?php 
+                $limit_visible = 6;
+                $visible_cats  = array_slice($categories, 0, $limit_visible);
+                $hidden_cats   = array_slice($categories, $limit_visible);
+            ?>
+            <div class="d-flex align-items-center gap-2 flex-grow-1" id="catFilterBar" style="min-width:0;">
+                <!-- Thanh trượt ngang chứa các danh mục chính -->
+                <div class="filter-scroll flex-grow-1 d-flex align-items-center">
+                    <button type="button" class="cat-filter-btn active" data-cat-id="">
+                        <i class="fas fa-th-large me-1"></i> Tất cả
                     </button>
-                <?php endforeach; ?>
+                    <?php foreach($visible_cats as $cat): ?>
+                        <button type="button" class="cat-filter-btn" data-cat-id="<?= $cat['id'] ?>">
+                            <i class="<?= $cat['icon'] ?> me-1"></i> <?= $cat['category_name'] ?>
+                        </button>
+                    <?php endforeach; ?>
+                </div>
+
+                <!-- Dropdown NẰM NGOÀI filter-scroll để không bị kẹt/ẩn menu -->
+                <?php if (!empty($hidden_cats)): ?>
+                    <div class="dropdown flex-shrink-0">
+                        <button type="button" class="cat-more-btn dropdown-toggle border-0" 
+                                id="moreCatsDropdown" data-bs-toggle="dropdown" aria-expanded="false" data-bs-offset="0,8">
+                            Khác
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-3 mt-2 py-2 px-1" 
+                            aria-labelledby="moreCatsDropdown"
+                            style="min-width: 210px; border: 1px solid #EDF2F7 !important; z-index: 9999;">
+                            <?php foreach($hidden_cats as $cat): ?>
+                                <li>
+                                    <button type="button" class="dropdown-item cat-filter-btn custom-dd-btn gap-2" 
+                                            data-cat-id="<?= $cat['id'] ?>">
+                                        <i class="<?= $cat['icon'] ?> text-center text-primary-mid" style="width: 18px; font-size:0.85rem;"></i>
+                                        <span class="fw-bold"><?= $cat['category_name'] ?></span>
+                                    </button>
+                                </li>
+                            <?php endforeach; ?>
+                        </ul>
+                    </div>
+                <?php endif; ?>
             </div>
             <!-- Nút xóa lọc -->
             <button type="button" id="clearFilterBtn" class="text-muted text-decoration-none btn btn-link p-0" style="font-size:0.82rem;white-space:nowrap;display:none;">
@@ -56,7 +88,7 @@
                       $cur_cat = reset($cur_cat); ?>
                 <?= $cur_cat ? $cur_cat['category_name'] : 'Danh mục' ?>
             <?php else: ?>
-                Sách đang được Pass
+                Tài liệu đang được trao đổi
             <?php endif; ?>
         </h2>
         <!-- id="resultCount" để JS cập nhật số lượng kết quả -->
@@ -78,10 +110,10 @@
     <div id="loading-state" class="row g-4">
         <?php for($i=0;$i<4;$i++): ?>
         <div class="col-12 col-sm-6 col-lg-4 col-xl-3">
-            <div class="card p-3" style="border-radius:12px;">
-                <div style="height:160px;background:#F1F5F9;border-radius:8px;animation:pulse 1.2s infinite;"></div>
-                <div style="height:14px;background:#F1F5F9;border-radius:4px;margin-top:12px;animation:pulse 1.2s infinite;"></div>
-                <div style="height:14px;background:#F1F5F9;border-radius:4px;margin-top:8px;width:60%;animation:pulse 1.2s infinite;"></div>
+            <div class="card border-0 p-3" style="border-radius:var(--card-radius);box-shadow:var(--shadow-sm);">
+                <div style="height:160px;background:#EFF6FF;border-radius:12px;animation:pulse 1.2s infinite;"></div>
+                <div style="height:14px;background:#EFF6FF;border-radius:4px;margin-top:14px;animation:pulse 1.2s infinite;"></div>
+                <div style="height:14px;background:#EFF6FF;border-radius:4px;margin-top:8px;width:60%;animation:pulse 1.2s infinite;"></div>
             </div>
         </div>
         <?php endfor; ?>
@@ -90,13 +122,55 @@
 </div>
 
 <style>
-.link-hcmue { color:#0052B4;font-weight:600;text-decoration:none; }
-.link-hcmue:hover { text-decoration:underline; }
-
 /* Skeleton loading animation */
 @keyframes pulse {
     0%, 100% { opacity: 1; }
     50%       { opacity: 0.4; }
+}
+
+/* Nút "Xem thêm" danh mục */
+.cat-more-btn {
+    display        : inline-flex;
+    align-items    : center;
+    white-space    : nowrap;
+    border         : 1.5px dashed var(--primary-light) !important;
+    border-radius  : var(--radius-pill);
+    padding        : 6px 16px;
+    font-size      : 0.80rem;
+    font-weight    : 600;
+    font-family    : inherit;
+    background     : #F8FAFC;
+    color          : var(--primary-mid);
+    transition     : var(--transition);
+    cursor         : pointer;
+}
+.cat-more-btn:hover, .cat-more-btn:focus, .cat-more-btn[aria-expanded="true"] {
+    background: var(--primary-pale);
+    border-color: var(--primary-mid) !important;
+}
+
+/* Reset style cho các nút lọc danh mục nằm trong dropdown */
+.cat-filter-btn.custom-dd-btn {
+    display: flex !important;
+    width: 100%;
+    border: none !important;
+    border-radius: 8px !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    color: #475569 !important;
+    text-align: left !important;
+    padding: 8px 16px !important;
+    font-size: 0.82rem !important;
+    white-space: nowrap !important;
+}
+.cat-filter-btn.custom-dd-btn:hover {
+    background: #F1F5F9 !important;
+    color: var(--primary-mid) !important;
+}
+.cat-filter-btn.custom-dd-btn.active {
+    background: var(--primary-pale) !important;
+    color: var(--primary) !important;
+    font-weight: 700 !important;
 }
 </style>
 
@@ -191,7 +265,7 @@
                                     post.title +
                                 '</a>' +
                                 '<div class="d-flex align-items-center gap-1 mb-2" style="font-size:0.78rem;color:#6B7280;">' +
-                                    '<i class="fas fa-user-circle" style="color:#003F8A;"></i>' +
+                                    '<i class="fas fa-user-circle" style="color:#2563EB;"></i>' +
                                     '<span>' + (post.full_name || post.username) + '</span>' +
                                     '<span class="mx-1">·</span>' +
                                     '<span class="star-display">' + rating + '</span>' +

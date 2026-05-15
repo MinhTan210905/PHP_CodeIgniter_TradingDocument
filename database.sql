@@ -108,12 +108,20 @@ INSERT INTO users (full_name, username, email, password, phone, phone_visible, r
 -- Trong thực tế, dùng: password_hash('yourpassword', PASSWORD_DEFAULT)
 
 INSERT INTO categories (category_name, icon) VALUES
-('Đại cương', 'fas fa-book'),
-('Chuyên ngành IT', 'fas fa-laptop-code'),
-('Ngoại ngữ', 'fas fa-language'),
-('Tâm lý - Giáo dục', 'fas fa-brain'),
-('Kinh tế', 'fas fa-chart-line'),
-('Khoa học tự nhiên', 'fas fa-flask');
+('Các môn Đại cương', 'fas fa-book'),
+('Công nghệ Thông tin', 'fas fa-laptop-code'),
+('Tâm lý học - Giáo dục', 'fas fa-brain'),
+('Toán học & Ứng dụng', 'fas fa-calculator'),
+('Ngữ văn & Ngôn ngữ', 'fas fa-feather-alt'),
+('Sư phạm tiếng Anh', 'fas fa-language'),
+('Sư phạm tiếng Trung/Nhật/Hàn', 'fas fa-globe-asia'),
+('Khoa học Tự nhiên (Lý, Hóa, Sinh)', 'fas fa-flask'),
+('Khoa học Xã hội (Sử, Địa, GDCD)', 'fas fa-globe'),
+('Mầm non & Tiểu học', 'fas fa-child'),
+('Nghệ thuật & Thể chất', 'fas fa-palette'),
+('Giáo trình Ngoại ngữ (IELTS, TOEIC...)', 'fas fa-passport'),
+('Tài liệu ôn thi / Trắc nghiệm', 'fas fa-file-alt'),
+('Khác / Tổng hợp', 'fas fa-folder-plus');
 
 INSERT INTO posts (user_id, category_id, title, description, price, image_url, status) VALUES
 (2, 2, 'Giáo trình C++ và Lập trình Hướng đối tượng', 'Sách còn mới 90%, không ghi chú, giá rẻ cho ae khóa dưới.', 85000, 'assets/uploads/default.png', 'available'),
@@ -128,3 +136,61 @@ INSERT INTO comments (post_id, user_id, content) VALUES
 (1, 3, 'Bạn ơi sách này còn bán không? Mình cần gấp.'),
 (1, 2, 'Còn bạn nhé, nhắn tin mình để hỏi thêm nhé!'),
 (2, 2, 'Sách ở khoa nào vậy bạn?');
+
+-- ============================================================
+-- NÂNG CẤP v3.0 — Shopee-style Order System
+-- ============================================================
+
+-- Thêm số lượng vào bài đăng
+ALTER TABLE posts ADD COLUMN quantity INT NOT NULL DEFAULT 1 AFTER price;
+
+-- ============================================================
+-- BẢNG ORDERS (Đơn hàng — luồng mua bán)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS orders (
+    id            INT AUTO_INCREMENT PRIMARY KEY,
+    post_id       INT NOT NULL,
+    seller_id     INT NOT NULL,
+    buyer_id      INT NOT NULL,
+    quantity      INT NOT NULL DEFAULT 1,
+    note          TEXT COMMENT 'Ghi chú của người mua',
+    status        ENUM('pending','confirmed','completed','disputed','rejected','cancelled')
+                  NOT NULL DEFAULT 'pending',
+    reject_reason TEXT COMMENT 'Lý do từ chối / tranh chấp',
+    created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (post_id)   REFERENCES posts(id)  ON DELETE CASCADE,
+    FOREIGN KEY (seller_id) REFERENCES users(id)  ON DELETE CASCADE,
+    FOREIGN KEY (buyer_id)  REFERENCES users(id)  ON DELETE CASCADE
+);
+
+-- Thêm order_id vào ratings (chỉ đánh giá khi có đơn completed)
+ALTER TABLE ratings ADD COLUMN order_id INT NULL AFTER post_id,
+    ADD FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE SET NULL;
+
+-- Thêm cột show_sold_history vào users (quyền hiện/ẩn lịch sử trên sàn cá nhân)
+ALTER TABLE users ADD COLUMN show_sold_history TINYINT(1) DEFAULT 1 AFTER phone_visible;
+
+-- Thêm cột is_banned vào users (quyền khoá tài khoản)
+ALTER TABLE users ADD COLUMN is_banned TINYINT(1) DEFAULT 0;
+
+-- ============================================================
+-- BẢNG SETTINGS (Cài đặt hệ thống cấu hình động)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS settings (
+    skey VARCHAR(50) PRIMARY KEY,
+    svalue TEXT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+INSERT IGNORE INTO settings (skey, svalue) VALUES ('auto_approve_new', '0'), ('auto_approve_edit', '0');
+
+-- ============================================================
+-- BẢNG POST_IMAGES (Lưu trữ nhiều hình ảnh chi tiết của Sách)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS post_images (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    post_id INT NOT NULL,
+    image_url VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

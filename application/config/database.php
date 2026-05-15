@@ -13,10 +13,10 @@ $query_builder = TRUE;
 
 $db['default'] = array(
     'dsn'      => '',
-    'hostname' => 'localhost',
-    'username' => 'root',
-    'password' => '',          // Mặc định XAMPP không có mật khẩu
-    'database' => 'hcmue_pass_sach',
+    'hostname' => getenv('DB_HOSTNAME') ?: 'localhost',
+    'username' => getenv('DB_USERNAME') ?: 'root',
+    'password' => getenv('DB_PASSWORD') !== false ? getenv('DB_PASSWORD') : '',
+    'database' => getenv('DB_NAME') ?: 'hcmue_pass_sach',
     'dbdriver' => 'mysqli',
     'dbprefix' => '',
     'pconnect' => FALSE,
