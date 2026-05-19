@@ -320,6 +320,14 @@ document.getElementById('loginForm').addEventListener('submit', function(e) {
     btn.disabled = true;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>Đang đăng nhập...';
     alertBox.innerHTML = '';
+    
+    // Xóa các thông báo cũ do PHP tạo ra (nếu có)
+    document.querySelectorAll('.alert:not(.alert-dismissible)').forEach(el => el.remove());
+    // Hoặc đơn giản là ẩn tất cả alert hiện có trên trang
+    document.querySelectorAll('.alert').forEach(el => {
+        const bsAlert = bootstrap.Alert.getOrCreateInstance(el);
+        bsAlert.close();
+    });
 
     fetch(form.action, {
         method: 'POST',
