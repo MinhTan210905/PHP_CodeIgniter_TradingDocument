@@ -59,26 +59,36 @@ $queries = [
 echo "🚀 Bắt đầu tạo bảng HCMUEPay...\n\n";
 
 foreach ($queries as $i => $sql) {
-    if ($db->query($sql)) {
-        echo "✅ Query " . ($i + 1) . " thành công!\n";
-    } else {
-        // Bỏ qua lỗi "Duplicate column" nếu đã tồn tại
-        if (strpos($db->error, 'Duplicate column') !== false) {
+    try {
+        if ($db->query($sql)) {
+            echo "✅ Query " . ($i + 1) . " thành công!\n";
+        }
+    } catch (mysqli_sql_exception $e) {
+        // Bỏ qua lỗi "Duplicate column" hoặc "Table already exists" nếu đã tồn tại
+        if (strpos($e->getMessage(), 'Duplicate column') !== false || strpos($e->getMessage(), 'already exists') !== false) {
             echo "⚠️  Query " . ($i + 1) . " bỏ qua (cột/bảng đã tồn tại).\n";
         } else {
-            echo "❌ Query " . ($i + 1) . " lỗi: " . $db->error . "\n";
+            echo "❌ Query " . ($i + 1) . " lỗi: " . $e->getMessage() . "\n";
         }
     }
 }
 
 // 5. Tự động tạo ví cho tất cả user hiện có (nếu chưa có)
-$result = $db->query("SELECT id FROM users WHERE id NOT IN (SELECT user_id FROM hcmuepay_wallets)");
-$count = 0;
-while ($row = $result->fetch_assoc()) {
-    $db->query("INSERT INTO hcmuepay_wallets (user_id) VALUES ({$row['id']})");
-    $count++;
+try {
+    $result = $db->query("SELECT id FROM users WHERE id NOT IN (SELECT user_id FROM hcmuepay_wallets)");
+    $count = 0;
+    while ($row = $result->fetch_assoc()) {
+        try {
+            $db->query("INSERT INTO hcmuepay_wallets (user_id) VALUES ({$row['id']})");
+            $count++;
+        } catch (mysqli_sql_exception $e) {
+            // Ignore if already exists
+        }
+    }
+    echo "\n🎒 Đã tạo ví HCMUEPay cho $count user hiện có.\n";
+} catch (mysqli_sql_exception $e) {
+    echo "\n❌ Lỗi khi tạo ví: " . $e->getMessage() . "\n";
 }
-echo "\n🎒 Đã tạo ví HCMUEPay cho $count user hiện có.\n";
 
 $db->close();
 echo "\n🎉 HOÀN TẤT! Hệ thống HCMUEPay đã sẵn sàng!\n";
