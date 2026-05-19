@@ -120,6 +120,11 @@ if (!isset($categories) || empty($categories)) {
                                 <i class="fas fa-store me-2 text-info"></i>Sàn của tôi
                             </a>
                         </li>
+                        <li>
+                            <a class="dropdown-item py-2" href="<?= site_url('wallet') ?>">
+                                <i class="fas fa-wallet me-2" style="color:#059669;"></i>Ví HCMUEPay
+                            </a>
+                        </li>
                         <?php if ($this->session->userdata('role') === 'admin'): ?>
                         <li>
                             <a class="dropdown-item py-2" href="<?= site_url('admin') ?>">

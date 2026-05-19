@@ -194,3 +194,52 @@ CREATE TABLE IF NOT EXISTS post_images (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================================
+-- NÂNG CẤP v4.0 — HCMUEPay Wallet System (Ví điện tử nội bộ)
+-- ============================================================
+
+-- Thêm cột thanh toán vào bảng orders
+ALTER TABLE orders ADD COLUMN payment_method ENUM('cod','wallet') DEFAULT 'cod' COMMENT 'Phương thức thanh toán';
+ALTER TABLE orders ADD COLUMN payment_status ENUM('unpaid','paid','refunded') DEFAULT 'unpaid' COMMENT 'Trạng thái thanh toán';
+
+-- Ví điện tử HCMUEPay (Mỗi sinh viên 1 ví)
+CREATE TABLE IF NOT EXISTS hcmuepay_wallets (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL UNIQUE,
+    balance DECIMAL(15,2) NOT NULL DEFAULT 0.00 COMMENT 'Số dư khả dụng',
+    holding_balance DECIMAL(15,2) NOT NULL DEFAULT 0.00 COMMENT 'Số dư tạm giữ Escrow',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Lịch sử giao dịch ví
+CREATE TABLE IF NOT EXISTS hcmuepay_transactions (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    wallet_id INT NOT NULL,
+    order_id INT NULL COMMENT 'Liên kết đơn hàng (nếu có)',
+    amount DECIMAL(15,2) NOT NULL COMMENT 'Số tiền (+nạp/-chi)',
+    type ENUM('deposit','payment','receive','withdraw','refund') NOT NULL,
+    status ENUM('pending','completed','failed') NOT NULL DEFAULT 'pending',
+    description TEXT,
+    payos_reference VARCHAR(100) NULL COMMENT 'Mã tham chiếu PayOS',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (wallet_id) REFERENCES hcmuepay_wallets(id) ON DELETE CASCADE,
+    FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Yêu cầu rút tiền (Admin duyệt thủ công)
+CREATE TABLE IF NOT EXISTS hcmuepay_withdraw_requests (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    amount DECIMAL(15,2) NOT NULL,
+    bank_name VARCHAR(100) NOT NULL,
+    account_number VARCHAR(50) NOT NULL,
+    account_name VARCHAR(100) NOT NULL,
+    status ENUM('pending','approved','rejected') NOT NULL DEFAULT 'pending',
+    admin_note TEXT NULL,
+    processed_at TIMESTAMP NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
