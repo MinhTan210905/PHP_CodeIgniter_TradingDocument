@@ -1,12 +1,14 @@
 <?php
 // Helper labels
 $status_labels = [
-    'pending'   => ['label' => 'Chờ xác nhận',   'class' => 'badge-pending',   'icon' => 'fa-hourglass-half'],
-    'confirmed' => ['label' => 'Đã xác nhận',     'class' => 'badge-confirmed', 'icon' => 'fa-handshake'],
-    'completed' => ['label' => 'Hoàn thành',       'class' => 'badge-completed', 'icon' => 'fa-check-circle'],
-    'disputed'  => ['label' => 'Tranh chấp',       'class' => 'badge-disputed',  'icon' => 'fa-exclamation-triangle'],
-    'rejected'  => ['label' => 'Đã từ chối',       'class' => 'badge-rejected',  'icon' => 'fa-times-circle'],
-    'cancelled' => ['label' => 'Đã hủy',           'class' => 'badge-cancelled', 'icon' => 'fa-ban'],
+    'pending'    => ['label' => 'Chờ xác nhận',     'class' => 'badge-pending',   'icon' => 'fa-hourglass-half'],
+    'confirmed'  => ['label' => 'Đã xác nhận',      'class' => 'badge-confirmed', 'icon' => 'fa-handshake'],
+    'processing' => ['label' => 'Đang xử lý',       'class' => 'badge-confirmed', 'icon' => 'fa-truck-loading'],
+    'delivering' => ['label' => 'Đang giao',        'class' => 'badge-confirmed', 'icon' => 'fa-motorcycle'],
+    'completed'  => ['label' => 'Hoàn thành',       'class' => 'badge-completed', 'icon' => 'fa-check-circle'],
+    'disputed'   => ['label' => 'Tranh chấp',       'class' => 'badge-disputed',  'icon' => 'fa-exclamation-triangle'],
+    'rejected'   => ['label' => 'Đã từ chối',       'class' => 'badge-rejected',  'icon' => 'fa-times-circle'],
+    'cancelled'  => ['label' => 'Đã hủy',           'class' => 'badge-cancelled', 'icon' => 'fa-ban'],
 ];
 $active_tab = $active_tab ?? 'buy';
 ?>
@@ -80,7 +82,7 @@ $active_tab = $active_tab ?? 'buy';
             <?php foreach($orders_as_buyer as $o): ?>
             <?php 
                 $sl = $status_labels[$o['status']] ?? $status_labels['cancelled']; 
-                $phase = in_array($o['status'], ['pending', 'confirmed', 'disputed']) ? 'current' : 'past';
+                $phase = in_array($o['status'], ['pending', 'confirmed', 'processing', 'delivering', 'disputed']) ? 'current' : 'past';
             ?>
             <div class="order-card p-3 buy-card" data-phase="<?= $phase ?>">
                 <div class="d-flex gap-3 align-items-start">
@@ -122,22 +124,24 @@ $active_tab = $active_tab ?? 'buy';
                                 <i class="fas fa-eye me-1"></i>Chi tiết
                             </a>
                             <?php if ($o['status'] === 'confirmed'): ?>
-                                <?php if (empty($o['payment_status']) || $o['payment_status'] === 'unpaid'): ?>
-                                    <a href="<?= site_url('orders/checkout/' . $o['id']) ?>"
-                                       class="btn btn-sm btn-primary-hcmue rounded-3 fw-bold" style="font-size:0.78rem;">
-                                        <i class="fas fa-wallet me-1"></i>Thanh toán ngay
-                                    </a>
-                                <?php else: ?>
-                                    <a href="<?= site_url('orders/received/' . $o['id']) ?>"
-                                       class="btn btn-sm btn-success rounded-3 fw-bold" style="font-size:0.78rem;"
-                                       onclick="return confirm('Xác nhận đã nhận sách?');">
-                                        <i class="fas fa-check me-1"></i>Đã nhận hàng
-                                    </a>
-                                    <button class="btn btn-sm btn-outline-danger rounded-3" style="font-size:0.78rem;"
-                                            data-bs-toggle="modal" data-bs-target="#disputeModal<?= $o['id'] ?>">
-                                        <i class="fas fa-exclamation-triangle me-1"></i>Chưa nhận được
-                                    </button>
-                                <?php endif; ?>
+                                <a href="<?= site_url('orders/checkout/' . $o['id']) ?>"
+                                   class="btn btn-sm btn-primary-hcmue rounded-3 fw-bold" style="font-size:0.78rem;">
+                                    <i class="fas fa-wallet me-1"></i>Thanh toán / Chọn PTTT
+                                </a>
+                            <?php elseif ($o['status'] === 'processing'): ?>
+                                <span class="btn btn-sm btn-outline-secondary rounded-3 disabled" style="font-size:0.78rem;">
+                                    <i class="fas fa-hourglass-half me-1"></i>Chờ giao hàng
+                                </span>
+                            <?php elseif ($o['status'] === 'delivering'): ?>
+                                <a href="<?= site_url('orders/received/' . $o['id']) ?>"
+                                   class="btn btn-sm btn-success rounded-3 fw-bold" style="font-size:0.78rem;"
+                                   onclick="return confirm('Xác nhận đã nhận sách?');">
+                                    <i class="fas fa-check me-1"></i>Đã nhận hàng
+                                </a>
+                                <button class="btn btn-sm btn-outline-danger rounded-3" style="font-size:0.78rem;"
+                                        data-bs-toggle="modal" data-bs-target="#disputeModal<?= $o['id'] ?>">
+                                    <i class="fas fa-exclamation-triangle me-1"></i>Chưa nhận được
+                                </button>
                             <?php endif; ?>
                             <?php if ($o['status'] === 'completed'): ?>
                                 <a href="<?= site_url('orders/rate/' . $o['id']) ?>"
@@ -207,7 +211,7 @@ $active_tab = $active_tab ?? 'buy';
             <?php foreach($orders_as_seller as $o): ?>
             <?php 
                 $sl = $status_labels[$o['status']] ?? $status_labels['cancelled']; 
-                $phase = in_array($o['status'], ['pending', 'confirmed', 'disputed']) ? 'current' : 'past';
+                $phase = in_array($o['status'], ['pending', 'confirmed', 'processing', 'delivering', 'disputed']) ? 'current' : 'past';
             ?>
             <div class="order-card p-3 sell-card" data-phase="<?= $phase ?>">
                 <div class="d-flex gap-3 align-items-start">
@@ -257,20 +261,28 @@ $active_tab = $active_tab ?? 'buy';
                                 </button>
                             <?php endif; ?>
                             <?php if ($o['status'] === 'confirmed'): ?>
-                                <?php if (empty($o['payment_status']) || $o['payment_status'] === 'unpaid'): ?>
-                                    <span class="text-warning fw-bold d-inline-flex align-items-center" style="font-size:0.78rem;background:#FFFBEB;padding:4px 10px;border-radius:6px;border:1px solid #FEF3C7;">
-                                        <i class="fas fa-hourglass-half me-1"></i>Chờ người mua thanh toán
-                                    </span>
-                                <?php else: ?>
-                                    <span class="text-success fw-bold d-inline-flex align-items-center" style="font-size:0.78rem;background:#F0FDF4;padding:4px 10px;border-radius:6px;border:1px solid #D1FAE5;">
-                                        <i class="fas fa-box me-1"></i>Đã thanh toán (Hãy giao sách)
-                                    </span>
-                                <?php endif; ?>
+                                <span class="text-warning fw-bold d-inline-flex align-items-center" style="font-size:0.78rem;background:#FFFBEB;padding:4px 10px;border-radius:6px;border:1px solid #FEF3C7;">
+                                    <i class="fas fa-hourglass-half me-1"></i>Chờ người mua thanh toán/chọn PTTT
+                                </span>
                                 <a href="<?= site_url('orders/cancel/' . $o['id']) ?>"
                                    class="btn btn-sm btn-outline-secondary rounded-3 ms-2" style="font-size:0.78rem;"
                                    onclick="return confirm('Hủy đơn hàng này?');">
                                     <i class="fas fa-ban me-1"></i>Hủy
                                 </a>
+                            <?php elseif ($o['status'] === 'processing'): ?>
+                                <a href="<?= site_url('orders/detail/' . $o['id']) ?>"
+                                   class="btn btn-sm btn-success rounded-3 fw-bold" style="font-size:0.78rem;">
+                                    <i class="fas fa-camera me-1"></i>Đã giao sách (Tải minh chứng)
+                                </a>
+                                <a href="<?= site_url('orders/cancel/' . $o['id']) ?>"
+                                   class="btn btn-sm btn-outline-secondary rounded-3 ms-2" style="font-size:0.78rem;"
+                                   onclick="return confirm('Hủy đơn hàng này?');">
+                                    <i class="fas fa-ban me-1"></i>Hủy
+                                </a>
+                            <?php elseif ($o['status'] === 'delivering'): ?>
+                                <span class="text-success fw-bold d-inline-flex align-items-center" style="font-size:0.78rem;background:#F0FDF4;padding:4px 10px;border-radius:6px;border:1px solid #D1FAE5;">
+                                    <i class="fas fa-box me-1"></i>Chờ người mua nhận hàng
+                                </span>
                             <?php endif; ?>
                             <a href="<?= site_url('message/conversation/' . $o['buyer_id']) ?>"
                                class="btn btn-sm btn-primary-hcmue rounded-3" style="font-size:0.78rem;">

@@ -137,10 +137,13 @@
 const chatBox = document.getElementById('chatBox');
 if (chatBox) chatBox.scrollTop = chatBox.scrollHeight;
 
-// Ctrl+Enter gửi form
+// Nhấn Enter để gửi (trừ khi giữ Shift thì xuống dòng)
 document.getElementById('msgInput').addEventListener('keydown', function(e) {
-    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-        this.form.submit();
+    if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault(); // Ngăn xuống dòng
+        if (this.value.trim() !== '') {
+            this.form.submit();
+        }
     }
 });
 </script>

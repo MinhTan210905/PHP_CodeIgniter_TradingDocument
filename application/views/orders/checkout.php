@@ -49,58 +49,81 @@
                     </div>
 
                     <!-- Phương thức thanh toán -->
-                    <div class="p-3 rounded-3 mb-4" style="border:1.5px solid var(--hcmue-blue);background:#F0F9FF;">
-                        <div class="d-flex align-items-center mb-2">
-                            <div style="width:32px;height:32px;background:var(--hcmue-blue);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;margin-right:12px;">
-                                <i class="fas fa-money-check-alt"></i>
+                    <form action="<?= site_url('orders/process_checkout/'.$order['id']) ?>" method="POST" id="checkoutForm">
+                        <div class="p-3 rounded-3 mb-3 payment-method-card" style="border:1.5px solid var(--hcmue-blue);background:#F0F9FF;cursor:pointer;" onclick="selectPayment('wallet')">
+                            <div class="d-flex align-items-center mb-2">
+                                <input class="form-check-input me-2 mt-0" type="radio" name="payment_method" value="wallet" id="payWallet" checked>
+                                <div style="width:32px;height:32px;background:var(--hcmue-blue);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;margin-right:12px;">
+                                    <i class="fas fa-money-check-alt"></i>
+                                </div>
+                                <h6 class="fw-bold mb-0" style="color:var(--hcmue-blue);">Thanh toán qua Ví HCMUEPay</h6>
                             </div>
-                            <h6 class="fw-bold mb-0" style="color:var(--hcmue-blue);">Thanh toán qua Ví HCMUEPay</h6>
-                        </div>
-                        <div class="ms-5" style="font-size:0.85rem;color:#475569;">
-                            Tiền của bạn sẽ được giữ an toàn bởi hệ thống cho đến khi bạn xác nhận "Đã nhận được sách".
-                        </div>
-                        
-                        <div class="ms-5 mt-3 pt-3" style="border-top:1px dashed #CBD5E1;">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <span>Số dư ví hiện tại:</span>
-                                <span class="fw-bold" style="color:var(--primary);"><?= number_format($wallet['balance'], 0, ',', '.') ?>đ</span>
+                            <div class="ms-5" style="font-size:0.85rem;color:#475569;">
+                                Tiền của bạn sẽ được giữ an toàn bởi hệ thống cho đến khi bạn xác nhận "Đã nhận được sách".
                             </div>
-                            <?php if($wallet['balance'] < $total_amount): ?>
-                                <div class="text-danger mt-2 fw-semibold" style="font-size:0.85rem;">
-                                    <i class="fas fa-exclamation-circle me-1"></i>Số dư ví không đủ. Vui lòng nạp thêm tiền!
+                            
+                            <div class="ms-5 mt-3 pt-3 wallet-info-box" style="border-top:1px dashed #CBD5E1;">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span>Số dư ví hiện tại:</span>
+                                    <span class="fw-bold" style="color:var(--primary);"><?= number_format($wallet['balance'], 0, ',', '.') ?>đ</span>
+                                </div>
+                                <?php if($wallet['balance'] < $total_amount): ?>
+                                    <div class="text-danger mt-2 fw-semibold" style="font-size:0.85rem;">
+                                        <i class="fas fa-exclamation-circle me-1"></i>Số dư ví không đủ. Vui lòng nạp thêm tiền!
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+
+                        <div class="p-3 rounded-3 mb-4 payment-method-card" style="border:1.5px solid #E2E8F0;background:#F8FAFC;cursor:pointer;" onclick="selectPayment('cod')">
+                            <div class="d-flex align-items-center mb-2">
+                                <input class="form-check-input me-2 mt-0" type="radio" name="payment_method" value="cod" id="payCod">
+                                <div style="width:32px;height:32px;background:#64748B;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;margin-right:12px;">
+                                    <i class="fas fa-hand-holding-usd"></i>
+                                </div>
+                                <h6 class="fw-bold mb-0" style="color:#475569;">Giao dịch trực tiếp (COD)</h6>
+                            </div>
+                            <div class="ms-5" style="font-size:0.85rem;color:#475569;">
+                                Giao sách trực tiếp tại trường và trả tiền mặt cho người bán.
+                            </div>
+                        </div>
+
+                        <!-- Action -->
+                        <div id="btnWalletWrap">
+                            <?php if($wallet['balance'] >= $total_amount): ?>
+                                <button type="submit" class="btn btn-primary-hcmue w-100 rounded-pill py-2 fw-bold" style="font-size:1.05rem;"
+                                        onclick="return confirm('Xác nhận thanh toán <?= number_format($total_amount, 0, ',', '.') ?>đ cho đơn hàng này qua ví?');">
+                                    <i class="fas fa-check-circle me-2"></i>Xác nhận Thanh toán
+                                </button>
+                            <?php else: ?>
+                                <a href="<?= site_url('wallet') ?>" class="btn w-100 rounded-pill py-2 fw-bold text-white" style="font-size:1.05rem;background:linear-gradient(135deg,#DC2626,#EF4444);">
+                                    <i class="fas fa-plus-circle me-2"></i>Nạp tiền vào ví ngay
+                                </a>
+                                <div class="text-center mt-3 text-muted" style="font-size:0.85rem;">
+                                    Bạn còn thiếu <strong><?= number_format($total_amount - $wallet['balance'], 0, ',', '.') ?>đ</strong>
                                 </div>
                             <?php endif; ?>
                         </div>
-                    </div>
 
-                    <!-- Action -->
-                    <?php if($wallet['balance'] >= $total_amount): ?>
-                        <form action="<?= site_url('orders/process_payment/'.$order['id']) ?>" method="POST">
-                            <button type="submit" class="btn btn-primary-hcmue w-100 rounded-pill py-2 fw-bold" style="font-size:1.05rem;"
-                                    onclick="return confirm('Xác nhận thanh toán <?= number_format($total_amount, 0, ',', '.') ?>đ cho đơn hàng này?');">
-                                <i class="fas fa-check-circle me-2"></i>Xác nhận Thanh toán
+                        <div id="btnCodWrap" class="d-none">
+                            <button type="submit" class="btn w-100 rounded-pill py-2 fw-bold text-white" style="font-size:1.05rem;background:linear-gradient(135deg,#64748B,#475569);"
+                                    onclick="return confirm('Bạn xác nhận chọn hình thức Giao dịch trực tiếp?');">
+                                <i class="fas fa-hand-holding-usd me-2"></i>Chốt đơn - Giao dịch trực tiếp
                             </button>
-                        </form>
-                    <?php else: ?>
-                        <a href="<?= site_url('wallet') ?>" class="btn w-100 rounded-pill py-2 fw-bold text-white" style="font-size:1.05rem;background:linear-gradient(135deg,#DC2626,#EF4444);">
-                            <i class="fas fa-plus-circle me-2"></i>Nạp tiền vào ví ngay
-                        </a>
-                        <div class="text-center mt-3 text-muted" style="font-size:0.85rem;">
-                            Bạn còn thiếu <strong><?= number_format($total_amount - $wallet['balance'], 0, ',', '.') ?>đ</strong>
                         </div>
-                    <?php endif; ?>
+                    </form>
 
                 </div>
             </div>
 
             <!-- Box hướng dẫn nạp tiền nếu thiếu -->
             <?php if($wallet['balance'] < $total_amount): ?>
-                <div class="card border-0 rounded-4 shadow-sm">
+                <div class="card border-0 rounded-4 shadow-sm" id="depositHintBox">
                     <div class="card-body p-4 text-center">
                         <i class="fas fa-university text-muted mb-2" style="font-size:2rem;"></i>
-                        <h6 class="fw-bold">Bạn không dùng Ví HCMUEPay?</h6>
+                        <h6 class="fw-bold">Nạp tiền vào ví HCMUEPay</h6>
                         <p class="text-muted" style="font-size:0.85rem;margin-bottom:1rem;">
-                            Bạn vẫn có thể thanh toán dễ dàng bằng cách chuyển khoản quét mã QR của Admin để nạp tiền vào ví.
+                            Chuyển khoản quét mã QR của Admin để nạp tiền vào ví. Giao dịch an toàn, tiền sẽ được hoàn lại nếu mua không thành công!
                         </p>
                         <a href="<?= site_url('wallet') ?>" class="btn btn-outline-secondary btn-sm rounded-pill px-4 fw-bold">
                             Xem hướng dẫn nạp tiền / QR Code Admin
@@ -112,3 +135,33 @@
         </div>
     </div>
 </div>
+
+<script>
+function selectPayment(method) {
+    document.getElementById('payWallet').checked = (method === 'wallet');
+    document.getElementById('payCod').checked = (method === 'cod');
+
+    const walletCard = document.getElementById('payWallet').closest('.payment-method-card');
+    const codCard = document.getElementById('payCod').closest('.payment-method-card');
+
+    if (method === 'wallet') {
+        walletCard.style.borderColor = 'var(--hcmue-blue)';
+        walletCard.style.background = '#F0F9FF';
+        codCard.style.borderColor = '#E2E8F0';
+        codCard.style.background = '#F8FAFC';
+
+        document.getElementById('btnWalletWrap').classList.remove('d-none');
+        document.getElementById('btnCodWrap').classList.add('d-none');
+        if (document.getElementById('depositHintBox')) document.getElementById('depositHintBox').style.display = 'block';
+    } else {
+        codCard.style.borderColor = '#475569';
+        codCard.style.background = '#F1F5F9';
+        walletCard.style.borderColor = '#E2E8F0';
+        walletCard.style.background = '#F8FAFC';
+
+        document.getElementById('btnWalletWrap').classList.add('d-none');
+        document.getElementById('btnCodWrap').classList.remove('d-none');
+        if (document.getElementById('depositHintBox')) document.getElementById('depositHintBox').style.display = 'none';
+    }
+}
+</script>
