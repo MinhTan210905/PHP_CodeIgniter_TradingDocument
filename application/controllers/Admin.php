@@ -12,7 +12,7 @@ class Admin extends CI_Controller {
 
     public function __construct() {
         parent::__construct();
-        $this->load->model(['Trade_model', 'Auth_model', 'Message_model', 'Setting_model']);
+        $this->load->model(['Trade_model', 'Auth_model', 'Message_model', 'Setting_model', 'Order_model']);
         $this->load->library('session');
         $this->load->helper(['url']);
     }
@@ -35,7 +35,10 @@ class Admin extends CI_Controller {
         $data['total_available'] = $this->db->where('status', 'available')->count_all_results('posts');
         $data['total_pending']   = $this->Trade_model->count_pending();
 
-        $data['recent_posts']  = $this->Trade_model->get_all_posts();
+        $this->load->model('Wallet_model');
+        $data['total_withdrawals'] = $this->Wallet_model->count_pending_withdrawals();
+
+        $data['recent_posts']  = $this->Trade_model->get_all_approved_posts();
         $data['pending_posts'] = $this->Trade_model->get_pending_posts();
         $data['unread_count']  = $this->Message_model->count_unread($user_id);
         
@@ -233,5 +236,52 @@ class Admin extends CI_Controller {
         $this->Trade_model->delete_category($id);
         $this->session->set_flashdata('success', 'Đã xóa danh mục thành công!');
         redirect('admin/categories');
+    }
+
+    // =========================================================
+    // KIỂM DUYỆT THANH TOÁN (DEMO) & RÚT TIỀN
+    // =========================================================
+
+    public function payments() {
+        $this->require_admin();
+        $user_id = $this->session->userdata('user_id');
+
+        $this->load->model('Wallet_model');
+        $data['withdrawals']      = $this->Wallet_model->get_all_pending_withdrawals();
+        $data['processed_withdrawals'] = $this->Wallet_model->get_all_processed_withdrawals();
+        $data['completed_orders'] = $this->Order_model->get_completed_orders();
+        $data['unread_count']     = $this->Message_model->count_unread($user_id);
+
+        $this->load->view('partials/header', $data);
+        $this->load->view('admin/payments', $data);
+        $this->load->view('partials/footer');
+    }
+
+    // Admin duyệt yêu cầu rút tiền
+    public function approve_withdrawal($id) {
+        $this->require_admin();
+        $this->load->model('Wallet_model');
+        $this->Wallet_model->approve_withdrawal($id);
+        $this->session->set_flashdata('success', '✅ Đã xác nhận chuyển tiền (Duyệt rút tiền thành công)!');
+        redirect('admin/payments');
+    }
+
+    // Admin từ chối yêu cầu rút tiền
+    public function reject_withdrawal($id) {
+        $this->require_admin();
+        $this->load->model('Wallet_model');
+        $note = $this->input->post('note', TRUE) ?: 'Quản trị viên từ chối';
+        $this->Wallet_model->reject_withdrawal($id, $note);
+        $this->session->set_flashdata('success', '✅ Đã từ chối yêu cầu rút tiền và hoàn số dư lại vào ví!');
+        redirect('admin/payments');
+    }
+
+    // Admin xác nhận đã chuyển tiền cho người bán (đơn thủ công cũ - giữ lại nếu cần)
+    public function confirm_payment($order_id) {
+        $this->require_admin();
+        $this->db->where('id', $order_id);
+        $this->db->update('orders', ['payment_status' => 'paid']);
+        $this->session->set_flashdata('success', '✅ Đã xác nhận chuyển tiền cho đơn hàng #' . $order_id);
+        redirect('admin/payments');
     }
 }

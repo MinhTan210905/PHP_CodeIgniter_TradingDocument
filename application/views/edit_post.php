@@ -46,13 +46,6 @@
 
                 <div class="row g-3 mb-3">
                     <!-- Số lượng -->
-                    <div class="col-md-6">
-                        <label class="form-label fw-600 text-secondary small">Số lượng hiện có</label>
-                        <input type="number" class="form-control rounded-3 border-light shadow-none" name="quantity" 
-                               style="background:#f8fafc;" value="<?= $post['quantity'] ?>" min="1">
-                    </div>
-                <div class="row g-3 mb-3">
-                    <!-- Số lượng -->
                     <div class="col-md-4">
                         <label class="form-label fw-600 text-secondary small">Số lượng hiện có</label>
                         <input type="number" class="form-control rounded-3 border-light shadow-none" name="quantity" 

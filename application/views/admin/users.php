@@ -13,13 +13,23 @@
         </div>
     <?php endif; ?>
 
-    <div class="d-flex align-items-center justify-content-between mb-4">
+    <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
         <h2 class="section-title flex-grow-1"><i class="fas fa-users"></i> Quản lý Người dùng
             <span class="badge bg-secondary ms-2" style="font-size:0.75rem;font-weight:600;"><?= count($users) ?></span>
         </h2>
-        <a href="<?= site_url('admin') ?>" class="btn btn-light rounded-3 px-3" style="font-size:0.85rem;">
-            <i class="fas fa-arrow-left me-1"></i> Về Dashboard
-        </a>
+        <div class="d-flex gap-2 align-items-center">
+            <div class="btn-group" role="group" id="userStatusFilter">
+                <button type="button" class="btn btn-sm btn-outline-success rounded-start-3 fw-bold active" data-filter="active" style="font-size:0.8rem;padding:5px 16px;">
+                    <i class="fas fa-check-circle me-1" style="font-size:0.7rem;"></i>Đang hoạt động
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-danger rounded-end-3 fw-bold" data-filter="banned" style="font-size:0.8rem;padding:5px 16px;">
+                    <i class="fas fa-ban me-1" style="font-size:0.7rem;"></i>Bị chặn
+                </button>
+            </div>
+            <a href="<?= site_url('admin') ?>" class="btn btn-light rounded-3 px-3" style="font-size:0.85rem;">
+                <i class="fas fa-arrow-left me-1"></i> Về Dashboard
+            </a>
+        </div>
     </div>
 
     <div class="card border-0 rounded-4 shadow-sm overflow-hidden">
@@ -37,9 +47,9 @@
                         <th style="text-align:right;padding-right:16px;">Thao tác</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody id="usersTableBody">
                     <?php foreach($users as $u): ?>
-                    <tr>
+                    <tr data-banned="<?= !empty($u['is_banned']) ? '1' : '0' ?>">
                         <td style="padding:10px 16px;color:#9CA3AF;">#<?= $u['id'] ?></td>
                         <td>
                             <div class="d-flex align-items-center gap-2">
@@ -165,4 +175,31 @@
             </table>
         </div>
     </div>
+
+    <!-- JS Tab filter Hoạt động / Bị chặn -->
+    <script>
+    (function() {
+        function filterUsers(filter) {
+            document.querySelectorAll('#usersTableBody > tr').forEach(row => {
+                const isBanned = row.dataset.banned === '1';
+                if (filter === 'active') {
+                    row.style.display = isBanned ? 'none' : '';
+                } else {
+                    row.style.display = isBanned ? '' : 'none';
+                }
+            });
+        }
+
+        document.querySelectorAll('#userStatusFilter button').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('#userStatusFilter button').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                filterUsers(this.dataset.filter);
+            });
+        });
+
+        // Mặc định: Chỉ hiện người đang hoạt động
+        filterUsers('active');
+    })();
+    </script>
 </div>

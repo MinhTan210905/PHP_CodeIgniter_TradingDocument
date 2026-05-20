@@ -44,7 +44,13 @@ git clone https://github.com/nmdai679/PHP_CodeIgniter_TradingDocument.git
 1. Mở **XAMPP / phpMyAdmin** và tạo một database mới có tên: `hcmue_pass_sach`
 2. Chọn database vừa tạo, click **Import** và dẫn file `database.sql` (nằm ở thư mục gốc dự án) vào để khởi tạo toàn bộ cấu trúc bảng.
 
-### Bước 3: Thiết lập OTP Email (Vô cùng quan trọng)
+### Bước 3: Khởi tạo dữ liệu Ví điện tử HCMUEPay
+Mở Terminal/Command Prompt tại thư mục dự án và chạy lệnh sau để tự động tạo các bảng Ví điện tử và cấp phát ví cho người dùng hiện tại:
+```bash
+php migrate_wallet.php
+```
+
+### Bước 4: Thiết lập OTP Email & PayOS (Vô cùng quan trọng)
 Hệ thống sử dụng SMTP để gửi thư OTP xác thực:
 1. Tại thư mục gốc, tìm file `.env.example`.
 2. Sao chép và đổi tên thành `.env`.

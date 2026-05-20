@@ -23,7 +23,7 @@
                 <label class="form-label-hcmue mb-2">Chất lượng giao dịch</label>
                 <div class="star-picker d-flex justify-content-center gap-3" id="starPicker">
                     <?php for ($i = 1; $i <= 5; $i++): ?>
-                        <input type="radio" name="stars" id="star<?= $i ?>" value="<?= $i ?>" class="visually-hidden" required>
+                        <input type="radio" name="stars" id="star<?= $i ?>" value="<?= $i ?>" class="visually-hidden">
                         <label for="star<?= $i ?>" class="star-pick" data-val="<?= $i ?>">
                             <i class="far fa-star" style="font-size:2.2rem;cursor:pointer;color:#CBD5E1;transition:color 0.15s;"></i>
                         </label>
@@ -63,7 +63,7 @@ document.querySelectorAll('.star-pick').forEach((lbl, idx, all) => {
         document.getElementById('starLabel').textContent = starLabels[idx + 1];
     });
     lbl.addEventListener('mouseleave', () => {
-        const checked = document.querySelector('.star-pick input:checked');
+        const checked = document.querySelector('input[name="stars"]:checked');
         const val = checked ? parseInt(checked.value) - 1 : -1;
         all.forEach((l, i) => {
             l.querySelector('i').className = i <= val ? 'fas fa-star' : 'far fa-star';
@@ -72,12 +72,25 @@ document.querySelectorAll('.star-pick').forEach((lbl, idx, all) => {
         document.getElementById('starLabel').textContent = checked ? starLabels[val + 1] : '';
     });
     lbl.addEventListener('click', () => {
+        // Tự kích hoạt radio button tương ứng
+        const radio = document.getElementById('star' + lbl.getAttribute('data-val'));
+        if (radio) radio.checked = true;
+
         all.forEach((l, i) => {
             l.querySelector('i').className = i <= idx ? 'fas fa-star' : 'far fa-star';
             l.querySelector('i').style.color = i <= idx ? '#F5A623' : '#CBD5E1';
         });
         document.getElementById('starLabel').textContent = starLabels[idx + 1];
     });
+});
+
+// Xử lý gửi form kèm validate
+document.querySelector('form').addEventListener('submit', function(e) {
+    const checked = document.querySelector('input[name="stars"]:checked');
+    if (!checked) {
+        e.preventDefault();
+        alert('Vui lòng chọn số sao để đánh giá người bán!');
+    }
 });
 </script>
 <?php endif; ?>

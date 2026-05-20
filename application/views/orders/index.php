@@ -1,12 +1,14 @@
 <?php
 // Helper labels
 $status_labels = [
-    'pending'   => ['label' => 'Chờ xác nhận',   'class' => 'badge-pending',   'icon' => 'fa-hourglass-half'],
-    'confirmed' => ['label' => 'Đã xác nhận',     'class' => 'badge-confirmed', 'icon' => 'fa-handshake'],
-    'completed' => ['label' => 'Hoàn thành',       'class' => 'badge-completed', 'icon' => 'fa-check-circle'],
-    'disputed'  => ['label' => 'Tranh chấp',       'class' => 'badge-disputed',  'icon' => 'fa-exclamation-triangle'],
-    'rejected'  => ['label' => 'Đã từ chối',       'class' => 'badge-rejected',  'icon' => 'fa-times-circle'],
-    'cancelled' => ['label' => 'Đã hủy',           'class' => 'badge-cancelled', 'icon' => 'fa-ban'],
+    'pending'    => ['label' => 'Chờ xác nhận',     'class' => 'badge-pending',   'icon' => 'fa-hourglass-half'],
+    'confirmed'  => ['label' => 'Đã xác nhận',      'class' => 'badge-confirmed', 'icon' => 'fa-handshake'],
+    'processing' => ['label' => 'Đang xử lý',       'class' => 'badge-confirmed', 'icon' => 'fa-truck-loading'],
+    'delivering' => ['label' => 'Đang giao',        'class' => 'badge-confirmed', 'icon' => 'fa-motorcycle'],
+    'completed'  => ['label' => 'Hoàn thành',       'class' => 'badge-completed', 'icon' => 'fa-check-circle'],
+    'disputed'   => ['label' => 'Tranh chấp',       'class' => 'badge-disputed',  'icon' => 'fa-exclamation-triangle'],
+    'rejected'   => ['label' => 'Đã từ chối',       'class' => 'badge-rejected',  'icon' => 'fa-times-circle'],
+    'cancelled'  => ['label' => 'Đã hủy',           'class' => 'badge-cancelled', 'icon' => 'fa-ban'],
 ];
 $active_tab = $active_tab ?? 'buy';
 ?>
@@ -61,6 +63,11 @@ $active_tab = $active_tab ?? 'buy';
 
     <!-- Tab Mua -->
     <div id="tab-buy" class="<?= $active_tab !== 'buy' ? 'd-none' : '' ?>">
+        <div class="d-flex mb-3">
+            <button class="btn btn-sm btn-primary-hcmue rounded-pill me-2 buy-sub-btn active" onclick="switchSubTab('buy', 'current')">Đơn hiện tại</button>
+            <button class="btn btn-sm btn-outline-secondary rounded-pill buy-sub-btn" onclick="switchSubTab('buy', 'past')">Đã mua / Đã hủy</button>
+        </div>
+
         <?php if (empty($orders_as_buyer)): ?>
             <div class="text-center py-5 text-muted">
                 <i class="fas fa-shopping-cart" style="font-size:3rem;color:#CBD5E1;"></i>
@@ -68,9 +75,16 @@ $active_tab = $active_tab ?? 'buy';
                 <a href="<?= site_url('trade') ?>" class="btn btn-primary-hcmue px-4">Khám phá sách ngay</a>
             </div>
         <?php else: ?>
+            <div id="buy-empty" class="text-center py-5 text-muted d-none">
+                <i class="fas fa-box-open" style="font-size:3rem;color:#CBD5E1;"></i>
+                <p class="mt-3">Không có đơn hàng nào trong mục này.</p>
+            </div>
             <?php foreach($orders_as_buyer as $o): ?>
-            <?php $sl = $status_labels[$o['status']] ?? $status_labels['cancelled']; ?>
-            <div class="order-card p-3">
+            <?php 
+                $sl = $status_labels[$o['status']] ?? $status_labels['cancelled']; 
+                $phase = in_array($o['status'], ['pending', 'confirmed', 'processing', 'delivering', 'disputed']) ? 'current' : 'past';
+            ?>
+            <div class="order-card p-3 buy-card" data-phase="<?= $phase ?>">
                 <div class="d-flex gap-3 align-items-start">
                     <!-- Ảnh -->
                     <?php
@@ -110,6 +124,15 @@ $active_tab = $active_tab ?? 'buy';
                                 <i class="fas fa-eye me-1"></i>Chi tiết
                             </a>
                             <?php if ($o['status'] === 'confirmed'): ?>
+                                <a href="<?= site_url('orders/checkout/' . $o['id']) ?>"
+                                   class="btn btn-sm btn-primary-hcmue rounded-3 fw-bold" style="font-size:0.78rem;">
+                                    <i class="fas fa-wallet me-1"></i>Thanh toán / Chọn PTTT
+                                </a>
+                            <?php elseif ($o['status'] === 'processing'): ?>
+                                <span class="btn btn-sm btn-outline-secondary rounded-3 disabled" style="font-size:0.78rem;">
+                                    <i class="fas fa-hourglass-half me-1"></i>Chờ giao hàng
+                                </span>
+                            <?php elseif ($o['status'] === 'delivering'): ?>
                                 <a href="<?= site_url('orders/received/' . $o['id']) ?>"
                                    class="btn btn-sm btn-success rounded-3 fw-bold" style="font-size:0.78rem;"
                                    onclick="return confirm('Xác nhận đã nhận sách?');">
@@ -170,15 +193,27 @@ $active_tab = $active_tab ?? 'buy';
 
     <!-- Tab Bán -->
     <div id="tab-sell" class="<?= $active_tab !== 'sell' ? 'd-none' : '' ?>">
+        <div class="d-flex mb-3">
+            <button class="btn btn-sm btn-primary-hcmue rounded-pill me-2 sell-sub-btn active" onclick="switchSubTab('sell', 'current')">Đang giao dịch</button>
+            <button class="btn btn-sm btn-outline-secondary rounded-pill sell-sub-btn" onclick="switchSubTab('sell', 'past')">Đã hoàn thành / Hủy</button>
+        </div>
+
         <?php if (empty($orders_as_seller)): ?>
             <div class="text-center py-5 text-muted">
                 <i class="fas fa-store" style="font-size:3rem;color:#CBD5E1;"></i>
                 <p class="mt-3">Bạn chưa có đơn bán nào.</p>
             </div>
         <?php else: ?>
+            <div id="sell-empty" class="text-center py-5 text-muted d-none">
+                <i class="fas fa-box-open" style="font-size:3rem;color:#CBD5E1;"></i>
+                <p class="mt-3">Không có đơn hàng nào trong mục này.</p>
+            </div>
             <?php foreach($orders_as_seller as $o): ?>
-            <?php $sl = $status_labels[$o['status']] ?? $status_labels['cancelled']; ?>
-            <div class="order-card p-3">
+            <?php 
+                $sl = $status_labels[$o['status']] ?? $status_labels['cancelled']; 
+                $phase = in_array($o['status'], ['pending', 'confirmed', 'processing', 'delivering', 'disputed']) ? 'current' : 'past';
+            ?>
+            <div class="order-card p-3 sell-card" data-phase="<?= $phase ?>">
                 <div class="d-flex gap-3 align-items-start">
                     <?php
                         $img_src = (!empty($o['image_url']) && file_exists(FCPATH . $o['image_url']))
@@ -226,11 +261,28 @@ $active_tab = $active_tab ?? 'buy';
                                 </button>
                             <?php endif; ?>
                             <?php if ($o['status'] === 'confirmed'): ?>
+                                <span class="text-warning fw-bold d-inline-flex align-items-center" style="font-size:0.78rem;background:#FFFBEB;padding:4px 10px;border-radius:6px;border:1px solid #FEF3C7;">
+                                    <i class="fas fa-hourglass-half me-1"></i>Chờ người mua thanh toán/chọn PTTT
+                                </span>
                                 <a href="<?= site_url('orders/cancel/' . $o['id']) ?>"
-                                   class="btn btn-sm btn-outline-secondary rounded-3" style="font-size:0.78rem;"
+                                   class="btn btn-sm btn-outline-secondary rounded-3 ms-2" style="font-size:0.78rem;"
                                    onclick="return confirm('Hủy đơn hàng này?');">
                                     <i class="fas fa-ban me-1"></i>Hủy
                                 </a>
+                            <?php elseif ($o['status'] === 'processing'): ?>
+                                <a href="<?= site_url('orders/detail/' . $o['id']) ?>"
+                                   class="btn btn-sm btn-success rounded-3 fw-bold" style="font-size:0.78rem;">
+                                    <i class="fas fa-camera me-1"></i>Đã giao sách (Tải minh chứng)
+                                </a>
+                                <a href="<?= site_url('orders/cancel/' . $o['id']) ?>"
+                                   class="btn btn-sm btn-outline-secondary rounded-3 ms-2" style="font-size:0.78rem;"
+                                   onclick="return confirm('Hủy đơn hàng này?');">
+                                    <i class="fas fa-ban me-1"></i>Hủy
+                                </a>
+                            <?php elseif ($o['status'] === 'delivering'): ?>
+                                <span class="text-success fw-bold d-inline-flex align-items-center" style="font-size:0.78rem;background:#F0FDF4;padding:4px 10px;border-radius:6px;border:1px solid #D1FAE5;">
+                                    <i class="fas fa-box me-1"></i>Chờ người mua nhận hàng
+                                </span>
                             <?php endif; ?>
                             <a href="<?= site_url('message/conversation/' . $o['buyer_id']) ?>"
                                class="btn btn-sm btn-primary-hcmue rounded-3" style="font-size:0.78rem;">
@@ -277,4 +329,45 @@ function switchTab(tab) {
     });
     history.replaceState(null, '', '?tab=' + tab);
 }
+
+function switchSubTab(mainTab, phase) {
+    const cards = document.querySelectorAll(`.${mainTab}-card`);
+    const emptyMsg = document.getElementById(`${mainTab}-empty`);
+    let visibleCount = 0;
+
+    cards.forEach(card => {
+        if (card.dataset.phase === phase) {
+            card.classList.remove('d-none');
+            visibleCount++;
+        } else {
+            card.classList.add('d-none');
+        }
+    });
+
+    if (emptyMsg) {
+        if (visibleCount === 0 && cards.length > 0) {
+            emptyMsg.classList.remove('d-none');
+        } else {
+            emptyMsg.classList.add('d-none');
+        }
+    }
+
+    // Toggle button active state
+    document.querySelectorAll(`.${mainTab}-sub-btn`).forEach(btn => {
+        btn.classList.remove('btn-primary-hcmue');
+        btn.classList.add('btn-outline-secondary');
+    });
+
+    const activeBtn = event ? event.currentTarget : document.querySelector(`.${mainTab}-sub-btn`);
+    if (activeBtn) {
+        activeBtn.classList.remove('btn-outline-secondary');
+        activeBtn.classList.add('btn-primary-hcmue');
+    }
+}
+
+// Chạy khởi tạo lọc sub-tab mặc định
+document.addEventListener('DOMContentLoaded', () => {
+    switchSubTab('buy', 'current');
+    switchSubTab('sell', 'current');
+});
 </script>

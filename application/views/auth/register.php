@@ -241,9 +241,15 @@
 
             <div class="mb-3">
                 <label class="form-label">Email sinh viên *</label>
-                <div class="input-wrap">
-                    <i class="fas fa-envelope input-icon"></i>
-                    <input type="email" class="form-control" name="email" required placeholder="nva@student.hcmue.edu.vn">
+                <div class="input-group">
+                    <span class="input-group-text" style="background:#FAFBFC; border: 1.5px solid var(--border); border-right: none; border-radius: 11px 0 0 11px; color: var(--text-muted); font-size: 13px; display: flex; align-items: center; justify-content: center; width: 38px;">
+                        <i class="fas fa-envelope"></i>
+                    </span>
+                    <input type="text" class="form-control" name="email_prefix" required placeholder="VD: 47.01.104.089" 
+                           style="border-radius: 0; border-left: none; border-right: none; padding-left: 8px; background:#FAFBFC; height: auto;">
+                    <span class="input-group-text fw-bold" style="background:#EFF6FF; border: 1.5px solid var(--border); border-left: none; border-radius: 0 11px 11px 0; font-size: 0.83rem; color: var(--primary-mid); display: flex; align-items: center;">
+                        @student.hcmue.edu.vn
+                    </span>
                 </div>
             </div>
 

@@ -98,4 +98,18 @@ class Order_model extends CI_Model {
                         ->where('status', 'completed')
                         ->count_all_results('orders');
     }
+    // [ADMIN] Lấy tất cả đơn hoàn thành (để kiểm duyệt thanh toán)
+    public function get_completed_orders() {
+        $this->db->select('orders.*, 
+            posts.title as post_title, posts.image_url, posts.price,
+            seller.full_name as seller_name, seller.username as seller_username,
+            buyer.full_name  as buyer_name,  buyer.username  as buyer_username');
+        $this->db->from('orders');
+        $this->db->join('posts',       'posts.id    = orders.post_id',   'left');
+        $this->db->join('users seller','seller.id   = orders.seller_id', 'left');
+        $this->db->join('users buyer', 'buyer.id    = orders.buyer_id',  'left');
+        $this->db->where('orders.status', 'completed');
+        $this->db->order_by('orders.updated_at', 'DESC');
+        return $this->db->get()->result_array();
+    }
 }

@@ -195,8 +195,11 @@
     const API_URL = '<?= site_url("api/posts/search") ?>';
     const BASE_URL = '<?= base_url() ?>';
     const DETAIL_URL = '<?= site_url("trade/detail/") ?>';
+    const EDIT_URL = '<?= site_url("trade/edit/") ?>';
     const MSG_URL = '<?= site_url("message/conversation/") ?>';
     const DEFAULT_IMG = '<?= base_url("assets/images/default_book.jpg") ?>';
+    const IS_ADMIN = <?= ($this->session->userdata('role') === 'admin') ? 'true' : 'false' ?>;
+    const CUR_UID = '<?= $this->session->userdata('user_id') ?? '' ?>';
 
     // =========================================================
     // Hàm gọi API và render kết quả
@@ -258,7 +261,7 @@
                                     '<span class="badge-cat"><i class="' + (post.cat_icon || 'fas fa-book') + '"></i> ' + (post.category_name || '') + '</span>' +
                                     (isSold
                                         ? '<span class="status-badge-sold"><i class="fas fa-lock" style="font-size:10px"></i> Đã Pass</span>'
-                                        : '<span class="status-badge-avail"><i class="fas fa-circle" style="font-size:6px"></i> Còn sách</span>') +
+                                        : '<span class="status-badge-avail"><i class="fas fa-circle" style="font-size:6px"></i> Còn ' + post.quantity + ' cuốn</span>') +
                                 '</div>' +
                                 '<a href="' + DETAIL_URL + post.id + '" class="text-decoration-none text-dark fw-bold mb-1"' +
                                    ' style="font-size:0.92rem;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.4;">' +
@@ -276,9 +279,16 @@
                                 '<hr class="my-2" style="border-color:#F1F5F9;">' +
                                 '<div class="d-flex align-items-center justify-content-between gap-1 flex-wrap">' +
                                     '<span class="price-tag">' + price + '</span>' +
-                                    '<a href="' + MSG_URL + post.user_id + '" class="btn btn-sm btn-primary-hcmue rounded-3" style="font-size:0.75rem;" title="Nhắn tin">' +
-                                        '<i class="fas fa-comment"></i>' +
-                                    '</a>' +
+                                    '<div class="d-flex align-items-center gap-1">' +
+                                        ((IS_ADMIN || String(post.user_id) === CUR_UID)
+                                            ? '<a href="' + EDIT_URL + post.id + '" class="btn btn-sm btn-outline-secondary rounded-3" style="font-size:0.72rem;padding:3px 7px;" title="Chỉnh sửa">' +
+                                                  '<i class="fas fa-pen"></i>' +
+                                              '</a>'
+                                            : '') +
+                                        '<a href="' + MSG_URL + post.user_id + '" class="btn btn-sm btn-primary-hcmue rounded-3" style="font-size:0.75rem;" title="Nhắn tin">' +
+                                            '<i class="fas fa-comment"></i>' +
+                                        '</a>' +
+                                    '</div>' +
                                 '</div>' +
                                 '<div class="d-flex gap-3 mt-2" style="font-size:0.74rem;color:#9CA3AF;">' +
                                     '<span><i class="far fa-clock me-1"></i>' + date + '</span>' +

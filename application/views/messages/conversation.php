@@ -47,23 +47,28 @@
                 <?php 
                 $is_mine = ($msg['sender_id'] == $cur_uid); 
                 
-                // PARSE TỰ ĐỘNG: Lọc link Đơn hàng để làm giao diện gọn đẹp
+                // PARSE TỰ ĐỘNG: Lọc link Đơn hàng/Đánh giá để làm giao diện gọn đẹp
                 $content = $msg['content'];
-                $has_order_link = preg_match('/https?:\/\/[^\s]+orders\/detail\/(\d+)/i', $content, $matches);
-                $order_id = $has_order_link ? $matches[1] : null;
+                $has_order_link = preg_match('/https?:\/\/[^\s]+orders\/(detail|rate)\/(\d+)/i', $content, $matches);
                 
+                $order_action_type = null;
+                $order_id = null;
                 if ($has_order_link) {
+                    $order_action_type = strtolower($matches[1]); // 'detail' hoặc 'rate'
+                    $order_id = $matches[2];
+                    
                     // Xoá bỏ hoàn toàn chuỗi URL thô để giao diện sạch đẹp
                     $content = preg_replace('/https?:\/\/[^\s]+/i', '', $content);
                     // Làm sạch các tiền tố thừa thãi
                     $content = str_replace('Vào trang Đơn hàng để xác nhận:', '', $content);
                     $content = str_replace('Hãy liên hệ để hẹn giao nhận sách nhé! Xem chi tiết:', '', $content);
                     $content = str_replace('Xem chi tiết:', '', $content);
+                    $content = str_replace('Hãy để lại đánh giá cho người bán nhé:', '', $content);
                     $content = trim($content);
                 }
                 ?>
                 <div style="display:flex;flex-direction:column;align-items:<?= $is_mine ? 'flex-end' : 'flex-start' ?>;">
-                    <div style="
+                     <div style="
                         max-width:72%;
                         background:<?= $is_mine ? 'var(--hcmue-blue)' : '#fff' ?>;
                         color:<?= $is_mine ? '#fff' : '#1A1A2E' ?>;
@@ -79,14 +84,25 @@
                         <!-- Nếu có mã Đơn hàng đi kèm, vẽ Nút hành động cực đẹp -->
                         <?php if ($order_id): ?>
                             <div class="mt-2 pt-2 border-top" style="border-color:rgba(255,255,255,0.2) !important;">
-                                <a href="<?= site_url('orders/detail/' . $order_id) ?>" 
-                                   class="btn btn-sm w-100 rounded-3 fw-bold py-1"
-                                   style="background:<?= $is_mine ? '#fff' : 'var(--hcmue-blue)' ?>; 
-                                          color:<?= $is_mine ? 'var(--hcmue-blue)' : '#fff' ?>; 
-                                          font-size:0.78rem; 
-                                          border:1px solid rgba(0,0,0,0.05);">
-                                    <i class="fas fa-shopping-bag me-1"></i> Xem chi tiết Đơn hàng
-                                </a>
+                                <?php if ($order_action_type === 'rate'): ?>
+                                    <a href="<?= site_url('orders/rate/' . $order_id) ?>" 
+                                       class="btn btn-sm w-100 rounded-3 fw-bold py-1.5 text-white"
+                                       style="background: linear-gradient(135deg, #F59E0B, #D97706); 
+                                              font-size:0.78rem; 
+                                              border: none;
+                                              box-shadow: var(--shadow-sm);">
+                                        <i class="fas fa-star me-1"></i> Đánh giá người bán ngay
+                                    </a>
+                                <?php else: ?>
+                                    <a href="<?= site_url('orders/detail/' . $order_id) ?>" 
+                                       class="btn btn-sm w-100 rounded-3 fw-bold py-1"
+                                       style="background:<?= $is_mine ? '#fff' : 'var(--hcmue-blue)' ?>; 
+                                              color:<?= $is_mine ? 'var(--hcmue-blue)' : '#fff' ?>; 
+                                              font-size:0.78rem; 
+                                              border:1px solid rgba(0,0,0,0.05);">
+                                        <i class="fas fa-shopping-bag me-1"></i> Xem chi tiết Đơn hàng
+                                    </a>
+                                <?php endif; ?>
                             </div>
                         <?php endif; ?>
                     </div>
@@ -121,10 +137,13 @@
 const chatBox = document.getElementById('chatBox');
 if (chatBox) chatBox.scrollTop = chatBox.scrollHeight;
 
-// Ctrl+Enter gửi form
+// Nhấn Enter để gửi (trừ khi giữ Shift thì xuống dòng)
 document.getElementById('msgInput').addEventListener('keydown', function(e) {
-    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-        this.form.submit();
+    if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault(); // Ngăn xuống dòng
+        if (this.value.trim() !== '') {
+            this.form.submit();
+        }
     }
 });
 </script>

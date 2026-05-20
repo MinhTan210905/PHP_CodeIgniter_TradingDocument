@@ -126,9 +126,20 @@ if (!isset($categories) || empty($categories)) {
                             </a>
                         </li>
                         <?php if ($this->session->userdata('role') === 'admin'): ?>
+                        <?php 
+                            $CI =& get_instance();
+                            $CI->load->model('Trade_model');
+                            $CI->load->model('Wallet_model');
+                            $admin_pending_posts = $CI->Trade_model->count_pending();
+                            $admin_pending_withdraw = $CI->Wallet_model->count_pending_withdrawals();
+                            $admin_total_pending = $admin_pending_posts + $admin_pending_withdraw;
+                        ?>
                         <li>
                             <a class="dropdown-item py-2" href="<?= site_url('admin') ?>">
                                 <i class="fas fa-cog me-2 text-warning"></i>Quản trị Admin
+                                <?php if($admin_total_pending > 0): ?>
+                                    <span class="badge bg-danger ms-1" style="font-size:0.7rem;"><?= $admin_total_pending ?></span>
+                                <?php endif; ?>
                             </a>
                         </li>
                         <?php endif; ?>
@@ -141,11 +152,11 @@ if (!isset($categories) || empty($categories)) {
                     </ul>
                 </div>
             <?php else: ?>
-                <a href="<?= site_url('auth/register') ?>" class="btn-dang-bai text-decoration-none">
-                    <i class="fas fa-user-plus"></i> Đăng ký
+                <a href="<?= site_url('auth') ?>" class="btn text-white fw-bold px-3" style="font-size:0.85rem;">
+                    Đăng nhập
                 </a>
-                <a href="<?= site_url('auth') ?>" class="nav-icon-btn" title="Đăng nhập">
-                    <i class="fas fa-sign-in-alt"></i>
+                <a href="<?= site_url('auth/register') ?>" class="btn-dang-bai text-decoration-none">
+                    Đăng ký
                 </a>
             <?php endif; ?>
         </div>

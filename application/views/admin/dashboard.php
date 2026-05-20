@@ -16,6 +16,14 @@
             <span class="text-muted" style="font-size:0.8rem;">HCMUE Pass Sách</span>
         </div>
         <div class="ms-auto d-flex gap-2">
+            <a href="<?= site_url('admin/payments') ?>" class="btn rounded-3 fw-bold text-white position-relative" style="font-size:0.85rem;background:linear-gradient(135deg,#10B981,#059669);">
+                <i class="fas fa-money-check-alt me-1"></i> Kiểm duyệt Thanh toán
+                <?php if (isset($total_withdrawals) && $total_withdrawals > 0): ?>
+                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                        <?= $total_withdrawals ?>
+                    </span>
+                <?php endif; ?>
+            </a>
             <a href="<?= site_url('admin/users') ?>" class="btn btn-primary-hcmue rounded-3 fw-bold" style="font-size:0.85rem;">
                 <i class="fas fa-users me-1"></i> Quản lý Người dùng
             </a>
@@ -172,13 +180,26 @@
 
     <!-- ===== BẢNG BÀI ĐÃ DUYỆT ===== -->
     <div class="card border-0 rounded-4 shadow-sm overflow-hidden">
-        <div class="p-3 px-4 border-bottom d-flex align-items-center justify-content-between">
+        <div class="p-3 px-4 border-bottom d-flex align-items-center justify-content-between flex-wrap gap-2">
             <h6 class="mb-0 fw-bold" style="color:var(--hcmue-blue);">
                 <i class="fas fa-list me-2"></i>Bài đã được duyệt (<?= count($recent_posts) ?>)
             </h6>
-            <a href="<?= site_url('admin/users') ?>" class="btn btn-sm btn-outline-hcmue rounded-3" style="font-size:0.8rem;">
-                <i class="fas fa-users me-1"></i> Người dùng
-            </a>
+            <div class="d-flex gap-2 align-items-center">
+                <div class="btn-group" role="group" id="postStatusFilter">
+                    <button type="button" class="btn btn-sm btn-outline-primary rounded-start-3 fw-bold active" data-filter="all" style="font-size:0.78rem;padding:4px 14px;">
+                        Tất cả
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-success fw-bold" data-filter="available" style="font-size:0.78rem;padding:4px 14px;">
+                        <i class="fas fa-circle me-1" style="font-size:5px;vertical-align:middle;"></i>Đang rao
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary rounded-end-3 fw-bold" data-filter="sold" style="font-size:0.78rem;padding:4px 14px;">
+                        <i class="fas fa-lock me-1" style="font-size:10px;"></i>Đã Pass
+                    </button>
+                </div>
+                <a href="<?= site_url('admin/users') ?>" class="btn btn-sm btn-outline-hcmue rounded-3" style="font-size:0.8rem;">
+                    <i class="fas fa-users me-1"></i> Người dùng
+                </a>
+            </div>
         </div>
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0" style="font-size:0.84rem;">
@@ -192,9 +213,9 @@
                         <th></th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody id="approvedPostsBody">
                     <?php foreach($recent_posts as $p): ?>
-                    <tr>
+                    <tr data-status="<?= $p['status'] ?>">
                         <td style="padding:10px 16px;">
                             <a href="<?= site_url('trade/detail/'.$p['id']) ?>"
                                class="text-decoration-none fw-semibold text-dark"
@@ -213,12 +234,19 @@
                         </td>
                         <td class="text-muted" style="font-size:0.77rem;"><?= date('d/m/Y', strtotime($p['created_at'])) ?></td>
                         <td>
-                            <a href="<?= site_url('admin/delete_post/'.$p['id']) ?>"
-                               class="btn btn-sm btn-outline-danger rounded-2"
-                               onclick="return confirm('Xóa bài đăng này?');"
-                               style="font-size:0.75rem;padding:4px 10px;">
-                                <i class="fas fa-trash"></i>
-                            </a>
+                            <div class="d-flex gap-1 justify-content-end">
+                                <a href="<?= site_url('trade/edit/'.$p['id']) ?>"
+                                   class="btn btn-sm btn-outline-primary rounded-2"
+                                   style="font-size:0.75rem;padding:4px 10px;" title="Chỉnh sửa">
+                                    <i class="fas fa-pen"></i>
+                                </a>
+                                <a href="<?= site_url('admin/delete_post/'.$p['id']) ?>"
+                                   class="btn btn-sm btn-outline-danger rounded-2"
+                                   onclick="return confirm('Xóa bài đăng này?');"
+                                   style="font-size:0.75rem;padding:4px 10px;">
+                                    <i class="fas fa-trash"></i>
+                                </a>
+                            </div>
                         </td>
                     </tr>
                     <?php endforeach; ?>
@@ -226,5 +254,19 @@
             </table>
         </div>
     </div>
+
+    <!-- JS Lọc tab Đang rao / Đã Pass -->
+    <script>
+    document.querySelectorAll('#postStatusFilter button').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('#postStatusFilter button').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            const filter = this.dataset.filter;
+            document.querySelectorAll('#approvedPostsBody tr').forEach(row => {
+                row.style.display = (filter === 'all' || row.dataset.status === filter) ? '' : 'none';
+            });
+        });
+    });
+    </script>
 
 </div>

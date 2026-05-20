@@ -110,7 +110,7 @@
                 <div class="d-flex gap-2 mb-3 flex-wrap">
                     <span class="badge-cat"><i class="fas fa-tag"></i> <?= $post['category_name'] ?></span>
                     <?php if($post['status'] === 'available'): ?>
-                        <span class="status-badge-avail"><i class="fas fa-circle" style="font-size:6px;"></i> Còn Sách</span>
+                        <span class="status-badge-avail"><i class="fas fa-circle" style="font-size:6px;"></i> Còn <?= $post['quantity'] ?> cuốn</span>
                     <?php else: ?>
                         <span class="status-badge-sold"><i class="fas fa-lock" style="font-size:10px;"></i> Đã Pass</span>
                     <?php endif; ?>
@@ -176,8 +176,8 @@
                           class="p-3 rounded-4 mb-3" style="background:#F0F7FF;border:1.5px solid #DBEAFE;">
                         <div class="fw-bold mb-2" style="font-size:0.88rem;color:var(--primary);"><i class="fas fa-shopping-bag me-1"></i>Yêu cầu mua sách</div>
                         <div class="d-flex gap-2 mb-2">
-                            <div style="flex:0 0 120px;">
-                                <label class="form-label-hcmue">Số lượng</label>
+                            <div style="flex:0 0 140px;">
+                                <label class="form-label-hcmue">Số lượng (Kho: <?= $post['quantity'] ?>)</label>
                                 <input type="number" name="quantity" min="1" max="<?= $post['quantity'] ?>" value="1"
                                        class="form-control form-control-hcmue text-center" style="font-weight:700;">
                             </div>
@@ -242,20 +242,98 @@
         </div>
     </div>
 
-    <!-- ===== ĐÁNH GIÁ NGƯỜI BÁN ===== -->
-    <?php $is_own = ($logged_in && $post['seller_id'] == $cur_uid); ?>
-    <?php if ($logged_in && !$is_own): ?>
+    <!-- ===== ĐÁNH GIÁ SẢN PHẨM (SHOPEE-STYLE) ===== -->
     <div class="card border-0 rounded-4 shadow-sm p-4 mb-4">
         <h5 class="fw-bold mb-3" style="color:var(--primary);">
-            <i class="fas fa-star me-2" style="color:var(--accent);"></i>Đánh giá người bán
+            <i class="fas fa-star me-2" style="color:var(--accent);"></i>Đánh giá sản phẩm
         </h5>
-        <div class="alert border-0 rounded-3" style="background:#F0F7FF;color:var(--primary);font-size:0.88rem;">
-            <i class="fas fa-info-circle me-2"></i>
-            Đánh giá chỉ dành cho người đã mua và xác nhận nhận sách.
-            <a href="<?= site_url('orders?tab=buy') ?>" class="ms-1 fw-bold" style="color:var(--primary);">Xem đơn mua của bạn →</a>
-        </div>
+
+        <?php
+        $stats = isset($post_rating_stats) ? $post_rating_stats : ['avg' => 0, 'total' => 0];
+        $reviews = isset($post_reviews) ? $post_reviews : [];
+        ?>
+
+        <?php if ($stats['total'] > 0): ?>
+            <!-- Tổng quan đánh giá -->
+            <div class="d-flex align-items-center gap-4 p-3 mb-3 rounded-3" style="background:#FFFBEB;">
+                <div class="text-center" style="min-width:100px;">
+                    <div style="font-size:2.5rem;font-weight:900;color:var(--accent);line-height:1;">
+                        <?= $stats['avg'] ?>
+                    </div>
+                    <div class="star-display mt-1">
+                        <?php for ($i = 1; $i <= 5; $i++): ?>
+                            <i class="<?= $i <= round($stats['avg']) ? 'fas' : 'far' ?> fa-star" style="font-size:1rem;"></i>
+                        <?php endfor; ?>
+                    </div>
+                    <div class="text-muted mt-1" style="font-size:0.78rem;"><?= $stats['total'] ?> đánh giá</div>
+                </div>
+                <div class="flex-grow-1" style="font-size:0.82rem;">
+                    <?php for ($s = 5; $s >= 1; $s--):
+                        $count = 0;
+                        foreach ($reviews as $r) { if ((int)$r['stars'] === $s) $count++; }
+                        $pct = $stats['total'] > 0 ? round(($count / $stats['total']) * 100) : 0;
+                    ?>
+                    <div class="d-flex align-items-center gap-2 mb-1">
+                        <span style="width:18px;text-align:right;font-weight:600;"><?= $s ?></span>
+                        <i class="fas fa-star" style="color:var(--accent);font-size:0.7rem;"></i>
+                        <div class="flex-grow-1" style="height:8px;background:#F1F5F9;border-radius:4px;overflow:hidden;">
+                            <div style="width:<?= $pct ?>%;height:100%;background:var(--accent);border-radius:4px;transition:width 0.3s;"></div>
+                        </div>
+                        <span class="text-muted" style="width:30px;font-size:0.75rem;"><?= $count ?></span>
+                    </div>
+                    <?php endfor; ?>
+                </div>
+            </div>
+
+            <!-- Danh sách đánh giá từng người mua -->
+            <div class="d-flex flex-column gap-3">
+                <?php foreach ($reviews as $rev): ?>
+                <div class="d-flex gap-3 p-3 rounded-3" style="background:#FAFBFC;">
+                    <div style="width:38px;height:38px;background:var(--primary);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#F5A623;font-weight:700;font-size:0.85rem;flex-shrink:0;">
+                        <?= strtoupper(mb_substr($rev['full_name'] ?: $rev['username'], 0, 1)) ?>
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="d-flex align-items-center gap-2 mb-1">
+                            <span class="fw-bold" style="font-size:0.85rem;color:var(--primary);">
+                                <?= htmlspecialchars($rev['full_name'] ?: $rev['username']) ?>
+                            </span>
+                            <span class="text-muted" style="font-size:0.72rem;">
+                                <i class="far fa-clock me-1"></i><?= date('d/m/Y H:i', strtotime($rev['created_at'])) ?>
+                            </span>
+                        </div>
+                        <div class="star-display mb-1">
+                            <?php for ($i = 1; $i <= 5; $i++): ?>
+                                <i class="<?= $i <= (int)$rev['stars'] ? 'fas' : 'far' ?> fa-star" style="font-size:0.8rem;"></i>
+                            <?php endfor; ?>
+                        </div>
+                        <?php if (!empty($rev['comment'])): ?>
+                            <p class="mb-0" style="font-size:0.86rem;line-height:1.6;color:#374151;">
+                                <?= nl2br(htmlspecialchars($rev['comment'])) ?>
+                            </p>
+                        <?php endif; ?>
+                    </div>
+                </div>
+                <?php endforeach; ?>
+            </div>
+
+        <?php else: ?>
+            <div class="text-center py-3">
+                <i class="far fa-star" style="font-size:2rem;color:#CBD5E1;"></i>
+                <p class="text-muted mt-2 mb-0" style="font-size:0.88rem;">
+                    Chưa có đánh giá nào cho sản phẩm này.
+                </p>
+            </div>
+        <?php endif; ?>
+
+        <?php $is_own = ($logged_in && $post['seller_id'] == $cur_uid); ?>
+        <?php if ($logged_in && !$is_own): ?>
+            <div class="alert border-0 rounded-3 mt-3 mb-0" style="background:#F0F7FF;color:var(--primary);font-size:0.85rem;">
+                <i class="fas fa-info-circle me-2"></i>
+                Bạn cần mua và xác nhận nhận sách để được đánh giá.
+                <a href="<?= site_url('orders?tab=buy') ?>" class="ms-1 fw-bold" style="color:var(--primary);">Xem đơn mua →</a>
+            </div>
+        <?php endif; ?>
     </div>
-    <?php endif; ?>
 
 
     <!-- ===== BÌNH LUẬN ===== -->

@@ -51,4 +51,26 @@ class Rating_model extends CI_Model {
         $this->db->order_by('ratings.created_at', 'DESC');
         return $this->db->get()->result_array();
     }
+
+    // Lấy danh sách đánh giá theo bài đăng (Shopee-style: hiện trên trang sản phẩm)
+    public function get_ratings_for_post($post_id) {
+        $this->db->select('ratings.*, users.username, users.full_name, users.avatar');
+        $this->db->from('ratings');
+        $this->db->join('users', 'users.id = ratings.reviewer_id', 'left');
+        $this->db->where('ratings.post_id', $post_id);
+        $this->db->order_by('ratings.created_at', 'DESC');
+        return $this->db->get()->result_array();
+    }
+
+    // Lấy điểm trung bình đánh giá theo bài đăng
+    public function get_avg_rating_for_post($post_id) {
+        $this->db->select_avg('stars', 'avg_stars');
+        $this->db->select('COUNT(id) as total_ratings');
+        $this->db->where('post_id', $post_id);
+        $result = $this->db->get('ratings')->row_array();
+        return [
+            'avg'   => $result['avg_stars'] ? round($result['avg_stars'], 1) : 0,
+            'total' => $result['total_ratings']
+        ];
+    }
 }

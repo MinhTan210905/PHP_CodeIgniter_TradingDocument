@@ -286,6 +286,19 @@ class Wallet_model extends CI_Model {
     }
 
     /**
+     * Admin: Lấy lịch sử yêu cầu rút tiền đã xử lý (approved, rejected)
+     */
+    public function get_all_processed_withdrawals($limit = 50) {
+        $this->db->select('hcmuepay_withdraw_requests.*, users.full_name, users.email');
+        $this->db->from('hcmuepay_withdraw_requests');
+        $this->db->join('users', 'users.id = hcmuepay_withdraw_requests.user_id', 'left');
+        $this->db->where('hcmuepay_withdraw_requests.status !=', 'pending');
+        $this->db->order_by('hcmuepay_withdraw_requests.processed_at', 'DESC');
+        $this->db->limit($limit);
+        return $this->db->get()->result_array();
+    }
+
+    /**
      * Admin: Duyệt yêu cầu rút tiền
      */
     public function approve_withdrawal($id) {

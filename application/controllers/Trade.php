@@ -72,6 +72,8 @@ class Trade extends CI_Controller {
         }
 
         $data['has_rated'] = FALSE;
+        $data['post_reviews'] = $this->Rating_model->get_ratings_for_post($id);
+        $data['post_rating_stats'] = $this->Rating_model->get_avg_rating_for_post($id);
         if ($this->session->userdata('logged_in')) {
             $uid = $this->session->userdata('user_id');
             $data['has_rated']     = $this->Rating_model->has_rated($uid, $id);
@@ -294,11 +296,20 @@ class Trade extends CI_Controller {
             'quantity'    => $quantity
         ];
 
+        // Kiểm tra xem có thay đổi thông tin nhạy cảm (tiêu đề, mô tả, ảnh) không
+        $sensitive_changed = false;
+        if ($post['title'] !== $title || $post['description'] !== $update_data['description']) {
+            $sensitive_changed = true;
+        }
+        if (!empty($_FILES['image']['name']) || !empty($_FILES['additional_images']['name'][0])) {
+            $sensitive_changed = true;
+        }
+
         // Check and re-approve reset logic
         $auto_approve_edit = ($this->Setting_model->get('auto_approve_edit') === '1');
         $was_pending = false;
 
-        if ($role !== 'admin' && !$auto_approve_edit) {
+        if ($role !== 'admin' && !$auto_approve_edit && $sensitive_changed) {
             $update_data['status'] = 'pending';
             $was_pending = true;
         }

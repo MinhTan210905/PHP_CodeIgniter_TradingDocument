@@ -95,6 +95,19 @@ class Auth extends CI_Controller {
             return;
         }
 
+        // Làm sạch và lọc bỏ đuôi nếu người dùng cố tình nhập cả email
+        $email_prefix = trim($email);
+        $email_prefix = str_ireplace('@student.hcmue.edu.vn', '', $email_prefix);
+
+        // Tạo email hoàn chỉnh
+        $email = $email_prefix . '@student.hcmue.edu.vn';
+
+        // Kiểm tra định dạng email hoàn chỉnh
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $this->session->set_flashdata('error', 'Tên email sinh viên không hợp lệ!');
+            redirect('auth/register');
+            return;
+        }
         // Kiểm tra mật khẩu khớp
         if ($password !== $confirm) {
             $this->session->set_flashdata('error', 'Mật khẩu xác nhận không khớp!');

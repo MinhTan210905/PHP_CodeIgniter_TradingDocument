@@ -49,8 +49,8 @@ class Orders extends CI_Controller {
 
         if (!$order) { show_404(); }
 
-        // Chỉ người liên quan mới xem được
-        if ($order['seller_id'] != $user_id && $order['buyer_id'] != $user_id) {
+        // Chỉ người liên quan hoặc admin mới xem được
+        if ($order['seller_id'] != $user_id && $order['buyer_id'] != $user_id && $this->session->userdata('role') !== 'admin') {
             show_error('Bạn không có quyền xem đơn hàng này.', 403);
         }
 
@@ -188,14 +188,176 @@ class Orders extends CI_Controller {
         redirect('orders?tab=sell');
     }
 
+    // =========================================================================
+    // THANH TOÁN (PAYMENT FLOW)
+    // =========================================================================
+
+    // Màn hình chọn phương thức thanh toán cho người mua
+    public function checkout($order_id) {
+        $this->require_login();
+        $buyer_id = $this->session->userdata('user_id');
+        $order    = $this->Order_model->get_order_by_id($order_id);
+
+        if (!$order || $order['buyer_id'] != $buyer_id || $order['status'] !== 'confirmed') {
+            $this->session->set_flashdata('error', 'Đơn hàng không hợp lệ hoặc không ở trạng thái chờ thanh toán.');
+            redirect('orders?tab=buy');
+            return;
+        }
+
+        if ($order['payment_status'] === 'paid') {
+            $this->session->set_flashdata('success', 'Đơn hàng này đã được thanh toán!');
+            redirect('orders?tab=buy');
+            return;
+        }
+
+        $this->load->model('Wallet_model');
+        $data['wallet'] = $this->Wallet_model->get_or_create_wallet($buyer_id);
+        $data['order']  = $order;
+        $data['total_amount'] = $order['price'] * $order['quantity'];
+        $data['unread_count'] = $this->Message_model->count_unread($buyer_id);
+
+        $this->load->view('partials/header', $data);
+        $this->load->view('orders/checkout', $data);
+        $this->load->view('partials/footer');
+    }
+
+    // Xử lý thanh toán / chọn phương thức
+    public function process_checkout($order_id) {
+        $this->require_login();
+        $buyer_id = $this->session->userdata('user_id');
+        $order    = $this->Order_model->get_order_by_id($order_id);
+        $method   = $this->input->post('payment_method', TRUE);
+
+        if (!$order || $order['buyer_id'] != $buyer_id || $order['status'] !== 'confirmed') {
+            $this->session->set_flashdata('error', 'Đơn hàng không hợp lệ để thanh toán.');
+            redirect('orders?tab=buy');
+            return;
+        }
+
+        if (!in_array($method, ['wallet', 'cod'])) {
+            $this->session->set_flashdata('error', 'Phương thức thanh toán không hợp lệ.');
+            redirect('orders/checkout/' . $order_id);
+            return;
+        }
+
+        $amount = $order['price'] * $order['quantity'];
+        $buyer_name = $this->session->userdata('full_name');
+
+        if ($method === 'wallet') {
+            $this->load->model('Wallet_model');
+            $result = $this->Wallet_model->pay_order($buyer_id, $order['seller_id'], $order_id, $amount);
+
+            if ($result === TRUE) {
+                $this->db->where('id', $order_id)->update('orders', [
+                    'payment_method' => 'wallet',
+                    'payment_status' => 'paid',
+                    'status' => 'processing'
+                ]);
+
+                $this->Message_model->send_message([
+                    'sender_id'   => $buyer_id,
+                    'receiver_id' => $order['seller_id'],
+                    'post_id'     => $order['post_id'],
+                    'content'     => "💰 [{$buyer_name}] đã thanh toán thành công " . number_format($amount, 0, ',', '.') . "đ qua Ví HCMUEPay. Tiền đã được tạm giữ, bạn hãy giao sách nhé!",
+                ]);
+
+                $this->session->set_flashdata('success', '✅ Đã thanh toán! Vui lòng chờ người bán giao hàng.');
+                redirect('orders?tab=buy');
+            } else {
+                $this->session->set_flashdata('error', $result);
+                redirect('orders/checkout/' . $order_id);
+            }
+        } else {
+            // COD
+            $this->db->where('id', $order_id)->update('orders', [
+                'payment_method' => 'cod',
+                'payment_status' => 'unpaid',
+                'status' => 'processing'
+            ]);
+
+            $this->Message_model->send_message([
+                'sender_id'   => $buyer_id,
+                'receiver_id' => $order['seller_id'],
+                'post_id'     => $order['post_id'],
+                'content'     => "🤝 [{$buyer_name}] đã chọn Giao dịch trực tiếp (COD). Hãy liên hệ để hẹn thời gian, địa điểm giao sách nhé!",
+            ]);
+
+            $this->session->set_flashdata('success', '✅ Đã chốt đơn COD! Vui lòng chờ người bán giao hàng.');
+            redirect('orders?tab=buy');
+        }
+    }
+
+    // Người bán xác nhận đã giao hàng
+    public function delivered($order_id) {
+        $this->require_login();
+        $seller_id = $this->session->userdata('user_id');
+        $order = $this->Order_model->get_order_by_id($order_id);
+
+        if (!$order || $order['seller_id'] != $seller_id || $order['status'] !== 'processing') {
+            $this->session->set_flashdata('error', 'Không thể xác nhận giao hàng cho đơn này!');
+            redirect('orders?tab=sell');
+            return;
+        }
+
+        $update_data = ['status' => 'delivering'];
+
+        $base64_image = $this->input->post('delivery_proof_base64');
+        
+        if (!empty($base64_image)) {
+            $upload_dir = FCPATH . 'assets/uploads/proofs/';
+            if (!is_dir($upload_dir)) mkdir($upload_dir, 0777, TRUE);
+            
+            // Extract base64 data
+            $image_parts = explode(";base64,", $base64_image);
+            if (count($image_parts) == 2) {
+                $image_type_aux = explode("image/", $image_parts[0]);
+                $image_type = $image_type_aux[1];
+                $image_base64 = base64_decode($image_parts[1]);
+                
+                $file_name = uniqid('proof_') . '.' . $image_type;
+                $file_path = $upload_dir . $file_name;
+                
+                if (file_put_contents($file_path, $image_base64)) {
+                    $update_data['delivery_proof'] = 'assets/uploads/proofs/' . $file_name;
+                } else {
+                    $this->session->set_flashdata('error', 'Lỗi khi lưu ảnh minh chứng!');
+                    redirect('orders/detail/' . $order_id);
+                    return;
+                }
+            } else {
+                $this->session->set_flashdata('error', 'Dữ liệu ảnh không hợp lệ!');
+                redirect('orders/detail/' . $order_id);
+                return;
+            }
+        } else {
+            $this->session->set_flashdata('error', 'Vui lòng chụp ảnh minh chứng giao hàng trực tiếp tại thời điểm giao!');
+            redirect('orders/detail/' . $order_id);
+            return;
+        }
+
+        $this->db->where('id', $order_id)->update('orders', $update_data);
+
+        // Gửi tin nhắn cho người mua
+        $seller_name = $this->session->userdata('full_name');
+        $this->Message_model->send_message([
+            'sender_id'   => $seller_id,
+            'receiver_id' => $order['buyer_id'],
+            'post_id'     => $order['post_id'],
+            'content'     => "📦 [{$seller_name}] đã xác nhận giao sách thành công. Vui lòng kiểm tra và xác nhận 'Đã nhận được sách' nhé!",
+        ]);
+
+        $this->session->set_flashdata('success', 'Đã xác nhận giao hàng! Chờ người mua xác nhận.');
+        redirect('orders?tab=sell');
+    }
+
     // Người mua xác nhận đã nhận hàng
     public function received($order_id) {
         $this->require_login();
         $buyer_id = $this->session->userdata('user_id');
         $order    = $this->Order_model->get_order_by_id($order_id);
 
-        if (!$order || $order['buyer_id'] != $buyer_id || $order['status'] !== 'confirmed') {
-            $this->session->set_flashdata('error', 'Không thể xác nhận đơn hàng này!');
+        if (!$order || $order['buyer_id'] != $buyer_id || $order['status'] !== 'delivering') {
+            $this->session->set_flashdata('error', 'Không thể xác nhận nhận hàng ở trạng thái này!');
             redirect('orders?tab=buy');
             return;
         }
@@ -212,6 +374,12 @@ class Orders extends CI_Controller {
 
         // Trừ số lượng sách
         $this->Trade_model->decrement_quantity($order['post_id'], $order['quantity']);
+
+        // Nếu thanh toán qua ví, giải ngân cho người bán
+        if ($order['payment_method'] === 'wallet' && $order['payment_status'] === 'paid') {
+            $this->load->model('Wallet_model');
+            $this->Wallet_model->release_escrow($order['seller_id'], $order_id, $order['price'] * $order['quantity']);
+        }
 
         // Gửi tin nhắn tự động dẫn đến trang đánh giá
         $this->Message_model->send_message([
@@ -241,7 +409,7 @@ class Orders extends CI_Controller {
         $order    = $this->Order_model->get_order_by_id($order_id);
         $reason   = $this->input->post('dispute_reason', TRUE) ?: 'Chưa nhận được hàng.';
 
-        if (!$order || $order['buyer_id'] != $buyer_id || $order['status'] !== 'confirmed') {
+        if (!$order || $order['buyer_id'] != $buyer_id || !in_array($order['status'], ['confirmed', 'processing', 'delivering'])) {
             $this->session->set_flashdata('error', 'Không thể báo cáo đơn hàng này!');
             redirect('orders?tab=buy');
             return;
@@ -334,7 +502,7 @@ class Orders extends CI_Controller {
 
         $can_cancel = (
             ($order['buyer_id']  == $user_id && $order['status'] === 'pending') ||
-            ($order['seller_id'] == $user_id && in_array($order['status'], ['pending', 'confirmed']))
+            ($order['seller_id'] == $user_id && in_array($order['status'], ['pending', 'confirmed', 'processing']))
         );
 
         if (!$can_cancel) {
@@ -345,16 +513,23 @@ class Orders extends CI_Controller {
 
         $this->Order_model->update_status($order_id, 'cancelled');
 
+        // Hoàn tiền nếu đã thanh toán
+        if ($order['payment_method'] === 'wallet' && $order['payment_status'] === 'paid') {
+            $this->load->model('Wallet_model');
+            $this->Wallet_model->refund_order($order['buyer_id'], $order['seller_id'], $order_id, $order['price'] * $order['quantity']);
+            $this->db->where('id', $order_id)->update('orders', ['payment_status' => 'refunded']);
+        }
+
         $other_id = ($order['buyer_id'] == $user_id) ? $order['seller_id'] : $order['buyer_id'];
         $user_name = $this->session->userdata('full_name');
         $this->Message_model->send_message([
             'sender_id'   => $user_id,
             'receiver_id' => $other_id,
             'post_id'     => $order['post_id'],
-            'content'     => "❌ [{$user_name}] đã hủy đơn hàng \"{$order['post_title']}\".",
+            'content'     => "❌ [{$user_name}] đã hủy đơn hàng \"{$order['post_title']}\"." . ($order['payment_status'] === 'paid' ? " Hệ thống đã hoàn tiền lại vào ví." : ""),
         ]);
 
-        $this->session->set_flashdata('success', 'Đã hủy đơn hàng.');
+        $this->session->set_flashdata('success', 'Đã hủy đơn hàng' . ($order['payment_status'] === 'paid' ? ' và hoàn tiền.' : '.'));
         redirect('orders');
     }
 }
