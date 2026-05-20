@@ -1,10 +1,10 @@
 <?php
-// TỰ ĐỘNG NẠP DANH MỤC NẾU CHƯA CÓ (Sửa lỗi mất danh mục khi ở trang đơn hàng / trang khác)
 if (!isset($categories) || empty($categories)) {
     $CI =& get_instance();
     $CI->load->model('Trade_model');
     $categories = $CI->Trade_model->get_categories();
 }
+header('Content-Type: text/html; charset=UTF-8');
 ?>
 <!DOCTYPE html>
 <html lang="vi">
@@ -47,7 +47,7 @@ if (!isset($categories) || empty($categories)) {
             border-color: rgba(255,255,255,0.4) !important;
         }
     </style>
-    <link rel="stylesheet" href="<?= base_url('assets/css/style.css?v=' . time()) ?>">
+    <link rel="stylesheet" href="<?= base_url('assets/css/style.css?v=4.0') ?>">
 </head>
 <body>
 

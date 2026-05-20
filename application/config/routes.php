@@ -45,6 +45,19 @@ $route['admin/delete_post/(:num)']     = 'admin/delete_post/$1';
 $route['admin/approve_post/(:num)']    = 'admin/approve_post/$1';
 $route['admin/reject_post/(:num)']     = 'admin/reject_post/$1';
 $route['admin/toggle_role/(:num)']     = 'admin/toggle_role/$1';
+$route['admin/ban_user/(:num)']        = 'admin/ban_user/$1';
+$route['admin/unban_user/(:num)']      = 'admin/unban_user/$1';
+$route['admin/delete_user/(:num)']     = 'admin/delete_user/$1';
+$route['admin/edit_user_post/(:num)']  = 'admin/edit_user_post/$1';
+$route['admin/categories']             = 'admin/categories';
+$route['admin/add_category']           = 'admin/add_category';
+$route['admin/edit_category/(:num)']   = 'admin/edit_category/$1';
+$route['admin/delete_category/(:num)'] = 'admin/delete_category/$1';
+$route['admin/payments']               = 'admin/payments';
+$route['admin/approve_withdrawal/(:num)']  = 'admin/approve_withdrawal/$1';
+$route['admin/reject_withdrawal/(:num)']   = 'admin/reject_withdrawal/$1';
+$route['admin/confirm_payment/(:num)']     = 'admin/confirm_payment/$1';
+$route['admin/update_settings']            = 'admin/update_settings';
 
 // API — RESTful endpoints
 // Auth
@@ -82,7 +95,25 @@ $route['orders/dispute/(:num)']            = 'orders/dispute/$1';
 $route['orders/cancel/(:num)']             = 'orders/cancel/$1';
 $route['orders/rate/(:num)']               = 'orders/rate/$1';
 $route['orders/submit_rating/(:num)']      = 'orders/submit_rating/$1';
+$route['orders/checkout/(:num)']           = 'orders/checkout/$1';
+$route['orders/process_checkout/(:num)']   = 'orders/process_checkout/$1';
+$route['orders/delivered/(:num)']          = 'orders/delivered/$1';
 
 // Seller storefront (Sàn người bán)
 $route['seller/(:num)']                    = 'seller/view/$1';
 
+// Wallet (Ví HCMUEPay)
+$route['wallet']                           = 'wallet/index';
+$route['wallet/deposit']                   = 'wallet/deposit';
+$route['wallet/withdraw']                  = 'wallet/withdraw';
+
+// Auth — OTP & Quên mật khẩu
+$route['auth/verify_otp']                        = 'auth/verify_otp';
+$route['auth/verify_otp_post']                   = 'auth/verify_otp_post';
+$route['auth/resend_otp']                        = 'auth/resend_otp';
+$route['auth/forgot_password']                   = 'auth/forgot_password';
+$route['auth/forgot_password_post']              = 'auth/forgot_password_post';
+$route['auth/verify_forgot_password']            = 'auth/verify_forgot_password';
+$route['auth/verify_forgot_password_post']       = 'auth/verify_forgot_password_post';
+$route['auth/reset_password']                    = 'auth/reset_password';
+$route['auth/reset_password_post']               = 'auth/reset_password_post';

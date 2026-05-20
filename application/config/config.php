@@ -87,7 +87,7 @@ $config['directory_trigger']       = 'd';
 |--------------------------------------------------------------------------
 | Bật level 4 (ALL) để debug, sau đó đặt lại 1
 */
-$config['log_threshold'] = 4;
+$config['log_threshold'] = 1;
 $config['log_path'] = APPPATH . 'logs/';
 $config['log_file_extension'] = '';
 $config['log_file_permissions'] = 0644;
