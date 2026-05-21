@@ -27,10 +27,21 @@ class Auth extends CI_Controller {
 
     // Xử lý đăng nhập
     public function login_post() {
-        $email    = $this->input->post('email');
+        $identity = trim($this->input->post('email'));
         $password = $this->input->post('password');
 
-        $user = $this->Auth_model->get_user_by_email($email);
+        // Tìm kiếm tài khoản bằng Email, Username hoặc mã số sinh viên (prefix email)
+        $user = NULL;
+        if (strpos($identity, '@') !== false) {
+            $user = $this->Auth_model->get_user_by_email($identity);
+        } else {
+            // 1. Thử tìm bằng Username trước
+            $user = $this->Auth_model->get_user_by_username($identity);
+            // 2. Nếu không thấy, thử ghép với đuôi email trường học
+            if (!$user) {
+                $user = $this->Auth_model->get_user_by_email($identity . '@student.hcmue.edu.vn');
+            }
+        }
 
         $is_ajax = $this->input->is_ajax_request();
 
@@ -62,7 +73,7 @@ class Auth extends CI_Controller {
             }
             redirect('trade');
         } else {
-            $message = 'Email hoặc mật khẩu không đúng!';
+            $message = 'Tài khoản hoặc mật khẩu không đúng!';
             if ($is_ajax) {
                 echo json_encode(['status' => 'error', 'message' => $message]);
                 return;
@@ -115,6 +126,18 @@ class Auth extends CI_Controller {
             return;
         }
 
+        // Kiểm tra độ mạnh mật khẩu (ít nhất 6 ký tự, phải chứa cả chữ cái và số)
+        if (strlen($password) < 6) {
+            $this->session->set_flashdata('error', 'Mật khẩu phải dài ít nhất 6 ký tự!');
+            redirect('auth/register');
+            return;
+        }
+        if (!preg_match('/[A-Za-z]/', $password) || !preg_match('/[0-9]/', $password)) {
+            $this->session->set_flashdata('error', 'Mật khẩu phải chứa cả chữ cái và số để đảm bảo an toàn!');
+            redirect('auth/register');
+            return;
+        }
+
         // Kiểm tra email đã tồn tại
         if ($this->Auth_model->get_user_by_email($email)) {
             $this->session->set_flashdata('error', 'Email này đã được đăng ký!');
@@ -152,9 +175,9 @@ class Auth extends CI_Controller {
         $this->load->library('email');
         $this->email->initialize(['mailtype' => 'html']);
 
-        $this->email->from($this->config->item('smtp_user') ?? 'no-reply@hcmue.edu.vn', 'HCMUE Pass Sách');
+        $this->email->from($this->config->item('smtp_user') ?? 'no-reply@hcmue.edu.vn', 'HCMUE BookSwap');
         $this->email->to($email);
-        $this->email->subject('[HCMUE Pass Sách] Mã xác nhận đăng ký tài khoản của bạn');
+        $this->email->subject('[HCMUE BookSwap] Mã xác nhận đăng ký tài khoản của bạn');
 
         $full_name = htmlspecialchars($data['full_name']);
         $html_body = "
@@ -167,14 +190,14 @@ class Auth extends CI_Controller {
                     <table width='560' cellpadding='0' cellspacing='0' style='background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);max-width:560px;width:100%;'>
                         <tr>
                             <td style='background:linear-gradient(135deg,#003F8A,#0052B4);padding:32px 40px;text-align:center;'>
-                                <h1 style='margin:0;color:#ffffff;font-size:22px;font-weight:800;letter-spacing:-0.5px;'>HCMUE Pass Sách</h1>
+                                <h1 style='margin:0;color:#ffffff;font-size:22px;font-weight:800;letter-spacing:-0.5px;'>HCMUE BookSwap</h1>
                                 <p style='margin:6px 0 0;color:rgba(255,255,255,0.75);font-size:13px;'>Đại học Sư phạm TP.HCM</p>
                             </td>
                         </tr>
                         <tr>
                             <td style='padding:40px 40px 32px;'>
                                 <p style='margin:0 0 16px;font-size:16px;color:#374151;'>Xin chào <strong>{$full_name}</strong>,</p>
-                                <p style='margin:0 0 24px;font-size:14px;color:#6B7280;line-height:1.7;'>Bạn vừa yêu cầu đăng ký tài khoản trên <strong>HCMUE Pass Sách</strong>. Dưới đây là mã OTP để xác thực:</p>
+                                <p style='margin:0 0 24px;font-size:14px;color:#6B7280;line-height:1.7;'>Bạn vừa yêu cầu đăng ký tài khoản trên <strong>HCMUE BookSwap</strong>. Dưới đây là mã OTP để xác thực:</p>
                                 <div style='background:#F0F5FF;border:2px dashed #003F8A;border-radius:12px;padding:28px;text-align:center;margin:0 0 28px;'>
                                     <p style='margin:0 0 8px;font-size:12px;color:#6B7280;letter-spacing:1px;text-transform:uppercase;'>Mã xác thực của bạn</p>
                                     <span style='font-size:42px;font-weight:800;color:#003F8A;letter-spacing:10px;'>{$otp}</span>
@@ -185,7 +208,7 @@ class Auth extends CI_Controller {
                         </tr>
                         <tr>
                             <td style='background:#F8FAFC;padding:20px 40px;border-top:1px solid #E5E7EB;text-align:center;'>
-                                <p style='margin:0;font-size:12px;color:#9CA3AF;'>&copy; 2025 HCMUE Pass Sách &mdash; Đại học Sư phạm TP.HCM</p>
+                                <p style='margin:0;font-size:12px;color:#9CA3AF;'>&copy; 2026 HCMUE BookSwap &mdash; Đại học Sư phạm TP.HCM</p>
                             </td>
                         </tr>
                     </table>
@@ -286,9 +309,9 @@ class Auth extends CI_Controller {
         // Gửi email OTP HTML đẹp
         $this->load->library('email');
         $this->email->initialize(['mailtype' => 'html']);
-        $this->email->from($this->config->item('smtp_user') ?? 'no-reply@hcmue.edu.vn', 'HCMUE Pass Sách');
+        $this->email->from($this->config->item('smtp_user') ?? 'no-reply@hcmue.edu.vn', 'HCMUE BookSwap');
         $this->email->to($email);
-        $this->email->subject('[HCMUE Pass Sách] Mã OTP mới của bạn');
+        $this->email->subject('[HCMUE BookSwap] Mã OTP mới của bạn');
 
         $html_body = "
         <!DOCTYPE html>
@@ -300,7 +323,7 @@ class Auth extends CI_Controller {
                     <table width='560' cellpadding='0' cellspacing='0' style='background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);max-width:560px;width:100%;'>
                         <tr>
                             <td style='background:linear-gradient(135deg,#003F8A,#0052B4);padding:32px 40px;text-align:center;'>
-                                <h1 style='margin:0;color:#ffffff;font-size:22px;font-weight:800;'>HCMUE Pass Sách</h1>
+                                <h1 style='margin:0;color:#ffffff;font-size:22px;font-weight:800;'>HCMUE BookSwap</h1>
                                 <p style='margin:6px 0 0;color:rgba(255,255,255,0.75);font-size:13px;'>Đại học Sư phạm TP.HCM</p>
                             </td>
                         </tr>
@@ -317,7 +340,7 @@ class Auth extends CI_Controller {
                         </tr>
                         <tr>
                             <td style='background:#F8FAFC;padding:20px 40px;border-top:1px solid #E5E7EB;text-align:center;'>
-                                <p style='margin:0;font-size:12px;color:#9CA3AF;'>&copy; 2025 HCMUE Pass Sách</p>
+                                <p style='margin:0;font-size:12px;color:#9CA3AF;'>&copy; 2026 HCMUE BookSwap</p>
                             </td>
                         </tr>
                     </table>
@@ -377,9 +400,9 @@ class Auth extends CI_Controller {
         // Gửi email
         $this->load->library('email');
         $this->email->initialize(['mailtype' => 'html']);
-        $this->email->from($this->config->item('smtp_user') ?? 'no-reply@hcmue.edu.vn', 'HCMUE Pass Sách');
+        $this->email->from($this->config->item('smtp_user') ?? 'no-reply@hcmue.edu.vn', 'HCMUE BookSwap');
         $this->email->to($email);
-        $this->email->subject('[HCMUE Pass Sách] Mã khôi phục mật khẩu');
+        $this->email->subject('[HCMUE BookSwap] Mã khôi phục mật khẩu');
 
         $html_body = "
         <!DOCTYPE html>
@@ -391,7 +414,7 @@ class Auth extends CI_Controller {
                     <table width='560' cellpadding='0' cellspacing='0' style='background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);max-width:560px;width:100%;'>
                         <tr>
                             <td style='background:linear-gradient(135deg,#003F8A,#0052B4);padding:32px 40px;text-align:center;'>
-                                <h1 style='margin:0;color:#ffffff;font-size:22px;font-weight:800;'>HCMUE Pass Sách</h1>
+                                <h1 style='margin:0;color:#ffffff;font-size:22px;font-weight:800;'>HCMUE BookSwap</h1>
                                 <p style='margin:6px 0 0;color:rgba(255,255,255,0.75);font-size:13px;'>Khôi phục mật khẩu</p>
                             </td>
                         </tr>
@@ -476,6 +499,18 @@ class Auth extends CI_Controller {
 
         if ($password !== $confirm) {
             $this->session->set_flashdata('error', 'Mật khẩu xác nhận không khớp!');
+            redirect('auth/reset_password');
+            return;
+        }
+
+        // Kiểm tra độ mạnh mật khẩu (ít nhất 6 ký tự, phải chứa cả chữ cái và số)
+        if (strlen($password) < 6) {
+            $this->session->set_flashdata('error', 'Mật khẩu phải dài ít nhất 6 ký tự!');
+            redirect('auth/reset_password');
+            return;
+        }
+        if (!preg_match('/[A-Za-z]/', $password) || !preg_match('/[0-9]/', $password)) {
+            $this->session->set_flashdata('error', 'Mật khẩu phải chứa cả chữ cái và số để đảm bảo an toàn!');
             redirect('auth/reset_password');
             return;
         }

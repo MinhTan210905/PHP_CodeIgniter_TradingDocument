@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Xác nhận mã OTP | HCMUE Pass Sách</title>
+    <title>Xác nhận mã OTP | HCMUE BookSwap</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -63,7 +63,7 @@
 <div class="bg-dots"></div>
 <div class="auth-card">
     <div class="auth-logo">
-        <a href="<?= base_url() ?>" title="Về trang chủ HCMUE Pass Sách">
+        <a href="<?= base_url() ?>" title="Về trang chủ HCMUE BookSwap">
             <img src="<?= base_url('assets/images/logo_hcmue.png') ?>" alt="Logo HCMUE">
         </a>
     </div>

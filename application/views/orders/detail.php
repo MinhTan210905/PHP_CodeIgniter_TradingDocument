@@ -300,12 +300,17 @@ $cur_step = $timeline[$order['status']] ?? 1;
 </div>
 
 <!-- Modal Đã Giao Hàng (Tải lên minh chứng - Cho Người bán) -->
-<div class="modal fade" id="deliveryProofModal" tabindex="-1">
+<div class="modal fade" id="deliveryProofModal" tabindex="-1" data-bs-backdrop="static">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 rounded-4 shadow">
-            <div class="modal-header" style="background:linear-gradient(135deg,#059669,#10B981);border-radius:16px 16px 0 0;">
-                <h5 class="modal-title text-white fw-bold"><i class="fas fa-camera me-2"></i>Minh chứng giao hàng</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            <div class="modal-header d-flex align-items-center justify-content-between" style="background:linear-gradient(135deg,#059669,#10B981);border-radius:16px 16px 0 0; width: 100%;">
+                <h5 class="modal-title text-white fw-bold mb-0"><i class="fas fa-camera me-2"></i>Minh chứng giao hàng</h5>
+                <div class="d-flex align-items-center gap-2">
+                    <span id="countdownBadge" class="badge bg-danger d-flex align-items-center gap-1 px-2.5 py-1.5 fs-7 fw-bold shadow-sm" style="font-family: monospace;">
+                        <i class="fas fa-hourglass-half animate-pulse"></i><span id="timerText">05:00</span>
+                    </span>
+                    <button type="button" class="btn-close btn-close-white ms-2" data-bs-dismiss="modal" style="margin:0;"></button>
+                </div>
             </div>
             <form action="<?= site_url('orders/delivered/' . $order['id']) ?>" method="POST" id="proofForm">
                 <!-- Ẩn field chứa dữ liệu base64 của ảnh chụp -->
@@ -313,6 +318,11 @@ $cur_step = $timeline[$order['status']] ?? 1;
                 
                 <div class="modal-body p-3 text-center">
                     <p class="text-muted mb-2" style="font-size:0.85rem;">Vui lòng chụp ảnh minh chứng tại thời điểm giao hàng. Hệ thống sẽ tự động ghi nhận địa chỉ và thời gian thực vào ảnh.</p>
+                    
+                    <!-- Bảng trạng thái xác thực máy ảnh và vị trí -->
+                    <div id="cameraStatus" class="alert alert-warning py-2 px-3 mb-3 rounded-3 text-center" style="font-size:0.85rem; font-weight: 500;">
+                        <i class="fas fa-spinner fa-spin me-2"></i>Đang xác thực Máy ảnh và Vị trí GPS của bạn...
+                    </div>
                     
                     <div id="cameraContainer" class="position-relative bg-dark rounded-4 overflow-hidden mb-3 mx-auto" style="aspect-ratio: 3/4; max-width: 300px; display:flex; justify-content:center; align-items:center;">
                         <video id="cameraVideo" autoplay playsinline style="width:100%; height:100%; object-fit:cover;"></video>
@@ -327,7 +337,7 @@ $cur_step = $timeline[$order['status']] ?? 1;
                     </div>
 
                     <div class="d-flex justify-content-center gap-3">
-                        <button type="button" id="btnCapture" class="btn btn-primary-hcmue rounded-circle shadow" style="width:64px; height:64px;">
+                        <button type="button" id="btnCapture" class="btn btn-primary-hcmue rounded-circle shadow disabled" style="width:64px; height:64px;" disabled>
                             <i class="fas fa-camera fs-3"></i>
                         </button>
                         <button type="button" id="btnRetake" class="btn btn-secondary rounded-circle shadow" style="width:64px; height:64px; display:none;">
@@ -361,6 +371,10 @@ document.addEventListener("DOMContentLoaded", function() {
     let stream = null;
     let locationString = "Đang xác định vị trí...";
     let timeInterval = null;
+    let countdownInterval = null;
+    let remainingTime = 300; // 5 phút (300 giây)
+    let hasLocation = false;
+    let hasCamera = false;
 
     // Định nghĩa các cơ sở HCMUE để nhận diện tức thì trong phạm vi 300m
     const CS1 = { lat: 10.759928, lon: 106.678736, name: "ĐH Sư phạm TPHCM - CS An Dương Vương" };
@@ -380,6 +394,61 @@ document.addEventListener("DOMContentLoaded", function() {
         const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
         return R * c;
+    }
+
+    // Cập nhật trạng thái kích hoạt của Nút chụp hình
+    function updateValidationStatus() {
+        const cameraStatus = document.getElementById('cameraStatus');
+        
+        if (remainingTime <= 0) {
+            cameraStatus.className = "alert alert-danger py-2 px-3 mb-3 rounded-3 text-center";
+            cameraStatus.innerHTML = `<i class="fas fa-times-circle me-2"></i>Đã hết thời gian chụp minh chứng. Vui lòng đóng và mở lại!`;
+            btnCapture.disabled = true;
+            btnCapture.classList.add('disabled');
+            return;
+        }
+
+        if (hasLocation && hasCamera) {
+            cameraStatus.className = "alert alert-success py-2 px-3 mb-3 rounded-3 text-center";
+            cameraStatus.innerHTML = `<i class="fas fa-check-circle me-2"></i>Đã xác thực thiết bị! Bạn có thể chụp ảnh minh chứng ngay.`;
+            btnCapture.disabled = false;
+            btnCapture.classList.remove('disabled');
+        } else {
+            btnCapture.disabled = true;
+            btnCapture.classList.add('disabled');
+
+            let statusHTML = `<i class="fas fa-spinner fa-spin me-2"></i>Đang xác minh: `;
+            let pending = [];
+            if (!hasCamera) pending.push("Máy ảnh <i class='fas fa-camera ms-1'></i>");
+            if (!hasLocation) pending.push("Vị trí GPS <i class='fas fa-map-marker-alt ms-1'></i>");
+            
+            statusHTML += pending.join(" và ") + "...";
+            cameraStatus.className = "alert alert-warning py-2 px-3 mb-3 rounded-3 text-center";
+            cameraStatus.innerHTML = statusHTML;
+        }
+    }
+
+    // Xử lý khi hết thời gian 5 phút
+    function handleTimeout() {
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+            stream = null;
+        }
+        
+        const cameraStatus = document.getElementById('cameraStatus');
+        cameraStatus.className = "alert alert-danger py-2 px-3 mb-3 rounded-3 text-center";
+        cameraStatus.innerHTML = `<i class="fas fa-times-circle me-2"></i>Hết thời gian phiên chụp minh chứng (5 phút). Vui lòng đóng và mở lại.`;
+        
+        video.style.display = 'none';
+        photoResult.style.display = 'none';
+        document.getElementById('cameraOverlay').style.display = 'none';
+        base64Input.value = '';
+        
+        btnCapture.disabled = true;
+        btnCapture.classList.add('disabled');
+        btnCapture.style.display = 'inline-block';
+        btnRetake.style.display = 'none';
+        btnSubmit.classList.add('disabled');
     }
 
     // Dịch tọa độ thành địa chỉ chi tiết qua API OpenStreetMap Nominatim
@@ -427,11 +496,17 @@ document.addEventListener("DOMContentLoaded", function() {
                 locationString = `GPS: ${lat.toFixed(5)}, ${lon.toFixed(5)}`;
             }
             overlayLoc.innerHTML = `<i class="fas fa-map-marker-alt me-1"></i>${locationString}`;
+            
+            hasLocation = true;
+            updateValidationStatus();
         })
         .catch(() => {
             clearTimeout(timeoutId);
             locationString = `GPS: ${lat.toFixed(5)}, ${lon.toFixed(5)}`;
             overlayLoc.innerHTML = `<i class="fas fa-map-marker-alt me-1"></i>${locationString}`;
+            
+            hasLocation = true;
+            updateValidationStatus();
         });
     }
 
@@ -443,9 +518,13 @@ document.addEventListener("DOMContentLoaded", function() {
         if (distCS1 <= 300) {
             locationString = CS1.name;
             overlayLoc.innerHTML = `<i class="fas fa-map-marker-alt me-1"></i>${locationString}`;
+            hasLocation = true;
+            updateValidationStatus();
         } else if (distCS2 <= 300) {
             locationString = CS2.name;
             overlayLoc.innerHTML = `<i class="fas fa-map-marker-alt me-1"></i>${locationString}`;
+            hasLocation = true;
+            updateValidationStatus();
         } else {
             fetchAddressFromCoords(lat, lon);
         }
@@ -504,6 +583,34 @@ document.addEventListener("DOMContentLoaded", function() {
             overlayTime.innerHTML = `<i class="fas fa-clock me-1"></i>${now.toLocaleDateString('vi-VN')} ${now.toLocaleTimeString('vi-VN')}`;
         }, 1000);
 
+        // Khởi động đếm ngược 5 phút
+        remainingTime = 300;
+        document.getElementById('timerText').innerText = "05:00";
+        document.getElementById('countdownBadge').className = "badge bg-danger d-flex align-items-center gap-1 px-2.5 py-1.5 fs-7 fw-bold shadow-sm";
+        
+        clearInterval(countdownInterval);
+        countdownInterval = setInterval(() => {
+            remainingTime--;
+            if (remainingTime <= 0) {
+                clearInterval(countdownInterval);
+                document.getElementById('timerText').innerText = "00:00";
+                handleTimeout();
+            } else {
+                const m = Math.floor(remainingTime / 60).toString().padStart(2, '0');
+                const s = (remainingTime % 60).toString().padStart(2, '0');
+                document.getElementById('timerText').innerText = `${m}:${s}`;
+                
+                // Hiệu ứng cảnh báo khi còn dưới 1 phút (nhấp nháy nhanh badge đỏ)
+                if (remainingTime <= 60) {
+                    document.getElementById('countdownBadge').classList.add('animate-pulse');
+                }
+            }
+        }, 1000);
+
+        hasLocation = false;
+        hasCamera = false;
+        updateValidationStatus();
+
         // Hàm dự phòng lấy vị trí qua IP (Khi không dùng được GPS thiết bị hoặc không chạy qua HTTPS/localhost)
         const fallbackToIPLocation = () => {
             fetch('https://get.geojs.io/v1/ip/geo.json')
@@ -517,11 +624,15 @@ document.addEventListener("DOMContentLoaded", function() {
                         let city = data.city ? data.city : "Không xác định";
                         locationString = `Khu vực: ${city} (Vị trí ước tính qua IP)`;
                         overlayLoc.innerHTML = `<i class="fas fa-map-marker-alt me-1"></i>${locationString}`;
+                        hasLocation = true;
+                        updateValidationStatus();
                     }
                 })
                 .catch(() => {
                     locationString = "Vị trí không xác định (Lỗi mạng)";
                     overlayLoc.innerHTML = `<i class="fas fa-map-marker-alt me-1"></i>${locationString}`;
+                    hasLocation = false;
+                    updateValidationStatus();
                 });
         };
 
@@ -532,7 +643,15 @@ document.addEventListener("DOMContentLoaded", function() {
                     handleLocationCoords(pos.coords.latitude, pos.coords.longitude);
                 },
                 err => {
-                    fallbackToIPLocation();
+                    if (err.code === err.PERMISSION_DENIED) {
+                        const cameraStatus = document.getElementById('cameraStatus');
+                        cameraStatus.className = "alert alert-danger py-2 px-3 mb-3 rounded-3 text-center";
+                        cameraStatus.innerHTML = `<i class="fas fa-exclamation-triangle me-2"></i>Lỗi định vị: Vui lòng cho phép quyền Vị trí (GPS) trong cài đặt để tiếp tục minh chứng.`;
+                        hasLocation = false;
+                        updateValidationStatus();
+                    } else {
+                        fallbackToIPLocation();
+                    }
                 },
                 { enableHighAccuracy: true, timeout: 6000, maximumAge: 0 }
             );
@@ -550,9 +669,16 @@ document.addEventListener("DOMContentLoaded", function() {
                 btnCapture.style.display = 'inline-block';
                 btnRetake.style.display = 'none';
                 btnSubmit.classList.add('disabled');
+                
+                hasCamera = true;
+                updateValidationStatus();
             })
             .catch(err => {
-                alert('Không thể khởi động camera: ' + err.message);
+                const cameraStatus = document.getElementById('cameraStatus');
+                cameraStatus.className = "alert alert-danger py-2 px-3 mb-3 rounded-3 text-center";
+                cameraStatus.innerHTML = `<i class="fas fa-exclamation-triangle me-2"></i>Lỗi camera: ${err.message}. Vui lòng cấp quyền truy cập Camera để tiếp tục.`;
+                hasCamera = false;
+                updateValidationStatus();
             });
     });
 
@@ -560,13 +686,22 @@ document.addEventListener("DOMContentLoaded", function() {
     modal.addEventListener('hidden.bs.modal', function () {
         if (stream) {
             stream.getTracks().forEach(track => track.stop());
+            stream = null;
         }
         clearInterval(timeInterval);
+        clearInterval(countdownInterval);
+        
+        // Khôi phục trạng thái ban đầu của overlay và kết quả
+        video.style.display = 'block';
+        photoResult.style.display = 'none';
+        document.getElementById('cameraOverlay').style.display = 'block';
+        base64Input.value = '';
+        btnSubmit.classList.add('disabled');
     });
 
     // Chụp ảnh và ghép Watermark
     btnCapture.addEventListener('click', function() {
-        if (!stream) return;
+        if (!stream || !hasCamera || !hasLocation) return;
         
         // Thiết lập kích thước canvas bằng kích thước video thực
         canvas.width = video.videoWidth;
@@ -599,6 +734,8 @@ document.addEventListener("DOMContentLoaded", function() {
 
     // Chụp lại
     btnRetake.addEventListener('click', function() {
+        if (remainingTime <= 0) return; // Nếu hết giờ thì không cho chụp lại
+        
         video.style.display = 'block';
         photoResult.style.display = 'none';
         base64Input.value = '';
@@ -610,7 +747,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
     // Gửi Form minh chứng
     btnSubmit.addEventListener('click', function() {
-        if (base64Input.value) {
+        if (base64Input.value && remainingTime > 0) {
             document.getElementById('proofForm').submit();
         }
     });

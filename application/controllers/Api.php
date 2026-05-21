@@ -2,7 +2,7 @@
 defined('BASEPATH') OR exit('No direct script access allowed');
 
 /**
- * REST API Controller — HCMUE Pass Sách
+ * REST API Controller — HCMUE BookSwap
  * 
  * Endpoints:
  *   === AUTH ===
@@ -242,7 +242,12 @@ class Api extends CI_Controller {
         if (!$order || $order['seller_id'] != $this->_uid() || $order['status'] !== 'pending') {
             $this->_json(['status' => 400, 'message' => 'Không thể xác nhận đơn này.'], 400); return;
         }
+        $post = $this->Trade_model->get_post_by_id($order['post_id']);
+        if (!$post || $post['quantity'] < $order['quantity']) {
+            $this->_json(['status' => 400, 'message' => 'Không đủ sách trong kho để xác nhận.'], 400); return;
+        }
         $this->Order_model->update_status($id, 'confirmed');
+        $this->Trade_model->decrement_quantity($order['post_id'], $order['quantity']);
         $this->_json(['status' => 200, 'message' => 'Đã xác nhận đơn hàng.']);
     }
 
@@ -264,7 +269,6 @@ class Api extends CI_Controller {
             $this->_json(['status' => 400, 'message' => 'Không thể xác nhận nhận hàng. Đơn phải ở trạng thái đang giao.'], 400); return;
         }
         $this->Order_model->update_status($id, 'completed');
-        $this->Trade_model->decrement_quantity($order['post_id'], $order['quantity']);
         // FIX #2: Giải ngân tiền escrow cho seller nếu thanh toán qua ví
         if ($order['payment_method'] === 'wallet' && $order['payment_status'] === 'paid') {
             $this->load->model('Wallet_model');
@@ -294,7 +298,11 @@ class Api extends CI_Controller {
         $can = ($order['buyer_id']  == $uid && $order['status'] === 'pending')
             || ($order['seller_id'] == $uid && in_array($order['status'], ['pending', 'confirmed', 'processing']));
         if (!$can) { $this->_json(['status' => 400, 'message' => 'Không thể hủy đơn này.'], 400); return; }
+        $was_confirmed = in_array($order['status'], ['confirmed', 'processing', 'delivering']);
         $this->Order_model->update_status($id, 'cancelled');
+        if ($was_confirmed) {
+            $this->Trade_model->increment_quantity($order['post_id'], $order['quantity']);
+        }
         // FIX #4b: Hoàn tiền về ví nếu đã thanh toán qua ví
         $refunded = false;
         if ($order['payment_method'] === 'wallet' && $order['payment_status'] === 'paid') {

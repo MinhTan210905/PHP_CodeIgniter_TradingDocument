@@ -152,6 +152,27 @@
         </div>
     <?php endif; ?>
 
+    <!-- ĐƠN HÀNG TRANH CHẤP (CẦN ADMIN PHÂN XỬ) -->
+    <h5 class="mb-3 fw-bold mt-5" style="color:#DC2626;"><i class="fas fa-gavel me-2"></i>Đơn hàng tranh chấp
+        <?php if (!empty($disputed_orders)): ?>
+            <span class="badge bg-danger rounded-pill ms-2" style="font-size:0.75rem;"><?= count($disputed_orders) ?></span>
+        <?php endif; ?>
+    </h5>
+    <?php if (empty($disputed_orders)): ?>
+        <div class="card border-0 rounded-4 shadow-sm p-4 text-center mb-5" style="background:#F0FDF4;border:1.5px dashed #86EFAC!important;">
+            <i class="fas fa-check-circle" style="font-size:2rem;color:#22C55E;"></i>
+            <p class="mt-2 mb-0 fw-semibold" style="color:#166534;">Không có đơn hàng tranh chấp nào cần phân xử!</p>
+        </div>
+    <?php else: ?>
+        <div class="card border-0 rounded-4 shadow-sm p-4 text-center mb-5" style="background:#FEF2F2;border:1.5px dashed #FECACA!important;">
+            <i class="fas fa-exclamation-triangle" style="font-size:2rem;color:#DC2626;"></i>
+            <p class="mt-2 mb-3 fw-semibold" style="color:#991B1B;">Có <?= count($disputed_orders) ?> đơn hàng đang tranh chấp cần xử lý!</p>
+            <a href="<?= site_url('admin/disputes') ?>" class="btn btn-danger rounded-3 fw-bold px-4">
+                <i class="fas fa-gavel me-2"></i>Đi tới Quản lý Tranh chấp
+            </a>
+        </div>
+    <?php endif; ?>
+
     <!-- QUẢN LÝ GIAO DỊCH ĐƠN HÀNG -->
     <h5 class="mb-3 fw-bold mt-5" style="color:var(--primary);"><i class="fas fa-shopping-cart me-2"></i>Quản lý giao dịch đơn hàng</h5>
     <?php if (empty($completed_orders)): ?>

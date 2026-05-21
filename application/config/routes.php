@@ -80,6 +80,9 @@ $route['admin/approve_withdrawal/(:num)']= 'admin/approve_withdrawal/$1';
 $route['admin/reject_withdrawal/(:num)'] = 'admin/reject_withdrawal/$1';
 $route['admin/confirm_payment/(:num)']   = 'admin/confirm_payment/$1';
 $route['admin/update_settings']          = 'admin/update_settings';
+$route['admin/disputes']                 = 'admin/disputes';
+$route['admin/resolve_dispute_refund/(:num)']  = 'admin/resolve_dispute_refund/$1';
+$route['admin/resolve_dispute_release/(:num)'] = 'admin/resolve_dispute_release/$1';
 
 // Orders (Đơn hàng)
 $route['orders']                         = 'orders/index';
@@ -103,6 +106,8 @@ $route['seller/(:num)']                  = 'seller/view/$1';
 $route['wallet']                         = 'wallet/index';
 $route['wallet/deposit']                 = 'wallet/deposit';
 $route['wallet/withdraw']                = 'wallet/withdraw';
+$route['wallet/payos_callback']          = 'wallet/payos_callback';
+$route['wallet/payos_cancel']            = 'wallet/payos_cancel';
 
 // API — RESTful endpoints
 $route['api/auth/login']                 = 'api/login';

@@ -24,16 +24,31 @@ class Comment extends CI_Controller {
         }
 
         $content = trim($this->input->post('content', TRUE));
-        if (empty($content)) {
-            redirect('trade/detail/' . $post_id);
-            return;
+        $user_id = $this->session->userdata('user_id');
+
+        // Gọi AI kiểm duyệt nội dung bình luận
+        $this->load->model('Ai_moderation_model');
+        $ai_analysis = $this->Ai_moderation_model->analyze_text($content);
+
+        $moderation_status = 'approved';
+        if ($ai_analysis['action'] === 'block') {
+            $moderation_status = 'flagged';
+            $this->session->set_flashdata('error', 'Bình luận của bạn chứa ngôn từ không phù hợp và đang được quản trị viên xem xét!');
         }
 
-        $this->Comment_model->add_comment([
-            'post_id'  => $post_id,
-            'user_id'  => $this->session->userdata('user_id'),
-            'content'  => $content
-        ]);
+        $comment_data = [
+            'post_id'           => $post_id,
+            'user_id'           => $user_id,
+            'content'           => $content,
+            'moderation_status' => $moderation_status,
+            'ai_score'          => $ai_analysis['score']
+        ];
+
+        $this->Comment_model->add_comment($comment_data);
+        $comment_id = $this->db->insert_id();
+
+        // Ghi log kiểm duyệt
+        $this->Ai_moderation_model->log_moderation('comment', $comment_id, $user_id, $content, $ai_analysis);
 
         redirect('trade/detail/' . $post_id . '#comments');
     }

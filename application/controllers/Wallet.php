@@ -46,7 +46,7 @@ class Wallet extends CI_Controller {
     }
 
     // =========================================================
-    // NẠP TIỀN (Mock Mode — Giả lập QR PayOS)
+    // NẠP TIỀN (PayOS Live Mode & Mock Mode)
     // =========================================================
     public function deposit() {
         $this->require_login();
@@ -71,18 +71,72 @@ class Wallet extends CI_Controller {
         $payos_mode = $this->_get_payos_mode();
 
         if ($payos_mode === 'live') {
-            // TODO: Gọi PayOS API tạo QR Code tại đây
-            // Tạm thời redirect sang trang QR (sẽ build ở Phase 2)
-            $this->session->set_flashdata('info', 'Tính năng PayOS đang được tích hợp. Vui lòng sử dụng chế độ Demo.');
-            redirect('wallet');
-            return;
+            $keys = $this->_get_payos_keys();
+            if (empty($keys['client_id']) || empty($keys['api_key']) || empty($keys['checksum_key'])) {
+                $this->session->set_flashdata('error', 'Cấu hình PayOS trong file .env chưa đầy đủ!');
+                redirect('wallet');
+                return;
+            }
+
+            // PayOS orderCode phải là số nguyên duy nhất (dùng timestamp + random)
+            $order_code = intval(time() + rand(100, 999));
+
+            // Chuẩn bị tham số ký (sắp xếp tăng dần theo bảng chữ cái A-Z)
+            $params = [
+                'amount'      => (int)$amount,
+                'cancelUrl'   => base_url('wallet/payos_cancel?orderCode=' . $order_code),
+                'description' => 'NapTienHCMUEPay', // Chỉ ký chữ và số không dấu không dấu cách để tránh lỗi ký
+                'orderCode'   => $order_code,
+                'returnUrl'   => base_url('wallet/payos_callback?orderCode=' . $order_code)
+            ];
+
+            $signature = $this->_generate_payos_signature($params, $keys['checksum_key']);
+            $params['signature'] = $signature;
+
+            // Gọi API PayOS để tạo liên kết thanh toán (checkoutUrl)
+            $payload = json_encode($params);
+            $ch = curl_init('https://api-merchant.payos.vn/v2/payment-requests');
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                "x-client-id: " . $keys['client_id'],
+                "x-api-key: " . $keys['api_key'],
+                "Content-Type: application/json"
+            ]);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 15);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+
+            $response = curl_exec($ch);
+            $err = curl_error($ch);
+            curl_close($ch);
+
+            if ($err) {
+                log_message('error', 'PayOS cURL Error: ' . $err);
+                $this->session->set_flashdata('error', 'Lỗi kết nối cổng thanh toán PayOS: ' . $err);
+                redirect('wallet');
+                return;
+            }
+
+            $res_data = json_decode($response, true);
+            if (isset($res_data['code']) && $res_data['code'] === '00' && isset($res_data['data']['checkoutUrl'])) {
+                // Chuyển hướng người dùng đến trang thanh toán của PayOS
+                redirect($res_data['data']['checkoutUrl']);
+                return;
+            } else {
+                $err_msg = isset($res_data['desc']) ? $res_data['desc'] : 'Không xác định';
+                log_message('error', 'PayOS API Error: ' . $response);
+                $this->session->set_flashdata('error', 'Lỗi tạo liên kết thanh toán PayOS: ' . $err_msg);
+                redirect('wallet');
+                return;
+            }
         }
 
         // CHẾ ĐỘ MOCK: Nạp tiền trực tiếp vào ví (dùng để demo)
         $result = $this->Wallet_model->deposit(
             $user_id, 
             $amount, 
-            '🎉 Nạp tiền Demo HCMUEPay (+' . number_format($amount, 0, ',', '.') . 'đ)',
+            '🎉 Nạp tiền HCMUEPay (+' . number_format($amount, 0, ',', '.') . 'đ)',
             'MOCK_' . time()
         );
 
@@ -154,5 +208,136 @@ class Wallet extends CI_Controller {
             }
         }
         return 'mock'; // Mặc định: chế độ Demo
+    }
+
+    // =========================================================
+    // HELPER: Lấy danh sách API Keys của PayOS từ file .env
+    // =========================================================
+    private function _get_payos_keys() {
+        $keys = [
+            'client_id'    => '',
+            'api_key'      => '',
+            'checksum_key' => ''
+        ];
+        
+        $env_file = FCPATH . '.env';
+        if (file_exists($env_file)) {
+            $lines = file($env_file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+            foreach ($lines as $line) {
+                if (strpos($line, '#') === 0) continue;
+                $parts = explode('=', $line, 2);
+                if (count($parts) === 2) {
+                    $k = trim($parts[0]);
+                    $v = trim(trim($parts[1]), '"\'');
+                    if ($k === 'PAYOS_CLIENT_ID') {
+                        $keys['client_id'] = $v;
+                    } elseif ($k === 'PAYOS_API_KEY') {
+                        $keys['api_key'] = $v;
+                    } elseif ($k === 'PAYOS_CHECKSUM_KEY') {
+                        $keys['checksum_key'] = $v;
+                    }
+                }
+            }
+        }
+        return $keys;
+    }
+
+    // =========================================================
+    // HELPER: Tạo chữ ký (Signature) của PayOS bằng HMAC SHA256
+    // =========================================================
+    private function _generate_payos_signature($data, $checksum_key) {
+        ksort($data);
+        $query_parts = [];
+        foreach ($data as $k => $v) {
+            $query_parts[] = "$k=$v";
+        }
+        $query_str = implode('&', $query_parts);
+        return hash_hmac('sha256', $query_str, $checksum_key);
+    }
+
+    // =========================================================
+    // CALLBACK: Xử lý khi thanh toán PayOS thành công (returnUrl)
+    // =========================================================
+    public function payos_callback() {
+        $this->require_login();
+        $user_id = $this->session->userdata('user_id');
+        $order_code = $this->input->get('orderCode', TRUE);
+
+        if (empty($order_code)) {
+            $this->session->set_flashdata('error', 'Mã đơn hàng PayOS không hợp lệ!');
+            redirect('wallet');
+            return;
+        }
+
+        // Gọi trực tiếp API lên PayOS để lấy thông tin chuẩn từ Server-to-Server
+        $keys = $this->_get_payos_keys();
+        if (empty($keys['client_id']) || empty($keys['api_key'])) {
+            $this->session->set_flashdata('error', 'Cấu hình PayOS chưa đầy đủ để xác thực giao dịch!');
+            redirect('wallet');
+            return;
+        }
+
+        $ch = curl_init('https://api-merchant.payos.vn/v2/payment-requests/' . $order_code);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            "x-client-id: " . $keys['client_id'],
+            "x-api-key: " . $keys['api_key'],
+            "Content-Type: application/json"
+        ]);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 15);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+
+        $response = curl_exec($ch);
+        $err = curl_error($ch);
+        curl_close($ch);
+
+        if ($err) {
+            log_message('error', 'PayOS Verify Transaction cURL Error: ' . $err);
+            $this->session->set_flashdata('error', 'Không thể kết nối đến PayOS để xác thực giao dịch!');
+            redirect('wallet');
+            return;
+        }
+
+        $res_data = json_decode($response, true);
+        if (isset($res_data['code']) && $res_data['code'] === '00' && isset($res_data['data'])) {
+            $tx_data = $res_data['data'];
+            $tx_status = $tx_data['status'];
+            $amount = (float)$tx_data['amount'];
+
+            if ($tx_status === 'PAID') {
+                // Kiểm tra trùng mã tham chiếu trong DB để tránh nạp tiền trùng lặp
+                $is_exists = $this->db->where('payos_reference', $order_code)->count_all_results('hcmuepay_transactions');
+                if ($is_exists > 0) {
+                    $this->session->set_flashdata('info', 'Giao dịch nạp tiền này đã được cộng số dư trước đó!');
+                    redirect('wallet');
+                    return;
+                }
+
+                // Cộng tiền vào ví thành viên
+                $desc = 'Nạp tiền tự động qua PayOS (Mã: ' . $order_code . ')';
+                $result = $this->Wallet_model->deposit($user_id, $amount, $desc, $order_code);
+
+                if ($result) {
+                    $this->session->set_flashdata('success', '✅ Nạp thành công ' . number_format($amount, 0, ',', '.') . 'đ qua cổng PayOS!');
+                } else {
+                    $this->session->set_flashdata('error', 'Lỗi hệ thống khi cộng tiền vào ví!');
+                }
+            } else {
+                $this->session->set_flashdata('error', 'Giao dịch PayOS chưa được thanh toán (Trạng thái: ' . $tx_status . ')');
+            }
+        } else {
+            $err_msg = isset($res_data['desc']) ? $res_data['desc'] : 'Không tìm thấy giao dịch trên cổng thanh toán';
+            $this->session->set_flashdata('error', 'Xác thực PayOS thất bại: ' . $err_msg);
+        }
+
+        redirect('wallet');
+    }
+
+    // =========================================================
+    // CANCEL: Xử lý khi hủy thanh toán PayOS (cancelUrl)
+    // =========================================================
+    public function payos_cancel() {
+        $this->session->set_flashdata('warning', 'Bạn đã hủy yêu cầu nạp tiền qua cổng PayOS.');
+        redirect('wallet');
     }
 }

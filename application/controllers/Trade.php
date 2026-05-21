@@ -135,6 +135,17 @@ class Trade extends CI_Controller {
         $auto_approve = ($this->Setting_model->get('auto_approve_new') === '1');
         $final_status = ($this->session->userdata('role') === 'admin' || $auto_approve) ? 'available' : 'pending';
 
+        $ai_analysis = null;
+        if ($auto_approve && $this->session->userdata('role') !== 'admin') {
+            $this->load->model('Ai_moderation_model');
+            $full_text = $this->input->post('title', TRUE) . "\n" . $this->input->post('description', TRUE);
+            $ai_analysis = $this->Ai_moderation_model->analyze_text($full_text);
+            
+            if ($ai_analysis['action'] === 'block') {
+                $final_status = 'pending';
+            }
+        }
+
         $post_data = [
             'user_id'     => $user_id,
             'category_id' => $this->input->post('category_id'),
@@ -148,6 +159,10 @@ class Trade extends CI_Controller {
 
         $this->Trade_model->insert_post($post_data);
         $post_id = $this->db->insert_id();
+
+        if ($ai_analysis) {
+            $this->Ai_moderation_model->log_moderation('post', $post_id, $user_id, $full_text, $ai_analysis);
+        }
 
         // UPLOAD NHIỀU ẢNH CHI TIẾT (Multi-Image Flow)
         if ($post_id && !empty($_FILES['additional_images']['name'][0])) {
@@ -309,9 +324,23 @@ class Trade extends CI_Controller {
         $auto_approve_edit = ($this->Setting_model->get('auto_approve_edit') === '1');
         $was_pending = false;
 
-        if ($role !== 'admin' && !$auto_approve_edit && $sensitive_changed) {
-            $update_data['status'] = 'pending';
-            $was_pending = true;
+        $ai_analysis = null;
+        if ($role !== 'admin' && $sensitive_changed) {
+            if (!$auto_approve_edit) {
+                $update_data['status'] = 'pending';
+                $was_pending = true;
+            } else {
+                // Admin bật tự động duyệt, chạy AI kiểm duyệt thay thế
+                $this->load->model('Ai_moderation_model');
+                $full_text = $title . "\n" . $update_data['description'];
+                $ai_analysis = $this->Ai_moderation_model->analyze_text($full_text);
+                
+                // Nhãn 3 (block) -> Cấm -> Đưa về chờ duyệt thủ công
+                if ($ai_analysis['action'] === 'block') {
+                    $update_data['status'] = 'pending';
+                    $was_pending = true;
+                }
+            }
         }
 
         // Khởi tạo thư mục & cấu hình upload chung
@@ -359,6 +388,10 @@ class Trade extends CI_Controller {
         }
 
         $this->Trade_model->update_post($id, $update_data);
+
+        if ($ai_analysis) {
+            $this->Ai_moderation_model->log_moderation('post', $id, $user_id, $full_text, $ai_analysis);
+        }
 
         $msg = ($was_pending) 
                ? '✅ Cập nhật thành công! Bài đăng đang chờ duyệt lại do thay đổi nội dung.'

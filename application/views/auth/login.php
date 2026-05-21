@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Đăng nhập | HCMUE Pass Sách</title>
+    <title>Đăng nhập | HCMUE BookSwap</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -266,11 +266,11 @@
         <form id="loginForm" action="<?= site_url('auth/login_post') ?>" method="POST">
             <input type="hidden" name="<?= $this->security->get_csrf_token_name() ?>" value="<?= $this->security->get_csrf_hash() ?>">
             <div class="mb-3">
-                <label class="form-label">Email sinh viên</label>
+                <label class="form-label">Tên đăng nhập hoặc Email</label>
                 <div class="input-wrap">
-                    <i class="fas fa-envelope input-icon"></i>
-                    <input type="email" class="form-control" name="email" required
-                           placeholder="Nhập email sinh viên của bạn">
+                    <i class="fas fa-user input-icon"></i>
+                    <input type="text" class="form-control" name="email" required
+                           placeholder="Nhập tên đăng nhập hoặc email">
                 </div>
             </div>
             <div class="mb-4">

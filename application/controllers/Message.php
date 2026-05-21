@@ -68,6 +68,15 @@ class Message extends CI_Controller {
             return;
         }
 
+        $this->load->model('Ai_moderation_model');
+        $ai_analysis = $this->Ai_moderation_model->analyze_text($content);
+        if ($ai_analysis['action'] === 'block') {
+            $this->Ai_moderation_model->log_moderation('message', 0, $sender_id, $content, $ai_analysis);
+            $this->session->set_flashdata('error', 'Tin nhắn bị chặn tự động do chứa ngôn từ không phù hợp!');
+            redirect('message/conversation/' . $receiver_id);
+            return;
+        }
+
         $this->Message_model->send_message([
             'sender_id'   => $sender_id,
             'receiver_id' => $receiver_id,
@@ -75,6 +84,9 @@ class Message extends CI_Controller {
             'content'     => $content,
             'is_read'     => 0
         ]);
+
+        $new_id = $this->db->insert_id();
+        $this->Ai_moderation_model->log_moderation('message', $new_id, $sender_id, $content, $ai_analysis);
 
         redirect('message/conversation/' . $receiver_id);
     }
@@ -94,6 +106,14 @@ class Message extends CI_Controller {
             return;
         }
 
+        $this->load->model('Ai_moderation_model');
+        $ai_analysis = $this->Ai_moderation_model->analyze_text($content);
+        if ($ai_analysis['action'] === 'block') {
+            $this->Ai_moderation_model->log_moderation('message', 0, $sender_id, $content, $ai_analysis);
+            echo json_encode(['status' => 'error', 'message' => 'Tin nhắn bị chặn tự động do chứa ngôn từ thù địch!']);
+            return;
+        }
+
         $this->Message_model->send_message([
             'sender_id'   => $sender_id,
             'receiver_id' => $receiver_id,
@@ -103,6 +123,8 @@ class Message extends CI_Controller {
         ]);
 
         $new_id = $this->db->insert_id();
+        $this->Ai_moderation_model->log_moderation('message', $new_id, $sender_id, $content, $ai_analysis);
+        
         echo json_encode(['status' => 'ok', 'id' => $new_id]);
     }
 
@@ -131,5 +153,66 @@ class Message extends CI_Controller {
         $user_id = $this->session->userdata('user_id');
         $count = $this->Message_model->count_unread($user_id);
         echo json_encode(['status' => 'ok', 'count' => $count]);
+    }
+
+    // [AJAX] Bật/tắt ghim cuộc hội thoại
+    public function toggle_pin_ajax($other_id) {
+        $this->require_login();
+        if (!$this->input->is_ajax_request()) { show_404(); }
+
+        $user_id = $this->session->userdata('user_id');
+        $new_val = $this->Message_model->toggle_pin($user_id, $other_id);
+
+        echo json_encode([
+            'status' => 'ok',
+            'is_pinned' => $new_val,
+            'message' => $new_val ? 'Đã ghim cuộc hội thoại thành công!' : 'Đã bỏ ghim cuộc hội thoại thành công!'
+        ]);
+    }
+
+    // [AJAX] Bật/tắt tắt tiếng cuộc hội thoại
+    public function toggle_mute_ajax($other_id) {
+        $this->require_login();
+        if (!$this->input->is_ajax_request()) { show_404(); }
+
+        $user_id = $this->session->userdata('user_id');
+        $new_val = $this->Message_model->toggle_mute($user_id, $other_id);
+
+        echo json_encode([
+            'status' => 'ok',
+            'is_muted' => $new_val,
+            'message' => $new_val ? 'Đã tắt thông báo cuộc hội thoại!' : 'Đã bật thông báo cuộc hội thoại!'
+        ]);
+    }
+
+    // [AJAX] Xóa mềm cuộc hội thoại (Soft Delete)
+    public function delete_chat_ajax($other_id) {
+        $this->require_login();
+        if (!$this->input->is_ajax_request()) { show_404(); }
+
+        $user_id = $this->session->userdata('user_id');
+        $this->Message_model->soft_delete_conversation($user_id, $other_id);
+
+        // Đồng thời đánh dấu đã đọc các tin nhắn cũ để giảm badge đếm
+        $this->Message_model->mark_as_read($other_id, $user_id);
+
+        echo json_encode([
+            'status' => 'ok',
+            'message' => 'Đã xóa cuộc hội thoại thành công!'
+        ]);
+    }
+
+    // [AJAX] Đánh dấu đã đọc cuộc hội thoại trực tiếp
+    public function mark_read_ajax($other_id) {
+        $this->require_login();
+        if (!$this->input->is_ajax_request()) { show_404(); }
+
+        $user_id = $this->session->userdata('user_id');
+        $this->Message_model->mark_as_read($other_id, $user_id);
+
+        echo json_encode([
+            'status' => 'ok',
+            'message' => 'Đã đánh dấu đã đọc thành công!'
+        ]);
     }
 }

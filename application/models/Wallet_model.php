@@ -342,4 +342,86 @@ class Wallet_model extends CI_Model {
     public function count_pending_withdrawals() {
         return $this->db->where('status', 'pending')->count_all_results('hcmuepay_withdraw_requests');
     }
+
+    /**
+     * Admin đảo ngược phán quyết tranh chấp: Thu hồi tiền bên này hoàn/bồi thường cho bên kia
+     * @param int    $buyer_id
+     * @param int    $seller_id
+     * @param int    $order_id
+     * @param float  $amount
+     * @param string $reverse_to  'buyer' (Bồi thường Buyer, thu hồi Seller) hoặc 'seller' (Giải ngân Seller, thu hồi Buyer)
+     * @return bool
+     */
+    public function reverse_dispute_wallets($buyer_id, $seller_id, $order_id, $amount, $reverse_to) {
+        $buyer_wallet  = $this->get_or_create_wallet($buyer_id);
+        $seller_wallet = $this->get_or_create_wallet($seller_id);
+
+        $this->db->trans_start();
+
+        if ($reverse_to === 'buyer') {
+            // 1. Thu hồi từ Seller (Cho phép âm tài khoản)
+            $this->db->set('balance', 'balance - ' . (float)$amount, FALSE);
+            $this->db->where('id', $seller_wallet['id']);
+            $this->db->update('hcmuepay_wallets');
+
+            // 2. Bồi thường / Hoàn tiền cho Buyer
+            $this->db->set('balance', 'balance + ' . (float)$amount, FALSE);
+            $this->db->where('id', $buyer_wallet['id']);
+            $this->db->update('hcmuepay_wallets');
+
+            // 3. Ghi lịch sử giao dịch thu hồi (Seller)
+            $this->db->insert('hcmuepay_transactions', [
+                'wallet_id'   => $seller_wallet['id'],
+                'order_id'    => $order_id,
+                'amount'      => -$amount,
+                'type'        => 'withdraw',
+                'status'      => 'completed',
+                'description' => 'Thu hồi tiền đơn #' . $order_id . ' do Admin đảo ngược phân xử khiếu nại',
+            ]);
+
+            // 4. Ghi lịch sử giao dịch bồi hoàn (Buyer)
+            $this->db->insert('hcmuepay_transactions', [
+                'wallet_id'   => $buyer_wallet['id'],
+                'order_id'    => $order_id,
+                'amount'      => $amount,
+                'type'        => 'refund',
+                'status'      => 'completed',
+                'description' => 'Nhận tiền bồi hoàn đơn #' . $order_id . ' do Admin đảo ngược phân xử',
+            ]);
+
+        } else if ($reverse_to === 'seller') {
+            // 1. Thu hồi từ Buyer (Cho phép âm tài khoản)
+            $this->db->set('balance', 'balance - ' . (float)$amount, FALSE);
+            $this->db->where('id', $buyer_wallet['id']);
+            $this->db->update('hcmuepay_wallets');
+
+            // 2. Giải ngân cho Seller
+            $this->db->set('balance', 'balance + ' . (float)$amount, FALSE);
+            $this->db->where('id', $seller_wallet['id']);
+            $this->db->update('hcmuepay_wallets');
+
+            // 3. Ghi lịch sử giao dịch thu hồi (Buyer)
+            $this->db->insert('hcmuepay_transactions', [
+                'wallet_id'   => $buyer_wallet['id'],
+                'order_id'    => $order_id,
+                'amount'      => -$amount,
+                'type'        => 'withdraw',
+                'status'      => 'completed',
+                'description' => 'Thu hồi tiền đơn #' . $order_id . ' do Admin đảo ngược phán quyết tranh chấp',
+            ]);
+
+            // 4. Ghi lịch sử giao dịch giải ngân (Seller)
+            $this->db->insert('hcmuepay_transactions', [
+                'wallet_id'   => $seller_wallet['id'],
+                'order_id'    => $order_id,
+                'amount'      => $amount,
+                'type'        => 'receive',
+                'status'      => 'completed',
+                'description' => 'Nhận tiền giải ngân đơn #' . $order_id . ' do Admin đảo ngược phán quyết',
+            ]);
+        }
+
+        $this->db->trans_complete();
+        return $this->db->trans_status();
+    }
 }

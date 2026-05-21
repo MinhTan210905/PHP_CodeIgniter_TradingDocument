@@ -93,7 +93,7 @@ header('Content-Type: text/html; charset=UTF-8');
                 </button>
                 <!-- User Chip -->
                 <div class="dropdown">
-                    <a href="javascript:void(0)" class="nav-user-chip" data-bs-toggle="dropdown">
+                    <a href="javascript:void(0)" class="nav-user-chip position-relative" data-bs-toggle="dropdown">
                         <div class="nav-user-avatar" style="overflow:hidden; display:flex; align-items:center; justify-content:center;">
                             <?php 
                             $ses_avt = $this->session->userdata('avatar');
@@ -106,6 +106,25 @@ header('Content-Type: text/html; charset=UTF-8');
                         <span style="font-size:0.82rem; font-weight:600;">
                             <?= $this->session->userdata('full_name') ?>
                         </span>
+                        <?php if ($this->session->userdata('role') === 'admin'): ?>
+                            <?php 
+                            // Tính tổng việc cần admin xử lý (cho chấm đỏ trên avatar)
+                            $CI_h =& get_instance();
+                            if (!isset($admin_total_pending)) {
+                                $CI_h->load->model('Trade_model');
+                                $CI_h->load->model('Wallet_model');
+                                $admin_total_pending = $CI_h->Trade_model->count_pending() 
+                                    + $CI_h->Wallet_model->count_pending_withdrawals()
+                                    + $CI_h->db->where('status', 'disputed')->count_all_results('orders')
+                                    + $CI_h->db->where('moderation_status', 'flagged')->count_all_results('comments');
+                            }
+                            ?>
+                            <?php if ($admin_total_pending > 0): ?>
+                                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger shadow-sm" style="font-size:0.6rem; min-width:18px; padding: 3px 5px;">
+                                    <?= $admin_total_pending ?>
+                                </span>
+                            <?php endif; ?>
+                        <?php endif; ?>
                         <i class="fas fa-chevron-down" style="font-size:0.65rem; opacity:0.7;"></i>
                     </a>
                     <ul class="dropdown-menu dropdown-menu-end mt-2 shadow border-0 rounded-3">
@@ -144,7 +163,9 @@ header('Content-Type: text/html; charset=UTF-8');
                             $CI->load->model('Wallet_model');
                             $admin_pending_posts = $CI->Trade_model->count_pending();
                             $admin_pending_withdraw = $CI->Wallet_model->count_pending_withdrawals();
-                            $admin_total_pending = $admin_pending_posts + $admin_pending_withdraw;
+                            $admin_pending_disputes = $CI->db->where('status', 'disputed')->count_all_results('orders');
+                            $admin_pending_comments = $CI->db->where('moderation_status', 'flagged')->count_all_results('comments');
+                            $admin_total_pending = $admin_pending_posts + $admin_pending_withdraw + $admin_pending_disputes + $admin_pending_comments;
                         ?>
                         <li>
                             <a class="dropdown-item py-2" href="<?= site_url('admin') ?>">
@@ -154,6 +175,22 @@ header('Content-Type: text/html; charset=UTF-8');
                                 <?php endif; ?>
                             </a>
                         </li>
+                        <?php if($admin_pending_disputes > 0): ?>
+                        <li>
+                            <a class="dropdown-item py-2" href="<?= site_url('admin/disputes') ?>">
+                                <i class="fas fa-gavel me-2 text-danger"></i>Tranh chấp cần xử lý
+                                <span class="badge bg-danger ms-1" style="font-size:0.7rem;"><?= $admin_pending_disputes ?></span>
+                            </a>
+                        </li>
+                        <?php endif; ?>
+                        <?php if($admin_pending_comments > 0): ?>
+                        <li>
+                            <a class="dropdown-item py-2" href="<?= site_url('admin/moderation') ?>">
+                                <i class="fas fa-shield-alt me-2 text-warning"></i>Nội dung vi phạm (AI)
+                                <span class="badge bg-warning text-dark ms-1" style="font-size:0.7rem;"><?= $admin_pending_comments ?></span>
+                            </a>
+                        </li>
+                        <?php endif; ?>
                         <?php endif; ?>
                         <li><hr class="dropdown-divider my-1"></li>
                         <li>

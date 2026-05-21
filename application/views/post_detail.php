@@ -132,13 +132,15 @@
 
                 <!-- Seller Info -->
                 <div class="d-flex align-items-center gap-3 mb-3">
-                    <div style="width:44px;height:44px;background:var(--primary);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;">
-                        <?php if (!empty($post['avatar']) && file_exists(FCPATH . $post['avatar'])): ?>
-                            <img src="<?= base_url($post['avatar']) ?>" alt="Avt" style="width:100%;height:100%;object-fit:cover;">
-                        <?php else: ?>
-                            <div style="color:#F5A623;font-weight:800;font-size:1.1rem;"><?= strtoupper(substr($post['full_name'] ?: $post['username'], 0, 1)) ?></div>
-                        <?php endif; ?>
-                    </div>
+                    <a href="<?= site_url('seller/' . $post['seller_id']) ?>" class="text-decoration-none" style="transition: opacity 0.2s;" onmouseover="this.style.opacity=0.8" onmouseout="this.style.opacity=1">
+                        <div style="width:44px;height:44px;background:var(--primary);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;">
+                            <?php if (!empty($post['avatar']) && file_exists(FCPATH . $post['avatar'])): ?>
+                                <img src="<?= base_url($post['avatar']) ?>" alt="Avt" style="width:100%;height:100%;object-fit:cover;">
+                            <?php else: ?>
+                                <div style="color:#F5A623;font-weight:800;font-size:1.1rem;"><?= strtoupper(substr($post['full_name'] ?: $post['username'], 0, 1)) ?></div>
+                            <?php endif; ?>
+                        </div>
+                    </a>
                     <div>
                         <a href="<?= site_url('seller/' . $post['seller_id']) ?>"
                            class="text-decoration-none" style="font-weight:700;font-size:0.9rem;color:var(--primary);">
@@ -349,17 +351,31 @@
             </p>
         <?php else: ?>
             <div class="d-flex flex-column gap-3 mb-4">
-                <?php foreach($comments as $cmt): ?>
-                <div class="d-flex gap-3">
-                    <div style="width:36px;height:36px;background:var(--primary);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#F5A623;font-weight:700;font-size:0.85rem;flex-shrink:0;">
+                <?php 
+                $shown_comments = 0;
+                foreach($comments as $cmt): 
+                    $is_flagged = isset($cmt['moderation_status']) && $cmt['moderation_status'] === 'flagged';
+                    $is_owner = $logged_in && ($cmt['user_id'] == $cur_uid);
+                    $is_admin = $logged_in && ($this->session->userdata('role') === 'admin');
+                    
+                    if ($is_flagged && !$is_owner && !$is_admin) {
+                        continue; // Ẩn bình luận bị cắm cờ đối với người dùng khác
+                    }
+                    $shown_comments++;
+                ?>
+                <div class="d-flex gap-3" <?= $is_flagged ? 'style="opacity:0.8;"' : '' ?>>
+                    <div style="width:36px;height:36px;background:<?= $is_flagged ? '#EF4444' : 'var(--primary)' ?>;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#F5A623;font-weight:700;font-size:0.85rem;flex-shrink:0;">
                         <?= strtoupper(substr($cmt['full_name'] ?: $cmt['username'], 0, 1)) ?>
                     </div>
                     <div class="flex-grow-1">
-                        <div style="background:#F8FAFC;border-radius:12px;padding:12px 14px;">
+                        <div style="background:<?= $is_flagged ? '#FFF5F5' : '#F8FAFC' ?>;border-radius:12px;padding:12px 14px;<?= $is_flagged ? 'border:1px dashed #FCA5A5;' : '' ?>">
                             <div class="fw-bold mb-1" style="font-size:0.82rem;color:var(--primary);">
                                 <?= htmlspecialchars($cmt['full_name'] ?: $cmt['username']) ?>
+                                <?php if ($is_flagged): ?>
+                                    <span class="badge bg-danger text-white ms-2" style="font-size:0.7rem;"><i class="fas fa-exclamation-triangle me-1"></i>Đang được kiểm duyệt AI</span>
+                                <?php endif; ?>
                             </div>
-                            <p class="mb-0" style="font-size:0.88rem;line-height:1.6;">
+                            <p class="mb-0" style="font-size:0.88rem;line-height:1.6;<?= $is_flagged ? 'color:#B91C1C;font-style:italic;' : '' ?>">
                                 <?= nl2br(htmlspecialchars($cmt['content'])) ?>
                             </p>
                         </div>
@@ -369,6 +385,12 @@
                     </div>
                 </div>
                 <?php endforeach; ?>
+                
+                <?php if ($shown_comments === 0): ?>
+                    <p class="text-muted mb-4" style="font-size:0.87rem;">
+                        Chưa có bình luận nào được hiển thị.
+                    </p>
+                <?php endif; ?>
             </div>
         <?php endif; ?>
 

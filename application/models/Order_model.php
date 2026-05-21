@@ -132,4 +132,38 @@ class Order_model extends CI_Model {
         $this->db->where('NOT EXISTS (SELECT 1 FROM ratings WHERE ratings.order_id = orders.id)', '', FALSE);
         return $this->db->get()->result_array();
     }
+
+    // [ADMIN] Lấy tất cả đơn đang tranh chấp (để Admin phân xử)
+    public function get_disputed_orders() {
+        $this->db->select('orders.*, 
+            posts.title as post_title, posts.image_url, posts.price,
+            seller.full_name as seller_name, seller.username as seller_username,
+            buyer.full_name  as buyer_name,  buyer.username  as buyer_username');
+        $this->db->from('orders');
+        $this->db->join('posts',       'posts.id    = orders.post_id',   'left');
+        $this->db->join('users seller','seller.id   = orders.seller_id', 'left');
+        $this->db->join('users buyer', 'buyer.id    = orders.buyer_id',  'left');
+        $this->db->where('orders.status', 'disputed');
+        $this->db->order_by('orders.updated_at', 'ASC'); // Đơn cũ nhất hiển thị trước
+        return $this->db->get()->result_array();
+    }
+
+    // [ADMIN] Lấy lịch sử tất cả đơn hàng đã được phân xử tranh chấp xong
+    public function get_resolved_disputes() {
+        $this->db->select('orders.*, 
+            posts.title as post_title, posts.image_url, posts.price,
+            seller.full_name as seller_name, seller.username as seller_username,
+            buyer.full_name  as buyer_name,  buyer.username  as buyer_username');
+        $this->db->from('orders');
+        $this->db->join('posts',       'posts.id    = orders.post_id',   'left');
+        $this->db->join('users seller','seller.id   = orders.seller_id', 'left');
+        $this->db->join('users buyer', 'buyer.id    = orders.buyer_id',  'left');
+        $this->db->group_start();
+        $this->db->where('orders.status', 'completed');
+        $this->db->or_where('orders.status', 'cancelled');
+        $this->db->group_end();
+        $this->db->like('orders.reject_reason', '[ADMIN] Kết luận:');
+        $this->db->order_by('orders.updated_at', 'DESC');
+        return $this->db->get()->result_array();
+    }
 }

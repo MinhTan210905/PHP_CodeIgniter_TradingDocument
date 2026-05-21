@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Đăng ký | HCMUE Pass Sách</title>
+    <title>Đăng ký | HCMUE BookSwap</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -183,7 +183,7 @@
         <div class="step-item">
             <div class="step-num">3</div>
             <div class="step-text">
-                <strong>Bắt đầu Pass Sách!</strong>
+                <strong>Bắt đầu BookSwap!</strong>
                 <span>Đăng bài, nhắn tin và giao dịch ngay</span>
             </div>
         </div>
@@ -259,7 +259,10 @@
                     <label class="form-label">Mật khẩu *</label>
                     <div class="input-wrap">
                         <i class="fas fa-lock input-icon"></i>
-                        <input type="password" class="form-control" name="password" required placeholder="Ít nhất 6 ký tự">
+                        <input type="password" class="form-control" name="password" required 
+                               pattern="^(?=.*[A-Za-z])(?=.*\d).{6,}$" 
+                               title="Mật khẩu phải chứa ít nhất 6 ký tự, bao gồm cả chữ cái và chữ số." 
+                               placeholder="Ít nhất 6 ký tự, cả chữ và số">
                     </div>
                 </div>
                 <div class="col-6">

@@ -201,6 +201,7 @@
     const DETAIL_URL = '<?= site_url("trade/detail/") ?>';
     const EDIT_URL = '<?= site_url("trade/edit/") ?>';
     const MSG_URL = '<?= site_url("message/conversation/") ?>';
+    const SELLER_URL = '<?= site_url("seller/") ?>';
     const DEFAULT_IMG = BASE_URL + 'assets/images/default_book.jpg';
     let lastResultJson = '';
 
@@ -249,8 +250,10 @@
                             post.title +
                         '</a>' +
                         '<div class="d-flex align-items-center gap-1 mb-2" style="font-size:0.78rem;color:#6B7280;">' +
-                            '<i class="fas fa-user-circle" style="color:#2563EB;"></i>' +
-                            '<span>' + (post.full_name || post.username) + '</span>' +
+                            '<a href="' + SELLER_URL + post.user_id + '" class="d-inline-flex align-items-center gap-1 text-decoration-none" style="color:#475569 !important; transition: opacity 0.2s;" onmouseover="this.style.opacity=0.75" onmouseout="this.style.opacity=1">' +
+                                '<i class="fas fa-user-circle" style="color:#2563EB;"></i>' +
+                                '<span>' + (post.full_name || post.username) + '</span>' +
+                            '</a>' +
                             '<span class="mx-1">·</span>' +
                             '<span class="star-display">' + rating + '</span>' +
                         '</div>' +

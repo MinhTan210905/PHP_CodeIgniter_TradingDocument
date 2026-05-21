@@ -127,14 +127,7 @@
 .wd-status-approved { background: #D1FAE5; color: #065F46; }
 .wd-status-rejected { background: #FEE2E2; color: #991B1B; }
 
-/* Mock mode banner */
-.mock-banner {
-    background: linear-gradient(90deg, #FFF7ED, #FFFBEB);
-    border: 1.5px solid #FDE68A;
-    border-radius: 12px;
-    padding: 12px 18px;
-    font-size: 0.82rem;
-}
+
 </style>
 
 <div class="container py-4" style="max-width: 850px;">
@@ -150,6 +143,22 @@
         <div class="alert alert-danger alert-hcmue alert-dismissible fade show mb-3">
             <i class="fas fa-exclamation-circle me-2"></i><?= $this->session->flashdata('error') ?>
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    <?php endif; ?>
+
+    <!-- Cảnh báo nợ âm (Shopee-style) -->
+    <?php if ($wallet['balance'] < 0): ?>
+        <div class="alert border-0 rounded-4 shadow-sm p-3 mb-4 d-flex align-items-center gap-3" style="background:#FEF2F2; color:#991B1B; border:1px solid #FCA5A5!important;">
+            <div style="width:40px;height:40px;background:#EF4444;border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.2rem;flex-shrink:0;">
+                <i class="fas fa-hand-holding-dollar"></i>
+            </div>
+            <div>
+                <h6 class="fw-bold mb-1" style="font-size:0.86rem; color:#991B1B;">⚠️ Tài khoản của bạn đang có khoản nợ (Số dư âm: <?= number_format($wallet['balance'], 0, ',', '.') ?>đ)</h6>
+                <p class="mb-0 text-muted" style="font-size:0.77rem; color:#7F1D1D !important; line-height:1.4;">
+                    Số dư ví của bạn tạm thời bị âm do Ban Quản trị đã thay đổi phán quyết phân xử tranh chấp của một đơn hàng liên quan đến bạn. 
+                    Để tiếp tục thực hiện giao dịch mua bán sách hoặc rút tiền, vui lòng nạp thêm tiền vào ví để thanh toán khoản nợ này. Xin cảm ơn!
+                </p>
+            </div>
         </div>
     <?php endif; ?>
 
@@ -192,13 +201,6 @@
                 Đơn hàng
             </a>
         </div>
-    </div>
-
-    <!-- Mock Mode Banner -->
-    <div class="mock-banner mb-4">
-        <i class="fas fa-flask me-2 text-warning"></i>
-        <strong>Chế độ Demo:</strong> Hệ thống đang chạy ở chế độ giả lập. Tiền nạp là tiền ảo để thử nghiệm. 
-        Khi tích hợp PayOS, hệ thống sẽ tự động chuyển sang quét mã QR thật.
     </div>
 
     <div class="row g-4">
@@ -357,10 +359,6 @@
                         <?php endforeach; ?>
                     </div>
 
-                    <div class="alert alert-info border-0 small mb-0" style="background:#EFF6FF; border-radius:10px;">
-                        <i class="fas fa-info-circle me-1"></i>
-                        <strong>Chế độ Demo:</strong> Số tiền sẽ được cộng trực tiếp vào ví ảo của bạn để thử nghiệm.
-                    </div>
                 </div>
                 <div class="modal-footer border-0 px-4 pb-4">
                     <button type="button" class="btn btn-light rounded-3 fw-bold" data-bs-dismiss="modal">Hủy</button>

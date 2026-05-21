@@ -150,6 +150,16 @@ class Trade_model extends CI_Model
         return $this->db->update('posts', ['quantity' => $new_qty, 'status' => $new_status]);
     }
 
+    // Update: Cộng lại số lượng khi hủy đơn, tự chuyển available nếu trước đó là sold
+    public function increment_quantity($post_id, $qty = 1) {
+        $post = $this->get_post_by_id($post_id);
+        if (!$post) return false;
+        $new_qty = (int)$post['quantity'] + $qty;
+        $new_status = ($post['status'] === 'sold') ? 'available' : $post['status'];
+        $this->db->where('id', $post_id);
+        return $this->db->update('posts', ['quantity' => $new_qty, 'status' => $new_status]);
+    }
+
     // Update: Chuyển trạng thái thủ công
     public function update_status($id, $status) {
         $this->db->where('id', $id);

@@ -7,13 +7,15 @@
         <a href="<?= site_url('message/inbox') ?>" class="btn btn-light rounded-3 px-3 py-2" style="font-size:0.88rem;">
             <i class="fas fa-arrow-left me-1"></i> Quay lại
         </a>
-        <div style="width:42px;height:42px;background:var(--hcmue-blue);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#F5A623;font-weight:800;font-size:1rem;flex-shrink:0;">
-            <?= strtoupper(substr($other_user['full_name'] ?: $other_user['username'], 0, 1)) ?>
-        </div>
-        <div>
-            <div class="fw-bold" style="font-size:0.95rem;"><?= htmlspecialchars($other_user['full_name'] ?: $other_user['username']) ?></div>
-            <div class="text-muted" style="font-size:0.75rem;">@<?= $other_user['username'] ?></div>
-        </div>
+        <a href="<?= site_url('seller/' . $other_user['id']) ?>" class="d-flex align-items-center gap-3 text-decoration-none text-dark" style="transition: opacity 0.2s;" onmouseover="this.style.opacity=0.8" onmouseout="this.style.opacity=1">
+            <div style="width:42px;height:42px;background:var(--hcmue-blue);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#F5A623;font-weight:800;font-size:1rem;flex-shrink:0;">
+                <?= strtoupper(substr($other_user['full_name'] ?: $other_user['username'], 0, 1)) ?>
+            </div>
+            <div>
+                <div class="fw-bold" style="font-size:0.95rem;"><?= htmlspecialchars($other_user['full_name'] ?: $other_user['username']) ?></div>
+                <div class="text-muted" style="font-size:0.75rem;">@<?= $other_user['username'] ?></div>
+            </div>
+        </a>
     </div>
 
     <!-- Messages container -->

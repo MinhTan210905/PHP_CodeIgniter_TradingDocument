@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS `categories` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================================
--- BẢNG POSTS (Bài đăng pass sách)
+-- BẢNG POSTS (Bài bán sách BookSwap)
 -- ============================================================
 CREATE TABLE IF NOT EXISTS `posts` (
     `id`          INT AUTO_INCREMENT PRIMARY KEY,
@@ -131,6 +131,23 @@ CREATE TABLE IF NOT EXISTS `messages` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================================
+-- BẢNG USER_CONVERSATION_META (Cài đặt nâng cao cuộc trò chuyện)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS `user_conversation_meta` (
+    `id`            INT AUTO_INCREMENT PRIMARY KEY,
+    `user_id`       INT NOT NULL,
+    `other_user_id` INT NOT NULL,
+    `is_pinned`     TINYINT(1) DEFAULT 0,
+    `is_muted`      TINYINT(1) DEFAULT 0,
+    `deleted_at`    DATETIME DEFAULT NULL,
+    `updated_at`    DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY `unique_user_conv` (`user_id`, `other_user_id`),
+    FOREIGN KEY (`user_id`)       REFERENCES `users`(`id`) ON DELETE CASCADE,
+    FOREIGN KEY (`other_user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+-- ============================================================
 -- BẢNG SETTINGS (Cài đặt hệ thống)
 -- ============================================================
 CREATE TABLE IF NOT EXISTS `settings` (
@@ -185,7 +202,40 @@ CREATE TABLE IF NOT EXISTS `hcmuepay_withdraw_requests` (
     FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- ============================================================
+-- DANH SÁCH MONG MUỐN (Wishlist nhận thông báo sách mới)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS `book_wishlists` (
+    `id`                    INT AUTO_INCREMENT PRIMARY KEY,
+    `user_id`               INT NOT NULL,
+    `book_title`            VARCHAR(255) NOT NULL COMMENT 'Tên sách mong muốn',
+    `is_active`             TINYINT(1) DEFAULT 1 COMMENT '1 = Đang theo dõi, 0 = Tạm tắt',
+    `last_notified_post_id` INT DEFAULT NULL COMMENT 'ID bài đăng cuối đã thông báo',
+    `created_at`            DATETIME DEFAULT CURRENT_TIMESTAMP,
+    `updated_at`            DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE,
+    INDEX `idx_active_user` (`is_active`, `user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 SET FOREIGN_KEY_CHECKS = 1;
+
+-- ============================================================
+-- LỊCH SỬ KIỂM DUYỆT AI (Hugging Face)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS `ai_moderation_logs` (
+    `id`               INT AUTO_INCREMENT PRIMARY KEY,
+    `content_type`     VARCHAR(50) NOT NULL COMMENT 'message, comment, post_description',
+    `content_id`       INT DEFAULT NULL,
+    `user_id`          INT NOT NULL,
+    `raw_text`         TEXT NOT NULL,
+    `label_0_score`    DECIMAL(5,4) NOT NULL,
+    `label_1_score`    DECIMAL(5,4) NOT NULL,
+    `label_2_score`    DECIMAL(5,4) NOT NULL,
+    `prediction_label` INT NOT NULL,
+    `action_taken`     VARCHAR(20) NOT NULL COMMENT 'allow, block',
+    `created_at`       TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================================
 -- DỮ LIỆU MẪU

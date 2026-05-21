@@ -38,16 +38,7 @@ class Cron extends CI_Controller {
         foreach ($orders as $order) {
             $order_id = $order['id'];
 
-            // Lớp kiểm tra tồn kho
-            $post = $this->Trade_model->get_post_by_id($order['post_id']);
-            if (!$post || $post['quantity'] < $order['quantity']) {
-                // Nếu không đủ sách (do lỗi đồng bộ gì đó), ta chuyển nó sang cancelled hoặc báo lỗi.
-                // Tạm thời bỏ qua
-                continue;
-            }
-
-            // Trừ số lượng sách
-            $this->Trade_model->decrement_quantity($order['post_id'], $order['quantity']);
+            // Sách đã được trừ số lượng từ lúc xác nhận đơn hàng (confirm)
 
             // Cập nhật trạng thái
             if ($order['payment_method'] === 'cod') {

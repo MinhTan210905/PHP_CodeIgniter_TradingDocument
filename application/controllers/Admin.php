@@ -37,6 +37,7 @@ class Admin extends CI_Controller {
 
         $this->load->model('Wallet_model');
         $data['total_withdrawals'] = $this->Wallet_model->count_pending_withdrawals();
+        $data['total_disputes']    = $this->db->where('status', 'disputed')->count_all_results('orders');
 
         $data['recent_posts']  = $this->Trade_model->get_all_approved_posts();
         $data['pending_posts'] = $this->Trade_model->get_pending_posts();
@@ -267,10 +268,28 @@ class Admin extends CI_Controller {
         $data['withdrawals']      = $this->Wallet_model->get_all_pending_withdrawals();
         $data['processed_withdrawals'] = $this->Wallet_model->get_all_processed_withdrawals();
         $data['completed_orders'] = $this->Order_model->get_completed_orders();
+        $data['disputed_orders']  = $this->Order_model->get_disputed_orders();
         $data['unread_count']     = $this->Message_model->count_unread($user_id);
 
         $this->load->view('partials/header', $data);
         $this->load->view('admin/payments', $data);
+        $this->load->view('partials/footer');
+    }
+
+    // =========================================================
+    // QUẢN LÝ TRANH CHẤP ĐƠN HÀNG
+    // =========================================================
+
+    public function disputes() {
+        $this->require_admin();
+        $user_id = $this->session->userdata('user_id');
+
+        $data['disputed_orders']  = $this->Order_model->get_disputed_orders();
+        $data['resolved_orders']  = $this->Order_model->get_resolved_disputes();
+        $data['unread_count']     = $this->Message_model->count_unread($user_id);
+
+        $this->load->view('partials/header', $data);
+        $this->load->view('admin/disputes', $data);
         $this->load->view('partials/footer');
     }
 
@@ -300,5 +319,252 @@ class Admin extends CI_Controller {
         $this->db->update('orders', ['payment_status' => 'paid']);
         $this->session->set_flashdata('success', '✅ Đã xác nhận chuyển tiền cho đơn hàng #' . $order_id);
         redirect('admin/payments');
+    }
+
+    // =========================================================
+    // PHÂN XỬ TRANH CHẤP ĐƠN HÀNG
+    // =========================================================
+
+    /**
+     * Admin đồng ý khiếu nại → Hoàn tiền cho người mua
+     * Chuyển trạng thái: disputed → cancelled
+     * Hoàn tiền: holding_balance seller → balance buyer
+     */
+    public function resolve_dispute_refund($order_id) {
+        $this->require_admin();
+        $order = $this->Order_model->get_order_by_id($order_id);
+
+        if (!$order || $order['status'] !== 'disputed') {
+            $this->session->set_flashdata('error', 'Đơn hàng không hợp lệ hoặc không ở trạng thái tranh chấp!');
+            redirect('admin/disputes');
+            return;
+        }
+
+        $admin_note = $this->input->post('admin_note', TRUE) ?: 'Admin đã xem xét và đồng ý khiếu nại.';
+        $amount = $order['price'] * $order['quantity'];
+
+        // Cập nhật trạng thái đơn hàng sang cancelled
+        $this->Order_model->update_status($order_id, 'cancelled', [
+            'reject_reason' => $order['reject_reason'] . "\n[ADMIN] Kết luận: " . $admin_note,
+        ]);
+
+        // Hoàn trả sách lại kho vì đơn bị hủy do tranh chấp
+        $this->Trade_model->increment_quantity($order['post_id'], $order['quantity']);
+
+        // Hoàn tiền nếu đã thanh toán bằng ví
+        if ($order['payment_method'] === 'wallet' && $order['payment_status'] === 'paid') {
+            $this->load->model('Wallet_model');
+            $this->Wallet_model->refund_order($order['buyer_id'], $order['seller_id'], $order_id, $amount);
+            $this->db->where('id', $order_id)->update('orders', ['payment_status' => 'refunded']);
+        }
+
+        // Gửi thông báo cho cả 2 bên qua chat
+        $admin_id = $this->session->userdata('user_id');
+
+        $this->Message_model->send_message([
+            'sender_id'   => $admin_id,
+            'receiver_id' => $order['buyer_id'],
+            'post_id'     => $order['post_id'],
+            'content'     => "✅ [Ban Quản trị] đã xem xét khiếu nại đơn hàng #" . $order_id . " \"" . $order['post_title'] . "\". Kết luận: ĐỒNG Ý khiếu nại. " . ($order['payment_method'] === 'wallet' ? 'Tiền đã được hoàn lại vào ví HCMUEPay của bạn.' : 'Đơn hàng đã được hủy.'),
+        ]);
+
+        $this->Message_model->send_message([
+            'sender_id'   => $admin_id,
+            'receiver_id' => $order['seller_id'],
+            'post_id'     => $order['post_id'],
+            'content'     => "⚠️ [Ban Quản trị] đã phân xử đơn hàng #" . $order_id . " \"" . $order['post_title'] . "\". Kết luận: Đồng ý khiếu nại của người mua. Lý do: " . $admin_note,
+        ]);
+
+        $this->session->set_flashdata('success', '✅ Đã xử lý tranh chấp đơn #' . $order_id . ': Hoàn tiền cho người mua.');
+        redirect('admin/disputes');
+    }
+
+    /**
+     * Admin từ chối khiếu nại → Giải ngân cho người bán
+     * Chuyển trạng thái: disputed → completed
+     * Giải ngân: holding_balance → balance seller
+     */
+    public function resolve_dispute_release($order_id) {
+        $this->require_admin();
+        $order = $this->Order_model->get_order_by_id($order_id);
+
+        if (!$order || $order['status'] !== 'disputed') {
+            $this->session->set_flashdata('error', 'Đơn hàng không hợp lệ hoặc không ở trạng thái tranh chấp!');
+            redirect('admin/disputes');
+            return;
+        }
+
+        $admin_note = $this->input->post('admin_note', TRUE) ?: 'Admin đã xem xét và từ chối khiếu nại.';
+        $amount = $order['price'] * $order['quantity'];
+
+        // Cập nhật trạng thái đơn hàng sang completed
+        $this->Order_model->update_status($order_id, 'completed', [
+            'reject_reason' => $order['reject_reason'] . "\n[ADMIN] Kết luận: " . $admin_note,
+        ]);
+
+        // Giải ngân tiền cho người bán nếu đã thanh toán bằng ví
+        if ($order['payment_method'] === 'wallet' && $order['payment_status'] === 'paid') {
+            $this->load->model('Wallet_model');
+            $this->Wallet_model->release_escrow($order['seller_id'], $order_id, $amount);
+        }
+
+        // Gửi thông báo cho cả 2 bên qua chat
+        $admin_id = $this->session->userdata('user_id');
+
+        $this->Message_model->send_message([
+            'sender_id'   => $admin_id,
+            'receiver_id' => $order['seller_id'],
+            'post_id'     => $order['post_id'],
+            'content'     => "✅ [Ban Quản trị] đã xem xét khiếu nại đơn hàng #" . $order_id . " \"" . $order['post_title'] . "\". Kết luận: TỪ CHỐI khiếu nại. " . ($order['payment_method'] === 'wallet' ? 'Tiền đã được giải ngân vào ví HCMUEPay của bạn.' : 'Giao dịch hoàn tất.'),
+        ]);
+
+        $this->Message_model->send_message([
+            'sender_id'   => $admin_id,
+            'receiver_id' => $order['buyer_id'],
+            'post_id'     => $order['post_id'],
+            'content'     => "⚠️ [Ban Quản trị] đã phân xử đơn hàng #" . $order_id . " \"" . $order['post_title'] . "\". Kết luận: Từ chối khiếu nại. Lý do: " . $admin_note . ". Giao dịch được xác nhận hoàn thành.",
+        ]);
+
+        $this->session->set_flashdata('success', '✅ Đã xử lý tranh chấp đơn #' . $order_id . ': Giải ngân cho người bán.');
+        redirect('admin/disputes');
+    }
+
+    /**
+     * Admin đảo ngược phán quyết tranh chấp (Kháng cáo thành công)
+     * Đảo trạng thái: completed <-> cancelled
+     * Đảo ví: chuyển tiền từ bên thắng cũ sang bên thắng mới (Cho phép âm số dư)
+     */
+    public function reverse_dispute_decision($order_id) {
+        $this->require_admin();
+        $order = $this->Order_model->get_order_by_id($order_id);
+
+        if (!$order) {
+            $this->session->set_flashdata('error', 'Đơn hàng không tồn tại!');
+            redirect('admin/disputes');
+            return;
+        }
+
+        // Kiểm tra xem đơn hàng có phải đã từng phân xử tranh chấp không
+        if (strpos($order['reject_reason'], '[ADMIN] Kết luận:') === false) {
+            $this->session->set_flashdata('error', 'Đơn hàng này chưa từng được Admin phân xử tranh chấp!');
+            redirect('admin/disputes');
+            return;
+        }
+
+        $admin_note = $this->input->post('admin_note', TRUE) ?: 'Ban Quản trị đã xem xét lại minh chứng và đảo ngược quyết định.';
+        $amount = $order['price'] * $order['quantity'];
+        $current_status = $order['status'];
+
+        $this->db->trans_start();
+
+        if ($current_status === 'completed') {
+            // Trước đây giải ngân cho Seller -> Nay đảo ngược hoàn tiền cho Buyer
+            // Cập nhật trạng thái đơn hàng sang cancelled
+            $this->Order_model->update_status($order_id, 'cancelled', [
+                'reject_reason' => $order['reject_reason'] . "\n[ADMIN] Đảo ngược quyết định: " . $admin_note,
+                'payment_status' => 'refunded'
+            ]);
+
+            // Hoàn trả sách lại kho vì đơn bị hủy
+            $this->Trade_model->increment_quantity($order['post_id'], $order['quantity']);
+
+            // Xử lý ví
+            if ($order['payment_method'] === 'wallet') {
+                $this->load->model('Wallet_model');
+                $this->Wallet_model->reverse_dispute_wallets($order['buyer_id'], $order['seller_id'], $order_id, $amount, 'buyer');
+            }
+
+            // Gửi tin nhắn qua Chat
+            $admin_id = $this->session->userdata('user_id');
+            $this->Message_model->send_message([
+                'sender_id'   => $admin_id,
+                'receiver_id' => $order['buyer_id'],
+                'post_id'     => $order['post_id'],
+                'content'     => "✅ [Kháng cáo thành công] Ban Quản trị đã xem xét lại đơn hàng #" . $order_id . " \"" . $order['post_title'] . "\". Quyết định mới: ĐỒNG Ý khiếu nại. " . ($order['payment_method'] === 'wallet' ? 'Tiền bồi hoàn đã được cộng vào ví HCMUEPay của bạn.' : 'Đơn hàng đã được chuyển sang trạng thái hủy.'),
+            ]);
+
+            $this->Message_model->send_message([
+                'sender_id'   => $admin_id,
+                'receiver_id' => $order['seller_id'],
+                'post_id'     => $order['post_id'],
+                'content'     => "⚠️ [Thay đổi phán quyết] Ban Quản trị đã xem xét lại khiếu nại đơn hàng #" . $order_id . " \"" . $order['post_title'] . "\". Quyết định mới: Đồng ý khiếu nại của người mua. Lý do: " . $admin_note . ". Số tiền giải ngân trước đó đã bị thu hồi từ ví HCMUEPay của bạn.",
+            ]);
+
+        } else if ($current_status === 'cancelled') {
+            // Trước đây hoàn tiền cho Buyer -> Nay đảo ngược giải ngân cho Seller
+            // Cập nhật trạng thái đơn hàng sang completed
+            $this->Order_model->update_status($order_id, 'completed', [
+                'reject_reason' => $order['reject_reason'] . "\n[ADMIN] Đảo ngược quyết định: " . $admin_note,
+                'payment_status' => 'paid'
+            ]);
+
+            // Trừ lại sách vì đơn đã được hoàn thành lại
+            $this->Trade_model->decrement_quantity($order['post_id'], $order['quantity']);
+
+            // Xử lý ví
+            if ($order['payment_method'] === 'wallet') {
+                $this->load->model('Wallet_model');
+                $this->Wallet_model->reverse_dispute_wallets($order['buyer_id'], $order['seller_id'], $order_id, $amount, 'seller');
+            }
+
+            // Gửi tin nhắn qua Chat
+            $admin_id = $this->session->userdata('user_id');
+            $this->Message_model->send_message([
+                'sender_id'   => $admin_id,
+                'receiver_id' => $order['seller_id'],
+                'post_id'     => $order['post_id'],
+                'content'     => "✅ [Kháng cáo thành công] Ban Quản trị đã xem xét lại đơn hàng #" . $order_id . " \"" . $order['post_title'] . "\". Quyết định mới: TỪ CHỐI khiếu nại của người mua. " . ($order['payment_method'] === 'wallet' ? 'Tiền giải ngân bồi hoàn đã được cộng lại vào ví HCMUEPay của bạn.' : 'Giao dịch hoàn tất.'),
+            ]);
+
+            $this->Message_model->send_message([
+                'sender_id'   => $admin_id,
+                'receiver_id' => $order['buyer_id'],
+                'post_id'     => $order['post_id'],
+                'content'     => "⚠️ [Thay đổi phán quyết] Ban Quản trị đã xem xét lại khiếu nại đơn hàng #" . $order_id . " \"" . $order['post_title'] . "\". Quyết định mới: Từ chối khiếu nại của bạn. Lý do: " . $admin_note . ". Số tiền hoàn trả trước đó đã bị thu hồi từ ví HCMUEPay của bạn.",
+            ]);
+        }
+
+        $this->db->trans_complete();
+
+        $this->session->set_flashdata('success', '✅ Đã đảo ngược phán quyết tranh chấp đơn hàng #' . $order_id . ' thành công!');
+        redirect('admin/disputes');
+    }
+    // ============================================
+    // Quản lý kiểm duyệt nội dung (AI Moderation)
+    // ============================================
+    
+    public function moderation() {
+        $this->require_admin();
+        $this->load->model('Ai_moderation_model');
+        
+        $data['flagged_comments'] = $this->db->where('moderation_status', 'flagged')->get('comments')->result_array();
+        foreach($data['flagged_comments'] as &$comment) {
+            $comment['user'] = $this->db->where('id', $comment['user_id'])->get('users')->row_array();
+            $comment['post'] = $this->db->where('id', $comment['post_id'])->get('posts')->row_array();
+        }
+        
+        $data['ai_logs'] = $this->Ai_moderation_model->get_flagged_logs(100, 0);
+
+        $this->load->view('partials/header', $data);
+        $this->load->view('admin/moderation', $data);
+        $this->load->view('partials/footer');
+    }
+
+    public function moderation_action() {
+        $this->require_admin();
+        $type = $this->input->post('type'); // 'comment'
+        $id = $this->input->post('id');
+        $action = $this->input->post('action'); // 'approve' or 'delete'
+        
+        if ($type == 'comment') {
+            if ($action == 'approve') {
+                $this->db->where('id', $id)->update('comments', ['moderation_status' => 'approved']);
+                $this->session->set_flashdata('success', 'Đã duyệt bình luận thành công!');
+            } else if ($action == 'delete') {
+                $this->db->where('id', $id)->delete('comments');
+                $this->session->set_flashdata('success', 'Đã xóa bình luận vi phạm!');
+            }
+        }
+        redirect('admin/moderation');
     }
 }

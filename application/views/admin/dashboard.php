@@ -13,14 +13,23 @@
         </div>
         <div>
             <h2 style="font-size:1.2rem;font-weight:800;color:var(--hcmue-blue);margin:0;">Quản trị Admin</h2>
-            <span class="text-muted" style="font-size:0.8rem;">HCMUE Pass Sách</span>
+            <span class="text-muted" style="font-size:0.8rem;">HCMUE BookSwap</span>
         </div>
         <div class="ms-auto d-flex gap-2">
             <a href="<?= site_url('admin/payments') ?>" class="btn rounded-3 fw-bold text-white position-relative" style="font-size:0.85rem;background:linear-gradient(135deg,#10B981,#059669);">
                 <i class="fas fa-money-check-alt me-1"></i> Kiểm duyệt Thanh toán
-                <?php if (isset($total_withdrawals) && $total_withdrawals > 0): ?>
+                <?php $total_payment_alerts = (isset($total_withdrawals) ? $total_withdrawals : 0); ?>
+                <?php if ($total_payment_alerts > 0): ?>
                     <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
-                        <?= $total_withdrawals ?>
+                        <?= $total_payment_alerts ?>
+                    </span>
+                <?php endif; ?>
+            </a>
+            <a href="<?= site_url('admin/disputes') ?>" class="btn rounded-3 fw-bold text-white position-relative" style="font-size:0.85rem;background:linear-gradient(135deg,#DC2626,#EF4444);">
+                <i class="fas fa-gavel me-1"></i> Tranh chấp
+                <?php if (isset($total_disputes) && $total_disputes > 0): ?>
+                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-dark">
+                        <?= $total_disputes ?>
                     </span>
                 <?php endif; ?>
             </a>
@@ -42,6 +51,7 @@
             ['label'=>'Đang Rao',      'value'=>$total_available,  'icon'=>'fas fa-check-circle',   'color'=>'#059669', 'bg'=>'#ECFDF5'],
             ['label'=>'Đã Pass',       'value'=>$total_sold,       'icon'=>'fas fa-lock',           'color'=>'#6B7280', 'bg'=>'#F3F4F6'],
             ['label'=>'Người dùng',    'value'=>$total_users,      'icon'=>'fas fa-users',          'color'=>'#D97706', 'bg'=>'#FEF3C7'],
+            ['label'=>'Tranh chấp',    'value'=>isset($total_disputes) ? $total_disputes : 0, 'icon'=>'fas fa-gavel', 'color'=>'#DC2626', 'bg'=>'#FEE2E2'],
         ];
         ?>
         <?php foreach($stats as $s): ?>

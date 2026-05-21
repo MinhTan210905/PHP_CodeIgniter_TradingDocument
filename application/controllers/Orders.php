@@ -148,6 +148,9 @@ class Orders extends CI_Controller {
 
         $this->Order_model->update_status($order_id, 'confirmed');
 
+        // Trừ tồn kho ngay khi xác nhận để chống bán chồng (Overselling)
+        $this->Trade_model->decrement_quantity($order['post_id'], $order['quantity']);
+
         // Thông báo cho người mua
         $seller_name = $this->session->userdata('full_name');
         $this->Message_model->send_message([
@@ -370,22 +373,11 @@ class Orders extends CI_Controller {
             return;
         }
 
-        // Một lớp kiểm tra cuối cùng trước khi trừ số lượng
-        $post = $this->Trade_model->get_post_by_id($order['post_id']);
-        if (!$post || $post['quantity'] < $order['quantity']) {
-            $this->session->set_flashdata('error', '❌ Rất tiếc, mặt hàng này hiện tại đã hết hàng hoặc đã được bán cho người khác trước!');
-            redirect('orders?tab=buy');
-            return;
-        }
-
         if ($order['payment_method'] === 'cod') {
             $this->Order_model->update_status($order_id, 'completed', ['payment_status' => 'paid']);
         } else {
             $this->Order_model->update_status($order_id, 'completed');
         }
-
-        // Trừ số lượng sách
-        $this->Trade_model->decrement_quantity($order['post_id'], $order['quantity']);
 
         // Nếu thanh toán qua ví, giải ngân cho người bán
         if ($order['payment_method'] === 'wallet' && $order['payment_status'] === 'paid') {
@@ -523,7 +515,12 @@ class Orders extends CI_Controller {
             return;
         }
 
+        $was_confirmed = in_array($order['status'], ['confirmed', 'processing', 'delivering']);
         $this->Order_model->update_status($order_id, 'cancelled');
+
+        if ($was_confirmed) {
+            $this->Trade_model->increment_quantity($order['post_id'], $order['quantity']);
+        }
 
         // Hoàn tiền nếu đã thanh toán
         // FIX #9: Lưu lại giá trị payment_status TRƯỚC khi update (tránh kiểm tra sai sau khi đã dùng)
