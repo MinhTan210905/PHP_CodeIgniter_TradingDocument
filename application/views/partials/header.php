@@ -47,7 +47,7 @@ header('Content-Type: text/html; charset=UTF-8');
             border-color: rgba(255,255,255,0.4) !important;
         }
     </style>
-    <link rel="stylesheet" href="<?= base_url('assets/css/style.css?v=4.0') ?>">
+    <link rel="stylesheet" href="<?= base_url('assets/css/style.css?v=4.1') ?>">
 </head>
 <body>
 
@@ -80,6 +80,10 @@ header('Content-Type: text/html; charset=UTF-8');
                         <span class="nav-badge"><?= $pending_count ?></span>
                     <?php endif; ?>
                 </a>
+                <!-- Mong muốn sách -->
+                <a href="<?= site_url('wishlist') ?>" class="nav-icon-btn" title="Danh sách mong muốn">
+                    <i class="fas fa-bell"></i>
+                </a>
                 <!-- Đăng bài -->
                 <button class="btn-dang-bai" data-bs-toggle="modal" data-bs-target="#createPostModal">
                     <i class="fas fa-plus"></i> Đăng Sách
@@ -105,6 +109,11 @@ header('Content-Type: text/html; charset=UTF-8');
                         <li>
                             <a class="dropdown-item py-2" href="<?= site_url('profile') ?>">
                                 <i class="fas fa-user-circle me-2 text-primary"></i>Trang cá nhân
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item py-2" href="<?= site_url('wishlist') ?>">
+                                <i class="fas fa-bell me-2 text-warning"></i>Danh sách mong muốn
                             </a>
                         </li>
                         <li>

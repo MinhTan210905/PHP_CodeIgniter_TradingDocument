@@ -133,7 +133,7 @@
                 <div class="input-wrap">
                     <i class="fas fa-envelope input-icon"></i>
                     <input type="email" class="form-control" name="email" required
-                           placeholder="nguyenvana@student.hcmue.edu.vn">
+                           placeholder="Nhập email sinh viên của bạn">
                 </div>
             </div>
             

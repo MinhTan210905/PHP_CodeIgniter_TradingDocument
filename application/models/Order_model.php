@@ -112,4 +112,24 @@ class Order_model extends CI_Model {
         $this->db->order_by('orders.updated_at', 'DESC');
         return $this->db->get()->result_array();
     }
+    // Lấy các đơn hàng đang giao (delivering) trên 24h
+    public function get_delivering_over_24h() {
+        $this->db->select('orders.*, posts.title as post_title');
+        $this->db->from('orders');
+        $this->db->join('posts', 'posts.id = orders.post_id', 'left');
+        $this->db->where('orders.status', 'delivering');
+        $this->db->where('orders.updated_at <', date('Y-m-d H:i:s', strtotime('-24 hours')));
+        return $this->db->get()->result_array();
+    }
+
+    // Lấy các đơn hàng đã hoàn thành (completed) trên 24h mà chưa có đánh giá
+    public function get_completed_unrated_over_24h() {
+        $this->db->select('orders.*');
+        $this->db->from('orders');
+        $this->db->where('orders.status', 'completed');
+        $this->db->where('orders.updated_at <', date('Y-m-d H:i:s', strtotime('-24 hours')));
+        // Lọc những đơn chưa có đánh giá
+        $this->db->where('NOT EXISTS (SELECT 1 FROM ratings WHERE ratings.order_id = orders.id)', '', FALSE);
+        return $this->db->get()->result_array();
+    }
 }

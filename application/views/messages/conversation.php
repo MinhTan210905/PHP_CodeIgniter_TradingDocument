@@ -61,9 +61,9 @@
                     $content = preg_replace('/https?:\/\/[^\s]+/i', '', $content);
                     // Làm sạch các tiền tố thừa thãi
                     $content = str_replace('Vào trang Đơn hàng để xác nhận:', '', $content);
-                    $content = str_replace('Hãy liên hệ để hẹn giao nhận sách nhé! Xem chi tiết:', '', $content);
+                    $content = str_replace('Vui lòng liên hệ để thỏa thuận thời gian và địa điểm giao nhận sách. Xem chi tiết:', '', $content);
                     $content = str_replace('Xem chi tiết:', '', $content);
-                    $content = str_replace('Hãy để lại đánh giá cho người bán nhé:', '', $content);
+                    $content = str_replace('Hãy để lại đánh giá cho người bán tại đây:', '', $content);
                     $content = trim($content);
                 }
                 ?>

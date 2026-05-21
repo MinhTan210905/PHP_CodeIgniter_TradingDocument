@@ -617,6 +617,31 @@ body {
 }
 .newsletter-btn:hover { background: var(--accent-dark); transform: scale(1.02); }
 
+.newsletter-btn-static {
+    display        : inline-flex;
+    align-items    : center;
+    gap            : 8px;
+    background     : var(--accent);
+    color          : #fff !important;
+    border         : none;
+    border-radius  : var(--radius-pill);
+    padding        : 12px 24px;
+    font-weight    : 700;
+    font-size      : 0.85rem;
+    white-space    : nowrap;
+    text-decoration: none !important;
+    cursor         : pointer;
+    transition     : var(--transition);
+    box-shadow     : 0 2px 8px rgba(245,158,11,0.25);
+    margin-top     : 16px;
+}
+.newsletter-btn-static:hover {
+    background : var(--accent-dark);
+    color      : #fff !important;
+    transform  : translateY(-2px);
+    box-shadow : var(--shadow-glow-acc);
+}
+
 /* Footer bottom bar */
 .footer-bottom {
     background: rgba(0,0,0,0.20);

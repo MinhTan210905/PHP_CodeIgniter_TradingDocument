@@ -152,8 +152,8 @@
         </div>
     <?php endif; ?>
 
-    <!-- ĐƠN HÀNG THỦ CÔNG (CŨ) -->
-    <h5 class="mb-3 fw-bold" style="color:var(--primary);"><i class="fas fa-shopping-cart me-2"></i>Đơn hàng giao dịch COD thủ công</h5>
+    <!-- QUẢN LÝ GIAO DỊCH ĐƠN HÀNG -->
+    <h5 class="mb-3 fw-bold mt-5" style="color:var(--primary);"><i class="fas fa-shopping-cart me-2"></i>Quản lý giao dịch đơn hàng</h5>
     <?php if (empty($completed_orders)): ?>
         <div class="card border-0 rounded-4 shadow-sm p-4 text-center" style="background:#F8FAFC;border:1.5px dashed #CBD5E1!important;">
             <i class="fas fa-check-circle" style="font-size:2rem;color:#94A3B8;"></i>
@@ -171,7 +171,8 @@
                             <th>Người mua</th>
                             <th>Giá</th>
                             <th>Ngày hoàn tất</th>
-                            <th>Trạng thái TT</th>
+                            <th class="text-center">PT Thanh toán</th>
+                            <th class="text-center">Trạng thái TT</th>
                             <th class="text-center">Thao tác</th>
                         </tr>
                     </thead>
@@ -196,11 +197,22 @@
                                 </div>
                             </td>
                             <td style="font-size:0.82rem;"><?= htmlspecialchars($o['buyer_name'] ?: $o['buyer_username']) ?></td>
-                            <td class="text-danger fw-bold"><?= number_format($o['price'],0,',','.') ?>đ</td>
+                            <td class="text-danger fw-bold"><?= number_format($o['price'] * $o['quantity'],0,',','.') ?>đ</td>
                             <td class="text-muted" style="font-size:0.77rem;">
                                 <i class="far fa-clock me-1"></i><?= date('d/m/Y H:i', strtotime($o['updated_at'])) ?>
                             </td>
-                            <td>
+                            <td class="text-center">
+                                <?php if (!empty($o['payment_method']) && $o['payment_method'] === 'wallet'): ?>
+                                    <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-2 py-1" style="font-size:0.75rem;">
+                                        <i class="fas fa-wallet me-2"></i>Ví HCMUEPay
+                                    </span>
+                                <?php else: ?>
+                                    <span class="badge bg-secondary bg-opacity-10 text-secondary rounded-pill px-2 py-1" style="font-size:0.75rem;">
+                                        <i class="fas fa-handshake me-2"></i>COD trực tiếp
+                                    </span>
+                                <?php endif; ?>
+                            </td>
+                            <td class="text-center">
                                 <?php if (!empty($o['payment_status']) && $o['payment_status'] === 'paid'): ?>
                                     <span style="background:#D1FAE5;color:#065F46;font-size:0.75rem;font-weight:700;padding:3px 12px;border-radius:20px;">
                                         <i class="fas fa-check me-1"></i>Đã chuyển

@@ -117,3 +117,12 @@ $route['auth/verify_forgot_password']            = 'auth/verify_forgot_password'
 $route['auth/verify_forgot_password_post']       = 'auth/verify_forgot_password_post';
 $route['auth/reset_password']                    = 'auth/reset_password';
 $route['auth/reset_password_post']               = 'auth/reset_password_post';
+
+// Cron Auto-Process
+$route['cron/run']                               = 'cron/run';
+
+// Wishlist (Danh sách mong muốn sách)
+$route['wishlist']                                = 'wishlist/index';
+$route['wishlist/add']                            = 'wishlist/add';
+$route['wishlist/toggle/(:num)']                  = 'wishlist/toggle/$1';
+$route['wishlist/delete/(:num)']                  = 'wishlist/delete/$1';

@@ -263,9 +263,9 @@ $cur_step = $timeline[$order['status']] ?? 1;
             </div>
             <form action="<?= site_url('orders/reject/' . $order['id']) ?>" method="POST">
                 <div class="modal-body p-4">
-                    <p class="text-muted" style="font-size:0.88rem;">Hãy để lại lý do từ chối bán tài liệu này (người mua sẽ nhận được thông báo này):</p>
+                    <p class="text-muted" style="font-size:0.88rem;">Vui lòng nhập lý do từ chối bán tài liệu này (người mua sẽ nhận được thông báo hiển thị lý do này):</p>
                     <textarea class="form-control" name="reject_reason" rows="3" style="border-radius:12px; font-size:0.88rem;"
-                              placeholder="VD: Tài liệu hiện đã hết hoặc không đủ số lượng cung cấp..." required></textarea>
+                              placeholder="Ví dụ: Tài liệu hiện đã hết hoặc không đủ số lượng để cung cấp..." required></textarea>
                 </div>
                 <div class="modal-footer border-top-0 pt-0">
                     <button type="button" class="btn btn-light rounded-3" data-bs-dismiss="modal">Đóng</button>
@@ -286,9 +286,9 @@ $cur_step = $timeline[$order['status']] ?? 1;
             </div>
             <form action="<?= site_url('orders/dispute/' . $order['id']) ?>" method="POST">
                 <div class="modal-body p-4">
-                    <p class="text-muted" style="font-size:0.88rem;">Vui lòng mô tả chi tiết vấn đề bạn gặp phải (Quản trị viên sẽ vào cuộc xem xét):</p>
+                    <p class="text-muted" style="font-size:0.88rem;">Vui lòng mô tả chi tiết vấn đề gặp phải để Ban quản trị hỗ trợ giải quyết:</p>
                     <textarea class="form-control" name="dispute_reason" rows="3" style="border-radius:12px; font-size:0.88rem;"
-                              placeholder="VD: Chưa nhận được sách như đã hẹn, hoặc tài liệu không đúng mô tả..." required></textarea>
+                              placeholder="Ví dụ: Chưa nhận được sách như đã hẹn, hoặc tài liệu không đúng mô tả..." required></textarea>
                 </div>
                 <div class="modal-footer border-top-0 pt-0">
                     <button type="button" class="btn btn-light rounded-3" data-bs-dismiss="modal">Đóng</button>
@@ -312,7 +312,7 @@ $cur_step = $timeline[$order['status']] ?? 1;
                 <input type="hidden" name="delivery_proof_base64" id="deliveryProofBase64" required>
                 
                 <div class="modal-body p-3 text-center">
-                    <p class="text-muted mb-2" style="font-size:0.85rem;">Vui lòng chụp ảnh minh chứng tại thời điểm giao hàng. Hệ thống sẽ tự động chèn Tọa độ & Thời gian vào ảnh.</p>
+                    <p class="text-muted mb-2" style="font-size:0.85rem;">Vui lòng chụp ảnh minh chứng tại thời điểm giao hàng. Hệ thống sẽ tự động ghi nhận địa chỉ và thời gian thực vào ảnh.</p>
                     
                     <div id="cameraContainer" class="position-relative bg-dark rounded-4 overflow-hidden mb-3 mx-auto" style="aspect-ratio: 3/4; max-width: 300px; display:flex; justify-content:center; align-items:center;">
                         <video id="cameraVideo" autoplay playsinline style="width:100%; height:100%; object-fit:cover;"></video>
@@ -362,6 +362,140 @@ document.addEventListener("DOMContentLoaded", function() {
     let locationString = "Đang xác định vị trí...";
     let timeInterval = null;
 
+    // Định nghĩa các cơ sở HCMUE để nhận diện tức thì trong phạm vi 300m
+    const CS1 = { lat: 10.759928, lon: 106.678736, name: "ĐH Sư phạm TPHCM - CS An Dương Vương" };
+    const CS2 = { lat: 10.789182, lon: 106.674895, name: "ĐH Sư phạm TPHCM - CS Lê Văn Sỹ" };
+
+    // Tính khoảng cách Haversine giữa 2 tọa độ (mét)
+    function getDistance(lat1, lon1, lat2, lon2) {
+        const R = 6371e3; // bán kính Trái Đất tính theo mét
+        const φ1 = lat1 * Math.PI / 180;
+        const φ2 = lat2 * Math.PI / 180;
+        const Δφ = (lat2 - lat1) * Math.PI / 180;
+        const Δλ = (lon2 - lon1) * Math.PI / 180;
+
+        const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+                  Math.cos(φ1) * Math.cos(φ2) *
+                  Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+        return R * c;
+    }
+
+    // Dịch tọa độ thành địa chỉ chi tiết qua API OpenStreetMap Nominatim
+    function fetchAddressFromCoords(lat, lon) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3500); // 3.5s timeout
+
+        fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1`, {
+            signal: controller.signal,
+            headers: { 'Accept-Language': 'vi,en;q=0.9' }
+        })
+        .then(res => res.json())
+        .then(data => {
+            clearTimeout(timeoutId);
+            const addr = data.address;
+            if (addr) {
+                let parts = [];
+                // 1. Tên địa điểm nổi bật nếu có
+                const place = addr.amenity || addr.building || addr.shop || addr.tourism || addr.historic || addr.school || addr.university || addr.mall || addr.hotel;
+                if (place) parts.push(place);
+                
+                // 2. Số nhà + Tên đường
+                let street = "";
+                if (addr.house_number) street += addr.house_number + " ";
+                if (addr.road) street += addr.road;
+                if (street) parts.push(street);
+                
+                // 3. Phường / Xã
+                const ward = addr.quarter || addr.suburb || addr.neighbourhood || addr.village || addr.hamlet;
+                if (ward && !parts.includes(ward)) parts.push(ward);
+                
+                // 4. Quận / Huyện
+                const district = addr.city_district || addr.district || addr.county;
+                if (district && !parts.includes(district)) parts.push(district);
+                
+                // 5. Tỉnh / Thành phố
+                const city = addr.city || addr.state || addr.province;
+                if (city && !parts.includes(city)) parts.push(city);
+                
+                let cleanAddr = parts.filter(p => p && typeof p === 'string').join(', ');
+                cleanAddr = cleanAddr.replace(', Việt Nam', ''); // Bỏ quốc gia cho ngắn gọn
+                
+                locationString = cleanAddr || `GPS: ${lat.toFixed(5)}, ${lon.toFixed(5)}`;
+            } else {
+                locationString = `GPS: ${lat.toFixed(5)}, ${lon.toFixed(5)}`;
+            }
+            overlayLoc.innerHTML = `<i class="fas fa-map-marker-alt me-1"></i>${locationString}`;
+        })
+        .catch(() => {
+            clearTimeout(timeoutId);
+            locationString = `GPS: ${lat.toFixed(5)}, ${lon.toFixed(5)}`;
+            overlayLoc.innerHTML = `<i class="fas fa-map-marker-alt me-1"></i>${locationString}`;
+        });
+    }
+
+    // Xử lý khi có tọa độ latitude & longitude
+    function handleLocationCoords(lat, lon) {
+        const distCS1 = getDistance(lat, lon, CS1.lat, CS1.lon);
+        const distCS2 = getDistance(lat, lon, CS2.lat, CS2.lon);
+
+        if (distCS1 <= 300) {
+            locationString = CS1.name;
+            overlayLoc.innerHTML = `<i class="fas fa-map-marker-alt me-1"></i>${locationString}`;
+        } else if (distCS2 <= 300) {
+            locationString = CS2.name;
+            overlayLoc.innerHTML = `<i class="fas fa-map-marker-alt me-1"></i>${locationString}`;
+        } else {
+            fetchAddressFromCoords(lat, lon);
+        }
+    }
+
+    // Vẽ watermark thông tin giao hàng chuyên nghiệp, tự động xuống dòng và cân chỉnh kích thước
+    function drawWatermark(ctx, canvasWidth, canvasHeight, timeStr, locStr) {
+        const fontSize = Math.max(13, Math.round(canvasWidth * 0.028));
+        ctx.font = "bold " + fontSize + "px Arial";
+        
+        const margin = Math.round(canvasWidth * 0.03);
+        const padding = Math.round(canvasWidth * 0.02);
+        const maxWidth = canvasWidth - (margin * 2) - (padding * 2);
+        
+        // Cắt chuỗi địa chỉ thành các dòng nhỏ phù hợp với bề rộng khung ảnh
+        const words = locStr.split(" ");
+        let lines = [];
+        let currentLine = "Vị trí: " + words[0];
+        
+        for (let i = 1; i < words.length; i++) {
+            let testLine = currentLine + " " + words[i];
+            let metrics = ctx.measureText(testLine);
+            if (metrics.width > maxWidth) {
+                lines.push(currentLine);
+                currentLine = words[i];
+            } else {
+                currentLine = testLine;
+            }
+        }
+        lines.push(currentLine);
+        
+        const timeLine = "Thời gian: " + timeStr;
+        const lineHeight = fontSize * 1.4;
+        const totalLines = 1 + lines.length;
+        const boxHeight = (totalLines * lineHeight) + (padding * 2);
+        const boxY = canvasHeight - margin - boxHeight;
+        
+        // Vẽ hình chữ nhật nền đen mờ bo viền nhẹ
+        ctx.fillStyle = "rgba(0, 0, 0, 0.65)";
+        ctx.fillRect(margin, boxY, canvasWidth - (margin * 2), boxHeight);
+        
+        // Vẽ chữ
+        ctx.fillStyle = "white";
+        ctx.fillText(timeLine, margin + padding, boxY + padding + fontSize);
+        
+        for (let i = 0; i < lines.length; i++) {
+            ctx.fillText(lines[i], margin + padding, boxY + padding + fontSize + ((i + 1) * lineHeight));
+        }
+    }
+
     // Khi bật Modal
     modal.addEventListener('show.bs.modal', function () {
         // Cập nhật thời gian liên tục
@@ -370,14 +504,20 @@ document.addEventListener("DOMContentLoaded", function() {
             overlayTime.innerHTML = `<i class="fas fa-clock me-1"></i>${now.toLocaleDateString('vi-VN')} ${now.toLocaleTimeString('vi-VN')}`;
         }, 1000);
 
-        // Hàm phụ để lấy vị trí qua IP (Dành cho Laptop không có GPS hoặc chạy HTTP IP)
+        // Hàm dự phòng lấy vị trí qua IP (Khi không dùng được GPS thiết bị hoặc không chạy qua HTTPS/localhost)
         const fallbackToIPLocation = () => {
             fetch('https://get.geojs.io/v1/ip/geo.json')
                 .then(res => res.json())
                 .then(data => {
-                    let city = data.city ? data.city + " " : "";
-                    locationString = `${city}(${parseFloat(data.latitude).toFixed(4)}, ${parseFloat(data.longitude).toFixed(4)})`;
-                    overlayLoc.innerHTML = `<i class="fas fa-map-marker-alt me-1"></i>${locationString}`;
+                    const lat = parseFloat(data.latitude);
+                    const lon = parseFloat(data.longitude);
+                    if (!isNaN(lat) && !isNaN(lon)) {
+                        handleLocationCoords(lat, lon);
+                    } else {
+                        let city = data.city ? data.city : "Không xác định";
+                        locationString = `Khu vực: ${city} (Vị trí ước tính qua IP)`;
+                        overlayLoc.innerHTML = `<i class="fas fa-map-marker-alt me-1"></i>${locationString}`;
+                    }
                 })
                 .catch(() => {
                     locationString = "Vị trí không xác định (Lỗi mạng)";
@@ -385,12 +525,11 @@ document.addEventListener("DOMContentLoaded", function() {
                 });
         };
 
-        // Lấy tọa độ (Ưu tiên GPS thiết bị -> Dự phòng IP)
+        // Lấy tọa độ (Ưu tiên GPS thiết bị có độ chính xác cao)
         if (navigator.geolocation && (window.isSecureContext || location.hostname === 'localhost')) {
             navigator.geolocation.getCurrentPosition(
                 pos => {
-                    locationString = `GPS: ${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)}`;
-                    overlayLoc.innerHTML = `<i class="fas fa-map-marker-alt me-1"></i>${locationString}`;
+                    handleLocationCoords(pos.coords.latitude, pos.coords.longitude);
                 },
                 err => {
                     fallbackToIPLocation();
@@ -401,7 +540,7 @@ document.addEventListener("DOMContentLoaded", function() {
             fallbackToIPLocation();
         }
 
-        // Bật Camera (ưu tiên camera sau trên điện thoại)
+        // Bật Camera (ưu tiên camera sau trên điện thoại di động)
         navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
             .then(s => {
                 stream = s;
@@ -413,7 +552,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 btnSubmit.classList.add('disabled');
             })
             .catch(err => {
-                alert('Không thể mở camera: ' + err.message);
+                alert('Không thể khởi động camera: ' + err.message);
             });
     });
 
@@ -425,7 +564,7 @@ document.addEventListener("DOMContentLoaded", function() {
         clearInterval(timeInterval);
     });
 
-    // Chụp ảnh
+    // Chụp ảnh và ghép Watermark
     btnCapture.addEventListener('click', function() {
         if (!stream) return;
         
@@ -437,23 +576,18 @@ document.addEventListener("DOMContentLoaded", function() {
         // Vẽ frame video hiện tại lên canvas
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         
-        // Vẽ overlay text lên canvas (như Shopee watermark)
-        ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
-        ctx.fillRect(10, canvas.height - 80, canvas.width - 20, 70);
-        
-        ctx.fillStyle = "white";
-        ctx.font = "bold 16px Arial";
+        // Vẽ overlay text lên canvas dạng hộp watermark Shopee chuyên nghiệp
         const now = new Date();
         const timeStr = `${now.toLocaleDateString('vi-VN')} ${now.toLocaleTimeString('vi-VN')}`;
-        ctx.fillText("Time: " + timeStr, 20, canvas.height - 50);
+        const locStr = (typeof locationString !== 'undefined' ? locationString : "Vị trí không xác định");
         
-        ctx.fillText("Loc: " + (typeof locationString !== 'undefined' ? locationString : "Vị trí không xác định"), 20, canvas.height - 25);
+        drawWatermark(ctx, canvas.width, canvas.height, timeStr, locStr);
         
         // Chuyển canvas thành Base64
-        const dataURL = canvas.toDataURL('image/jpeg', 0.8);
+        const dataURL = canvas.toDataURL('image/jpeg', 0.82);
         base64Input.value = dataURL;
         
-        // Đổi view
+        // Đổi view sang ảnh kết quả
         video.style.display = 'none';
         photoResult.src = dataURL;
         photoResult.style.display = 'block';
@@ -474,7 +608,7 @@ document.addEventListener("DOMContentLoaded", function() {
         btnSubmit.classList.add('disabled');
     });
 
-    // Gửi Form
+    // Gửi Form minh chứng
     btnSubmit.addEventListener('click', function() {
         if (base64Input.value) {
             document.getElementById('proofForm').submit();
@@ -489,7 +623,7 @@ document.addEventListener("DOMContentLoaded", function() {
         <h6 class="fw-bold mb-3" style="color:var(--hcmue-blue);"><i class="fas fa-camera-retro me-2"></i>Minh chứng giao hàng từ người bán</h6>
         <div class="text-center">
             <img src="<?= base_url($order['delivery_proof']) ?>" alt="Minh chứng giao hàng" class="img-fluid rounded-3 shadow-sm" style="max-height: 400px; object-fit: contain;">
-            <div class="mt-2 text-muted" style="font-size:0.8rem;">Ảnh minh chứng được cung cấp bởi người bán khi xác nhận "Đã giao hàng".</div>
+            <div class="mt-2 text-muted" style="font-size:0.8rem;">Ảnh chụp minh chứng giao hàng từ người bán.</div>
         </div>
     </div>
 <?php endif; ?>
