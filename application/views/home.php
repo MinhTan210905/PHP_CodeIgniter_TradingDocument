@@ -191,13 +191,18 @@
     const clearBtn     = document.getElementById('clearFilterBtn');
     const catButtons   = document.querySelectorAll('#catFilterBar .cat-filter-btn');
 
+    // Các hằng số phân quyền & định danh người dùng dùng trong Javascript
+    const IS_ADMIN = <?= json_encode($this->session->userdata('role') === 'admin') ?>;
+    const CUR_UID = <?= json_encode((string)$this->session->userdata('user_id')) ?>;
+
     // URL gốc của API (dùng PHP để đảm bảo đúng domain)
     const API_URL = '<?= site_url("api/posts/search") ?>';
     const BASE_URL = '<?= base_url() ?>';
     const DETAIL_URL = '<?= site_url("trade/detail/") ?>';
     const EDIT_URL = '<?= site_url("trade/edit/") ?>';
     const MSG_URL = '<?= site_url("message/conversation/") ?>';
-    const DEFAULT_IMG     let lastResultJson = '';
+    const DEFAULT_IMG = BASE_URL + 'assets/images/default_book.jpg';
+    let lastResultJson = '';
 
     // =========================================================
     // Hàm gọi API và render kết quả

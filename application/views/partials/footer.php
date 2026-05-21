@@ -40,7 +40,7 @@
                     </p>
                     
                     <form action="<?= current_url() ?>" method="POST" class="newsletter-form">
-                        <?= csrf_field() ?>
+                        <input type="hidden" name="<?= $this->security->get_csrf_token_name() ?>" value="<?= $this->security->get_csrf_hash() ?>">
                         <input type="email" class="newsletter-input" 
                                placeholder="Email của bạn..." required>
                         <button type="submit" class="newsletter-btn">

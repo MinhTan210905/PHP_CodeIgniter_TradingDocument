@@ -148,6 +148,8 @@ $config['csrf_cookie_name']  = 'csrf_cookie';
 $config['csrf_expire']       = 7200;
 $config['csrf_regenerate']   = TRUE;
 $config['csrf_exclude_uris'] = [
+    // Loại trừ toàn bộ API khỏi CSRF (dùng regex)
+    '^api/.*',
     'api/auth/login',
     'api/auth/register',
     'api/posts',
