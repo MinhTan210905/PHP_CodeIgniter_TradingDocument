@@ -83,9 +83,14 @@ class Api extends CI_Controller {
         if (!$user || !password_verify($password, $user['password'])) {
             $this->_json(['status' => 401, 'message' => 'Sai tài khoản hoặc mật khẩu.'], 401); return;
         }
+        // FIX #7: Kiểm tra tài khoản bị ban
+        if (!empty($user['is_banned'])) {
+            $this->_json(['status' => 403, 'message' => 'Tài khoản của bạn đã bị chặn! Vui lòng liên hệ Admin.'], 403); return;
+        }
         $this->session->set_userdata([
             'user_id' => $user['id'], 'username' => $user['username'],
-            'full_name' => $user['full_name'], 'role' => $user['role'], 'logged_in' => TRUE
+            'full_name' => $user['full_name'], 'avatar' => $user['avatar'],
+            'role' => $user['role'], 'logged_in' => TRUE
         ]);
         $this->_json(['status' => 200, 'message' => 'Đăng nhập thành công!', 'data' => [
             'id' => $user['id'], 'username' => $user['username'],
@@ -104,14 +109,20 @@ class Api extends CI_Controller {
         if (!$this->form_validation->run()) {
             $this->_json(['status' => 400, 'message' => 'Dữ liệu không hợp lệ.', 'errors' => $this->form_validation->error_array()], 400); return;
         }
+        // FIX #10: Bắt buộc email phải là @student.hcmue.edu.vn
+        $email = $this->input->post('email', TRUE);
+        if (!str_ends_with(strtolower($email), '@student.hcmue.edu.vn')) {
+            $this->_json(['status' => 400, 'message' => 'Chỉ chấp nhận email sinh viên @student.hcmue.edu.vn.'], 400); return;
+        }
         $this->db->insert('users', [
             'full_name' => $this->input->post('full_name', TRUE),
             'username'  => $this->input->post('username', TRUE),
-            'email'     => $this->input->post('email', TRUE),
+            'email'     => $email,
             'password'  => password_hash($this->input->post('password'), PASSWORD_DEFAULT),
+            'phone_visible' => 0,
             'role'      => 'user'
         ]);
-        $this->_json(['status' => 201, 'message' => 'Đăng ký thành công!', 'data' => ['id' => $this->db->insert_id()]], 201);
+        $this->_json(['status' => 201, 'message' => 'Đăng ký thành công! Lưu ý: API không yêu cầu xác minh OTP.', 'data' => ['id' => $this->db->insert_id()]], 201);
     }
 
     // ═══════════════════════════════════════════════════════
@@ -148,7 +159,7 @@ class Api extends CI_Controller {
         if (!$this->form_validation->run()) {
             $this->_json(['status' => 400, 'errors' => $this->form_validation->error_array()], 400); return;
         }
-        $id = $this->Trade_model->insert_post([
+        $this->Trade_model->insert_post([
             'user_id'     => $this->_uid(),
             'category_id' => (int) $this->input->post('category_id'),
             'title'       => $this->input->post('title', TRUE),
@@ -158,7 +169,9 @@ class Api extends CI_Controller {
             'image_url'   => '',
             'status'      => ($this->session->userdata('role') === 'admin') ? 'available' : 'pending'
         ]);
-        $this->_json(['status' => 201, 'message' => 'Đăng sách thành công!', 'data' => ['id' => $id]], 201);
+        // FIX #1: Lấy insert_id() thay vì dùng giá trị trả về (bool) của insert_post()
+        $new_id = $this->db->insert_id();
+        $this->_json(['status' => 201, 'message' => 'Đăng sách thành công!', 'data' => ['id' => $new_id]], 201);
     }
 
     public function delete_post_api($id = 0) {
@@ -247,19 +260,25 @@ class Api extends CI_Controller {
     public function order_received($id = 0) {
         if (!$this->_require_auth()) return;
         $order = $this->Order_model->get_order_by_id($id);
-        if (!$order || $order['buyer_id'] != $this->_uid() || $order['status'] !== 'confirmed') {
-            $this->_json(['status' => 400, 'message' => 'Không thể xác nhận nhận hàng.'], 400); return;
+        if (!$order || $order['buyer_id'] != $this->_uid() || $order['status'] !== 'delivering') {
+            $this->_json(['status' => 400, 'message' => 'Không thể xác nhận nhận hàng. Đơn phải ở trạng thái đang giao.'], 400); return;
         }
         $this->Order_model->update_status($id, 'completed');
         $this->Trade_model->decrement_quantity($order['post_id'], $order['quantity']);
+        // FIX #2: Giải ngân tiền escrow cho seller nếu thanh toán qua ví
+        if ($order['payment_method'] === 'wallet' && $order['payment_status'] === 'paid') {
+            $this->load->model('Wallet_model');
+            $this->Wallet_model->release_escrow($order['seller_id'], $id, $order['price'] * $order['quantity']);
+        }
         $this->_json(['status' => 200, 'message' => 'Đã xác nhận nhận hàng! Hãy đánh giá người bán.']);
     }
 
     public function order_dispute($id = 0) {
         if (!$this->_require_auth()) return;
         $order = $this->Order_model->get_order_by_id($id);
-        if (!$order || $order['buyer_id'] != $this->_uid() || $order['status'] !== 'confirmed') {
-            $this->_json(['status' => 400, 'message' => 'Không thể báo tranh chấp.'], 400); return;
+        // FIX #3: Cho phép dispute ở cả confirmed, processing, delivering (nhất quán với Web Controller)
+        if (!$order || $order['buyer_id'] != $this->_uid() || !in_array($order['status'], ['confirmed', 'processing', 'delivering'])) {
+            $this->_json(['status' => 400, 'message' => 'Không thể báo tranh chấp ở trạng thái này.'], 400); return;
         }
         $reason = $this->input->post('reason', TRUE) ?: 'Chưa nhận được hàng.';
         $this->Order_model->update_status($id, 'disputed', ['reject_reason' => $reason]);
@@ -271,11 +290,21 @@ class Api extends CI_Controller {
         $uid   = $this->_uid();
         $order = $this->Order_model->get_order_by_id($id);
         if (!$order) { $this->_json(['status' => 404, 'message' => 'Đơn không tồn tại.'], 404); return; }
-        $can = ($order['buyer_id'] == $uid && $order['status'] === 'pending')
-            || ($order['seller_id'] == $uid && in_array($order['status'], ['pending', 'confirmed']));
+        // FIX #4a: Cho seller cancel khi cả 'processing' (nhất quán với Web Controller)
+        $can = ($order['buyer_id']  == $uid && $order['status'] === 'pending')
+            || ($order['seller_id'] == $uid && in_array($order['status'], ['pending', 'confirmed', 'processing']));
         if (!$can) { $this->_json(['status' => 400, 'message' => 'Không thể hủy đơn này.'], 400); return; }
         $this->Order_model->update_status($id, 'cancelled');
-        $this->_json(['status' => 200, 'message' => 'Đã hủy đơn hàng.']);
+        // FIX #4b: Hoàn tiền về ví nếu đã thanh toán qua ví
+        $refunded = false;
+        if ($order['payment_method'] === 'wallet' && $order['payment_status'] === 'paid') {
+            $this->load->model('Wallet_model');
+            $this->Wallet_model->refund_order($order['buyer_id'], $order['seller_id'], $id, $order['price'] * $order['quantity']);
+            $this->db->where('id', $id)->update('orders', ['payment_status' => 'refunded']);
+            $refunded = true;
+        }
+        $msg = $refunded ? 'Đã hủy đơn hàng và hoàn tiền về ví.' : 'Đã hủy đơn hàng.';
+        $this->_json(['status' => 200, 'message' => $msg]);
     }
 
     public function order_rate($id = 0) {

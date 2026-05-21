@@ -38,23 +38,9 @@ $db['default'] = array(
     'save_queries' => TRUE,
 );
 
-// ==========================================
-// ĐOẠN CODE DEBUG KẾT NỐI DATABASE (Rất hữu ích cho hosting)
-// Truy cập: tên-miền-của-bạn/?debug_db=1 để kiểm tra trực tiếp
-// ==========================================
-if (isset($_GET['debug_db'])) {
-    $test_conn = @mysqli_connect($db_host, $db_user, $db_pass, $db_name);
-    if (!$test_conn) {
-        echo "<h3>[DEBUG] Kết nối Database thất bại:</h3>";
-        echo "<b>Host:</b> " . htmlspecialchars($db_host) . "<br>";
-        echo "<b>User:</b> " . htmlspecialchars($db_user) . "<br>";
-        echo "<b>Database:</b> " . htmlspecialchars($db_name) . "<br>";
-        echo "<b>Mật khẩu dài:</b> " . strlen($db_pass) . " ký tự<br>";
-        echo "<b>Lỗi chi tiết từ MySQL:</b> " . htmlspecialchars(mysqli_connect_error()) . "<br>";
-        die("<hr>Vui lòng kiểm tra lại file .env đã upload hoặc cấu hình database trên hosting.");
-    } else {
-        mysqli_close($test_conn);
-        die("<h3>[DEBUG] Kết nối Database THÀNH CÔNG!</h3>");
-    }
-}
 
+// ==========================================
+// DEBUG KẾT NỐI DATABASE
+// ĐÃ XÓA debug_db endpoint vì lý do bảo mật.
+// Dùng CLI hoặc kiểm tra application/logs/ để debug.
+// ==========================================

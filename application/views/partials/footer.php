@@ -39,15 +39,14 @@
                         Nhận thông báo qua email và tin nhắn khi có người đăng bán sách bạn đang tìm kiếm.
                     </p>
                     
-                    <?php if($this->session->userdata('logged_in')): ?>
-                        <a href="<?= site_url('wishlist') ?>" class="newsletter-btn-static d-inline-flex align-items-center gap-2 text-decoration-none" style="background:#F59E0B !important; color:#ffffff !important; padding:12px 24px; border-radius:50px; font-weight:700; margin-top:16px; box-shadow: 0 2px 8px rgba(245,158,11,0.25);">
-                            <i class="fas fa-bell"></i> Quản lý danh sách mong muốn
-                        </a>
-                    <?php else: ?>
-                        <a href="<?= site_url('auth') ?>" class="newsletter-btn-static d-inline-flex align-items-center gap-2 text-decoration-none" style="background:#F59E0B !important; color:#ffffff !important; padding:12px 24px; border-radius:50px; font-weight:700; margin-top:16px; box-shadow: 0 2px 8px rgba(245,158,11,0.25);">
-                            <i class="fas fa-sign-in-alt"></i> Đăng nhập để sử dụng
-                        </a>
-                    <?php endif; ?>
+                    <form action="<?= current_url() ?>" method="POST" class="newsletter-form">
+                        <?= csrf_field() ?>
+                        <input type="email" class="newsletter-input" 
+                               placeholder="Email của bạn..." required>
+                        <button type="submit" class="newsletter-btn">
+                            Đăng ký
+                        </button>
+                    </form>
                 </div>
             </div>
         </div>
@@ -64,10 +63,19 @@
     </div>
 </footer>
 
-<!-- Poor Man's Cron: Chạy ngầm xử lý đơn hàng/đánh giá quá hạn 24h -->
+<?php /* FIX CSRF: Tự động thêm CSRF token vào tất cả form POST chưa có token */ ?>
 <script>
-    setTimeout(function() {
-        fetch('<?= site_url('cron/run') ?>', { method: 'GET' })
-            .catch(err => console.log('Cron err:', err));
-    }, 5000); // Đợi 5 giây sau khi tải trang để không ảnh hưởng tốc độ load
+(function() {
+    var tokenName  = '<?= $this->security->get_csrf_token_name() ?>';
+    var tokenValue = '<?= $this->security->get_csrf_hash() ?>';
+    document.querySelectorAll('form[method="POST"], form[method="post"]').forEach(function(form) {
+        if (!form.querySelector('input[name="' + tokenName + '"]')) {
+            var input = document.createElement('input');
+            input.type  = 'hidden';
+            input.name  = tokenName;
+            input.value = tokenValue;
+            form.appendChild(input);
+        }
+    });
+})();
 </script>
