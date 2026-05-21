@@ -16,8 +16,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 $config['protocol']    = 'smtp';
 $config['smtp_host']   = 'ssl://smtp.gmail.com';
 $config['smtp_port']   = 465;
-$config['smtp_user']   = getenv('SMTP_USER') ?: '';
-$config['smtp_pass']   = getenv('SMTP_PASS') ?: '';
+$config['smtp_user']   = isset($_ENV['SMTP_USER']) ? $_ENV['SMTP_USER'] : (isset($_SERVER['SMTP_USER']) ? $_SERVER['SMTP_USER'] : (getenv('SMTP_USER') ?: ''));
+$config['smtp_pass']   = isset($_ENV['SMTP_PASS']) ? $_ENV['SMTP_PASS'] : (isset($_SERVER['SMTP_PASS']) ? $_SERVER['SMTP_PASS'] : (getenv('SMTP_PASS') ?: ''));
 $config['mailtype']    = 'text'; // Gửi dạng text thường
 $config['charset']     = 'utf-8';
 $config['wordwrap']    = TRUE;
