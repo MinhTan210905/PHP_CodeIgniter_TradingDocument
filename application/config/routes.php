@@ -27,8 +27,13 @@ $route['auth/reset_password_post']       = 'auth/reset_password_post';
 $route['trade']                          = 'trade/index';
 $route['trade/create']                   = 'trade/create';
 $route['trade/detail/(:num)']            = 'trade/detail/$1';
+// FIX #12: Thêm param $status vào route (trước chỉ truyền $id, $status lúc nào cũng là 'sold')
+$route['trade/update_status/(:num)/(:any)'] = 'trade/update_status/$1/$2';
 $route['trade/update_status/(:num)']     = 'trade/update_status/$1';
 $route['trade/delete/(:num)']            = 'trade/delete/$1';
+// FIX #11: Thêm các route cho chức năng sửa và cập nhật bài đăng
+$route['trade/edit/(:num)']              = 'trade/edit/$1';
+$route['trade/update/(:num)']            = 'trade/update/$1';
 
 // Comment (Bình luận)
 $route['comment/add/(:num)']             = 'comment/add/$1';
@@ -49,6 +54,10 @@ $route['message/total_unread']          = 'message/total_unread';
 $route['profile']                        = 'profile/index';
 $route['profile/toggle_phone']           = 'profile/toggle_phone';
 $route['profile/update_phone']           = 'profile/update_phone';
+// FIX #11: Thêm các route bị thiếu cho Profile
+$route['profile/update_info']            = 'profile/update_info';
+$route['profile/change_password']        = 'profile/change_password';
+$route['profile/delete_account']         = 'profile/delete_account';
 
 // Admin (Quản lý)
 $route['admin']                          = 'admin/index';

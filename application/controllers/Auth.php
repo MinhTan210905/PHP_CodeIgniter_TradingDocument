@@ -358,6 +358,13 @@ class Auth extends CI_Controller {
             return;
         }
 
+        // FIX #8: Không cho user bị ban đặt lại mật khẩu
+        if (!empty($user['is_banned'])) {
+            $this->session->set_flashdata('error', 'Tài khoản của bạn đã bị chặn! Vui lòng liên hệ Admin.');
+            redirect('auth/forgot_password');
+            return;
+        }
+
         // Tạo OTP
         $otp = rand(100000, 999999);
         $forgot_data = [

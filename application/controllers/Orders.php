@@ -311,9 +311,17 @@ class Orders extends CI_Controller {
             $image_parts = explode(";base64,", $base64_image);
             if (count($image_parts) == 2) {
                 $image_type_aux = explode("image/", $image_parts[0]);
-                $image_type = $image_type_aux[1];
+                $image_type = strtolower(trim($image_type_aux[1] ?? ''));
+
+                // FIX #5: Validate loại file ảnh để chống upload file PHP giả dạng ảnh (RCE)
+                $allowed_types = ['jpeg', 'jpg', 'png', 'gif', 'webp'];
+                if (!in_array($image_type, $allowed_types)) {
+                    $this->session->set_flashdata('error', 'Loại file không hợp lệ! Chỉ chấp nhận: jpg, png, gif, webp.');
+                    redirect('orders/detail/' . $order_id);
+                    return;
+                }
+
                 $image_base64 = base64_decode($image_parts[1]);
-                
                 $file_name = uniqid('proof_') . '.' . $image_type;
                 $file_path = $upload_dir . $file_name;
                 
@@ -514,22 +522,24 @@ class Orders extends CI_Controller {
         $this->Order_model->update_status($order_id, 'cancelled');
 
         // Hoàn tiền nếu đã thanh toán
-        if ($order['payment_method'] === 'wallet' && $order['payment_status'] === 'paid') {
+        // FIX #9: Lưu lại giá trị payment_status TRƯỚC khi update (tránh kiểm tra sai sau khi đã dùng)
+        $was_wallet_paid = ($order['payment_method'] === 'wallet' && $order['payment_status'] === 'paid');
+        if ($was_wallet_paid) {
             $this->load->model('Wallet_model');
             $this->Wallet_model->refund_order($order['buyer_id'], $order['seller_id'], $order_id, $order['price'] * $order['quantity']);
             $this->db->where('id', $order_id)->update('orders', ['payment_status' => 'refunded']);
         }
 
-        $other_id = ($order['buyer_id'] == $user_id) ? $order['seller_id'] : $order['buyer_id'];
+        $other_id  = ($order['buyer_id'] == $user_id) ? $order['seller_id'] : $order['buyer_id'];
         $user_name = $this->session->userdata('full_name');
         $this->Message_model->send_message([
             'sender_id'   => $user_id,
             'receiver_id' => $other_id,
             'post_id'     => $order['post_id'],
-            'content'     => "❌ [{$user_name}] đã hủy đơn hàng \"{$order['post_title']}\"." . ($order['payment_status'] === 'paid' ? " Hệ thống đã hoàn tiền lại vào ví." : ""),
+            'content'     => "❌ [{$user_name}] đã hủy đơn hàng \"{$order['post_title']}\"." . ($was_wallet_paid ? " Hệ thống đã hoàn tiền lại vào ví." : ""),
         ]);
 
-        $this->session->set_flashdata('success', 'Đã hủy đơn hàng' . ($order['payment_status'] === 'paid' ? ' và hoàn tiền.' : '.'));
+        $this->session->set_flashdata('success', 'Đã hủy đơn hàng' . ($was_wallet_paid ? ' và hoàn tiền.' : '.'));
         redirect('orders');
     }
 }

@@ -106,8 +106,9 @@ $config['uncacheable_methods'] = array('POST');
 |--------------------------------------------------------------------------
 | Encryption Key
 |--------------------------------------------------------------------------
+| FIX #B: Đọc từ biến môi trường thay vì hardcode để bảo mật hơn.
 */
-$config['encryption_key'] = 'MCUverse2025SecretKey';
+$config['encryption_key'] = isset($_ENV['APP_SECRET_KEY']) ? $_ENV['APP_SECRET_KEY'] : (getenv('APP_SECRET_KEY') ?: 'MCUverse2025SecretKey!#$@');
 
 /*
 |--------------------------------------------------------------------------
@@ -137,8 +138,37 @@ $config['cookie_httponly'] = FALSE;
 |--------------------------------------------------------------------------
 | Cross Site Request Forgery
 |--------------------------------------------------------------------------
+| FIX #A: Bật CSRF protection cho web form.
+| API sử dụng session-based auth nên hưởng lợi từ bảo vệ này.
+| Các AJAX endpoint dùng X-Requested-With header để bypass (was already handled).
 */
-$config['csrf_protection']   = FALSE;
+$config['csrf_protection']   = TRUE;
+$config['csrf_token_name']   = 'csrf_token';
+$config['csrf_cookie_name']  = 'csrf_cookie';
+$config['csrf_expire']       = 7200;
+$config['csrf_regenerate']   = TRUE;
+$config['csrf_exclude_uris'] = [
+    'api/auth/login',
+    'api/auth/register',
+    'api/posts',
+    'api/posts/search',
+    'api/posts/detail',
+    'api/posts/create',
+    'api/posts/delete',
+    'api/orders',
+    'api/orders/detail',
+    'api/orders/request',
+    'api/orders/confirm',
+    'api/orders/reject',
+    'api/orders/received',
+    'api/orders/dispute',
+    'api/orders/cancel',
+    'api/orders/rate',
+    'api/seller',
+    'message/send_ajax',
+    'message/poll',
+    'message/total_unread',
+];
 
 /*
 |--------------------------------------------------------------------------

@@ -40,6 +40,7 @@
                     </p>
                     
                     <form action="<?= current_url() ?>" method="POST" class="newsletter-form">
+                        <?= csrf_field() ?>
                         <input type="email" class="newsletter-input" 
                                placeholder="Email của bạn..." required>
                         <button type="submit" class="newsletter-btn">
@@ -61,3 +62,20 @@
         </div>
     </div>
 </footer>
+
+<?php /* FIX CSRF: Tự động thêm CSRF token vào tất cả form POST chưa có token */ ?>
+<script>
+(function() {
+    var tokenName  = '<?= $this->security->get_csrf_token_name() ?>';
+    var tokenValue = '<?= $this->security->get_csrf_hash() ?>';
+    document.querySelectorAll('form[method="POST"], form[method="post"]').forEach(function(form) {
+        if (!form.querySelector('input[name="' + tokenName + '"]')) {
+            var input = document.createElement('input');
+            input.type  = 'hidden';
+            input.name  = tokenName;
+            input.value = tokenValue;
+            form.appendChild(input);
+        }
+    });
+})();
+</script>
