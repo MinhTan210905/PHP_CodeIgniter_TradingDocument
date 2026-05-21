@@ -207,7 +207,7 @@ class Api extends CI_Controller {
         $uid  = $this->_uid();
         $post = $this->Trade_model->get_post_by_id($post_id);
         if (!$post) { $this->_json(['status' => 404, 'message' => 'Bài đăng không tồn tại.'], 404); return; }
-        if ($post['user_id'] == $uid) { $this->_json(['status' => 400, 'message' => 'Không thể tự mua sách của mình.'], 400); return; }
+        if ($post['user_id'] == $uid) { $this->_json(['status' => 400, 'message' => 'Không thể mua sách của chính mình.'], 400); return; }
         if ($post['status'] !== 'available') { $this->_json(['status' => 400, 'message' => 'Sách đã hết hàng.'], 400); return; }
         if ($this->Order_model->has_active_order($post_id, $uid)) {
             $this->_json(['status' => 409, 'message' => 'Bạn đã có đơn đang chờ cho sách này.'], 409); return;

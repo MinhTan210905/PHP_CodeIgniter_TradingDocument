@@ -121,7 +121,7 @@ class Orders extends CI_Controller {
             'content'     => "📦 [{$buyer_name}] vừa gửi yêu cầu mua [{$qty} cuốn] sách \"{$post['title']}\". Vào trang Đơn hàng để xác nhận: " . site_url('orders/detail/' . $order_id),
         ]);
 
-        $this->session->set_flashdata('success', '✅ Đã gửi yêu cầu mua! Chờ người bán xác nhận nhé.');
+        $this->session->set_flashdata('success', '✅ Gửi yêu cầu mua thành công! Vui lòng chờ người bán xác nhận.');
         redirect('orders?tab=buy');
     }
 
@@ -154,7 +154,7 @@ class Orders extends CI_Controller {
             'sender_id'   => $seller_id,
             'receiver_id' => $order['buyer_id'],
             'post_id'     => $order['post_id'],
-            'content'     => "✅ [{$seller_name}] đã xác nhận đơn hàng \"{$order['post_title']}\". Hãy liên hệ để hẹn giao nhận sách nhé! Xem chi tiết: " . site_url('orders/detail/' . $order_id),
+            'content'     => "✅ [{$seller_name}] đã xác nhận đơn hàng \"{$order['post_title']}\". Vui lòng liên hệ để thỏa thuận thời gian và địa điểm giao nhận sách. Xem chi tiết: " . site_url('orders/detail/' . $order_id),
         ]);
 
         $this->session->set_flashdata('success', 'Đã xác nhận đơn! Liên hệ với người mua để hẹn giao sách.');
@@ -258,7 +258,7 @@ class Orders extends CI_Controller {
                     'sender_id'   => $buyer_id,
                     'receiver_id' => $order['seller_id'],
                     'post_id'     => $order['post_id'],
-                    'content'     => "💰 [{$buyer_name}] đã thanh toán thành công " . number_format($amount, 0, ',', '.') . "đ qua Ví HCMUEPay. Tiền đã được tạm giữ, bạn hãy giao sách nhé!",
+                    'content'     => "💰 [{$buyer_name}] đã thanh toán thành công " . number_format($amount, 0, ',', '.') . "đ qua Ví HCMUEPay. Hệ thống đã tạm giữ số tiền này an toàn. Vui lòng tiến hành bàn giao sách cho người mua.",
                 ]);
 
                 $this->session->set_flashdata('success', '✅ Đã thanh toán! Vui lòng chờ người bán giao hàng.');
@@ -279,7 +279,7 @@ class Orders extends CI_Controller {
                 'sender_id'   => $buyer_id,
                 'receiver_id' => $order['seller_id'],
                 'post_id'     => $order['post_id'],
-                'content'     => "🤝 [{$buyer_name}] đã chọn Giao dịch trực tiếp (COD). Hãy liên hệ để hẹn thời gian, địa điểm giao sách nhé!",
+                'content'     => "🤝 [{$buyer_name}] đã chọn Giao dịch trực tiếp (COD). Vui lòng chủ động liên hệ với người mua để hẹn thời gian và địa điểm giao nhận sách.",
             ]);
 
             $this->session->set_flashdata('success', '✅ Đã chốt đơn COD! Vui lòng chờ người bán giao hàng.');
@@ -343,7 +343,7 @@ class Orders extends CI_Controller {
             'sender_id'   => $seller_id,
             'receiver_id' => $order['buyer_id'],
             'post_id'     => $order['post_id'],
-            'content'     => "📦 [{$seller_name}] đã xác nhận giao sách thành công. Vui lòng kiểm tra và xác nhận 'Đã nhận được sách' nhé!",
+            'content'     => "📦 [{$seller_name}] đã xác nhận giao sách thành công. Vui lòng kiểm tra sản phẩm và xác nhận nhận sách trên hệ thống.",
         ]);
 
         $this->session->set_flashdata('success', 'Đã xác nhận giao hàng! Chờ người mua xác nhận.');
@@ -370,7 +370,11 @@ class Orders extends CI_Controller {
             return;
         }
 
-        $this->Order_model->update_status($order_id, 'completed');
+        if ($order['payment_method'] === 'cod') {
+            $this->Order_model->update_status($order_id, 'completed', ['payment_status' => 'paid']);
+        } else {
+            $this->Order_model->update_status($order_id, 'completed');
+        }
 
         // Trừ số lượng sách
         $this->Trade_model->decrement_quantity($order['post_id'], $order['quantity']);
@@ -386,7 +390,7 @@ class Orders extends CI_Controller {
             'sender_id'   => $order['seller_id'],
             'receiver_id' => $buyer_id,
             'post_id'     => $order['post_id'],
-            'content'     => "🎉 Cảm ơn bạn đã nhận sách \"{$order['post_title']}\"! Hãy để lại đánh giá cho người bán nhé: " . site_url('orders/rate/' . $order_id),
+            'content'     => "🎉 Giao dịch hoàn tất! Cảm ơn bạn đã tin dùng HCMUE BookSwap. Hãy để lại đánh giá cho người bán tại đây: " . site_url('orders/rate/' . $order_id),
         ]);
 
         // Thông báo cho người bán
@@ -398,7 +402,7 @@ class Orders extends CI_Controller {
             'content'     => "✅ [{$buyer_name}] đã xác nhận nhận sách \"{$order['post_title']}\". Giao dịch hoàn tất!",
         ]);
 
-        $this->session->set_flashdata('success', '✅ Đã xác nhận nhận hàng! Hãy đánh giá người bán nhé.');
+        $this->session->set_flashdata('success', '✅ Xác nhận nhận sách thành công! Vui lòng để lại đánh giá cho người bán.');
         redirect('orders/rate/' . $order_id);
     }
 
