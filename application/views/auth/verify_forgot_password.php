@@ -122,6 +122,7 @@
         <?php endif; ?>
 
         <form action="<?= site_url('auth/verify_forgot_password_post') ?>" method="POST">
+            <input type="hidden" name="<?= $this->security->get_csrf_token_name() ?>" value="<?= $this->security->get_csrf_hash() ?>">
             <div class="mb-4">
                 <label class="form-label">Mã OTP (6 số)</label>
                 <div class="input-wrap">

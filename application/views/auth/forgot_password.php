@@ -128,6 +128,7 @@
         <?php endif; ?>
 
         <form action="<?= site_url('auth/forgot_password_post') ?>" method="POST">
+            <input type="hidden" name="<?= $this->security->get_csrf_token_name() ?>" value="<?= $this->security->get_csrf_hash() ?>">
             <div class="mb-4">
                 <label class="form-label">Email sinh viên</label>
                 <div class="input-wrap">

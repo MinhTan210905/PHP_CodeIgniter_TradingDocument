@@ -213,6 +213,7 @@
         <?php endif; ?>
 
         <form action="<?= site_url('auth/register_post') ?>" method="POST">
+            <input type="hidden" name="<?= $this->security->get_csrf_token_name() ?>" value="<?= $this->security->get_csrf_hash() ?>">
 
             <div class="mb-3">
                 <label class="form-label">Họ và Tên *</label>
