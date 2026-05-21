@@ -67,11 +67,14 @@ header('Content-Type: text/html; charset=UTF-8');
         <div class="d-flex align-items-center gap-2">
             <?php if ($this->session->userdata('logged_in')): ?>
                 <!-- Inbox -->
+                <?php 
+                $CI =& get_instance();
+                $CI->load->model('Message_model');
+                $header_unread = $CI->Message_model->count_unread($this->session->userdata('user_id'));
+                ?>
                 <a href="<?= site_url('message/inbox') ?>" class="nav-icon-btn" title="Hộp thư">
                     <i class="fas fa-comment-dots"></i>
-                    <?php if (isset($unread_count) && $unread_count > 0): ?>
-                        <span class="nav-badge"><?= $unread_count ?></span>
-                    <?php endif; ?>
+                    <span class="nav-badge" id="inboxUnreadBadge" style="<?= $header_unread > 0 ? '' : 'display:none;' ?>"><?= $header_unread ?></span>
                 </a>
                 <!-- Đơn hàng -->
                 <a href="<?= site_url('orders') ?>" class="nav-icon-btn" title="Đơn hàng của tôi">
@@ -162,6 +165,40 @@ header('Content-Type: text/html; charset=UTF-8');
         </div>
     </div>
 </nav>
+
+<?php if ($this->session->userdata('logged_in')): ?>
+<script>
+// Tự động kiểm tra và cập nhật badge tin nhắn chưa đọc ở header mỗi 4 giây
+(function() {
+    const badge = document.getElementById('inboxUnreadBadge');
+    if (!badge) return;
+
+    function checkTotalUnread() {
+        fetch('<?= site_url("message/total_unread") ?>', {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'ok') {
+                const count = parseInt(data.count);
+                if (count > 0) {
+                    badge.textContent = count;
+                    badge.style.display = '';
+                } else {
+                    badge.style.display = 'none';
+                }
+            }
+        })
+        .catch(err => console.warn('Lỗi đồng bộ tin nhắn:', err));
+    }
+
+    // Chạy định kỳ 4 giây
+    setInterval(checkTotalUnread, 4000);
+})();
+</script>
+<?php endif; ?>
 
 <!-- Modal Đăng Bài -->
 <?php if ($this->session->userdata('logged_in')): ?>

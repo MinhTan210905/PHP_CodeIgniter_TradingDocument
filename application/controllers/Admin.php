@@ -50,6 +50,23 @@ class Admin extends CI_Controller {
         $this->load->view('partials/footer');
     }
 
+    // [AJAX] Kiểm tra xem có bài đăng hoặc yêu cầu thanh toán mới chờ duyệt không
+    public function check_updates() {
+        if (!$this->session->userdata('logged_in') || $this->session->userdata('role') !== 'admin') {
+            echo json_encode(['status' => 'error', 'message' => 'Unauthorized']);
+            return;
+        }
+        $this->load->model(['Trade_model', 'Wallet_model']);
+        $total_pending = $this->Trade_model->count_pending();
+        $total_withdrawals = $this->Wallet_model->count_pending_withdrawals();
+
+        echo json_encode([
+            'status' => 'ok',
+            'pending_posts' => (int)$total_pending,
+            'pending_withdrawals' => (int)$total_withdrawals
+        ]);
+    }
+
     // Cập nhật cấu hình hệ thống
     public function update_settings() {
         $this->require_admin();

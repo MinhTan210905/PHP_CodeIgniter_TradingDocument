@@ -78,4 +78,58 @@ class Message extends CI_Controller {
 
         redirect('message/conversation/' . $receiver_id);
     }
+
+    // [AJAX] Gửi tin nhắn — trả về JSON
+    public function send_ajax() {
+        $this->require_login();
+        if (!$this->input->is_ajax_request()) { show_404(); }
+
+        $sender_id   = $this->session->userdata('user_id');
+        $receiver_id = $this->input->post('receiver_id');
+        $content     = trim($this->input->post('content', TRUE));
+        $post_id     = $this->input->post('post_id') ?: NULL;
+
+        if (empty($content) || !$receiver_id) {
+            echo json_encode(['status' => 'error', 'message' => 'Nội dung trống!']);
+            return;
+        }
+
+        $this->Message_model->send_message([
+            'sender_id'   => $sender_id,
+            'receiver_id' => $receiver_id,
+            'post_id'     => $post_id,
+            'content'     => $content,
+            'is_read'     => 0
+        ]);
+
+        $new_id = $this->db->insert_id();
+        echo json_encode(['status' => 'ok', 'id' => $new_id]);
+    }
+
+    // [AJAX] Lấy các tin nhắn MỚI hơn after_id — dùng để poll realtime
+    public function poll_messages($other_id) {
+        $this->require_login();
+        if (!$this->input->is_ajax_request()) { show_404(); }
+
+        $user_id  = $this->session->userdata('user_id');
+        $after_id = (int)$this->input->get('after_id');
+
+        // Đánh dấu đã đọc luôn
+        $this->Message_model->mark_as_read($other_id, $user_id);
+
+        $msgs = $this->Message_model->get_new_messages($user_id, $other_id, $after_id);
+
+        echo json_encode(['status' => 'ok', 'messages' => $msgs]);
+    }
+
+    // [AJAX] Lấy tổng số tin nhắn chưa đọc của user hiện tại
+    public function total_unread() {
+        if (!$this->session->userdata('logged_in')) {
+            echo json_encode(['status' => 'error', 'count' => 0]);
+            return;
+        }
+        $user_id = $this->session->userdata('user_id');
+        $count = $this->Message_model->count_unread($user_id);
+        echo json_encode(['status' => 'ok', 'count' => $count]);
+    }
 }

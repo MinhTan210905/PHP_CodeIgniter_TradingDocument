@@ -197,13 +197,87 @@
     const DETAIL_URL = '<?= site_url("trade/detail/") ?>';
     const EDIT_URL = '<?= site_url("trade/edit/") ?>';
     const MSG_URL = '<?= site_url("message/conversation/") ?>';
-    const DEFAULT_IMG = '<?= base_url("assets/images/default_book.jpg") ?>';
-    const IS_ADMIN = <?= ($this->session->userdata('role') === 'admin') ? 'true' : 'false' ?>;
-    const CUR_UID = '<?= $this->session->userdata('user_id') ?? '' ?>';
+    const DEFAULT_IMG     let lastResultJson = '';
 
     // =========================================================
     // Hàm gọi API và render kết quả
     // =========================================================
+    function renderBooksList(result) {
+        if (result.status === 404 || !result.data || !result.data.length) {
+            // Trường hợp không có kết quả
+            emptyState.style.display  = 'block';
+            bookList.style.display    = 'none';
+            resultCount.textContent   = '0 bài đăng';
+            return;
+        }
+
+        emptyState.style.display  = 'none';
+        resultCount.textContent = result.total + ' bài đăng';
+
+        // Vẽ HTML từ dữ liệu JSON trả về
+        bookList.innerHTML = result.data.map(function (post) {
+            const isSold  = post.status === 'sold';
+            const imgSrc  = post.image_url ? BASE_URL + post.image_url : DEFAULT_IMG;
+            const price   = Number(post.price).toLocaleString('vi-VN') + 'đ';
+            const date    = new Date(post.created_at).toLocaleDateString('vi-VN');
+            const rating  = parseFloat(post.avg_rating) > 0
+                ? Array.from({length: 5}, function(_, i) {
+                      return '<i class="' + (i < Math.round(post.avg_rating) ? 'fas' : 'far') + ' fa-star"></i>';
+                  }).join('') + ' <span style="color:#6B7280">(' + post.total_ratings + ')</span>'
+                : '<span class="no-rating">Chưa có đánh giá</span>';
+
+            return '<div class="col-12 col-sm-6 col-lg-4 col-xl-3">' +
+                '<div class="card trade-card d-flex flex-column ' + (isSold ? 'card-sold' : '') + '">' +
+                    '<a href="' + DETAIL_URL + post.id + '" class="d-block card-img-link">' +
+                        '<img src="' + imgSrc + '" class="post-img" alt="' + post.title + '" loading="lazy"' +
+                             ' onerror="this.onerror=null;this.src=\'' + DEFAULT_IMG + '\'">' +
+                    '</a>' +
+                    '<div class="p-3 d-flex flex-column flex-grow-1">' +
+                        '<div class="d-flex align-items-center justify-content-between mb-2 gap-1 flex-wrap">' +
+                            '<span class="badge-cat"><i class="' + (post.cat_icon || 'fas fa-book') + '"></i> ' + (post.category_name || '') + '</span>' +
+                            (isSold
+                                ? '<span class="status-badge-sold"><i class="fas fa-lock" style="font-size:10px"></i> Đã Pass</span>'
+                                : '<span class="status-badge-avail"><i class="fas fa-circle" style="font-size:6px"></i> Còn ' + post.quantity + ' cuốn</span>') +
+                        '</div>' +
+                        '<a href="' + DETAIL_URL + post.id + '" class="text-decoration-none text-dark fw-bold mb-1"' +
+                           ' style="font-size:0.92rem;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.4;">' +
+                            post.title +
+                        '</a>' +
+                        '<div class="d-flex align-items-center gap-1 mb-2" style="font-size:0.78rem;color:#6B7280;">' +
+                            '<i class="fas fa-user-circle" style="color:#2563EB;"></i>' +
+                            '<span>' + (post.full_name || post.username) + '</span>' +
+                            '<span class="mx-1">·</span>' +
+                            '<span class="star-display">' + rating + '</span>' +
+                        '</div>' +
+                        '<p class="text-muted mb-2 flex-grow-1" style="font-size:0.8rem;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">' +
+                            (post.description || 'Không có mô tả') +
+                        '</p>' +
+                        '<hr class="my-2" style="border-color:#F1F5F9;">' +
+                        '<div class="d-flex align-items-center justify-content-between gap-1 flex-wrap">' +
+                            '<span class="price-tag">' + price + '</span>' +
+                            '<div class="d-flex align-items-center gap-1">' +
+                                ((IS_ADMIN || String(post.user_id) === CUR_UID)
+                                    ? '<a href="' + EDIT_URL + post.id + '" class="btn btn-sm btn-outline-secondary rounded-3" style="font-size:0.72rem;padding:3px 7px;" title="Chỉnh sửa">' +
+                                          '<i class="fas fa-pen"></i>' +
+                                      '</a>'
+                                    : '') +
+                                '<a href="' + MSG_URL + post.user_id + '" class="btn btn-sm btn-primary-hcmue rounded-3" style="font-size:0.75rem;" title="Nhắn tin">' +
+                                    '<i class="fas fa-comment"></i>' +
+                                '</a>' +
+                            '</div>' +
+                        '</div>' +
+                        '<div class="d-flex gap-3 mt-2" style="font-size:0.74rem;color:#9CA3AF;">' +
+                            '<span><i class="far fa-clock me-1"></i>' + date + '</span>' +
+                            '<span><i class="far fa-comment me-1"></i>' + post.comment_count + ' bình luận</span>' +
+                        '</div>' +
+                    '</div>' +
+                '</div>' +
+                '</div>';
+        }).join('');
+
+        bookList.style.display = '';
+    }
+
     function fetchBooks() {
         const keyword = searchInput.value.trim();
 
@@ -220,91 +294,42 @@
         // Bước 3: Hiện/ẩn nút "Xóa lọc"
         clearBtn.style.display = (currentCat || keyword) ? 'inline-block' : 'none';
 
-        // Bước 4: Gọi API bằng Fetch — đây là trái tim của tính năng này
+        // Bước 4: Gọi API bằng Fetch
         fetch(API_URL + '?' + params.toString())
             .then(function (response) { return response.json(); })
             .then(function (result) {
                 // Ẩn skeleton sau khi nhận được dữ liệu
                 loadingState.style.display = 'none';
 
-                if (result.status === 404 || !result.data.length) {
-                    // Trường hợp không có kết quả
-                    emptyState.style.display  = 'block';
-                    bookList.style.display    = 'none';
-                    resultCount.textContent   = '0 bài đăng';
-                    return;
-                }
-
-                // Cập nhật bộ đếm kết quả
-                resultCount.textContent = result.total + ' bài đăng';
-
-                // Bước 5: Vẽ HTML từ dữ liệu JSON trả về
-                bookList.innerHTML = result.data.map(function (post) {
-                    const isSold  = post.status === 'sold';
-                    const imgSrc  = post.image_url ? BASE_URL + post.image_url : DEFAULT_IMG;
-                    const price   = Number(post.price).toLocaleString('vi-VN') + 'đ';
-                    const date    = new Date(post.created_at).toLocaleDateString('vi-VN');
-                    const rating  = parseFloat(post.avg_rating) > 0
-                        ? Array.from({length: 5}, function(_, i) {
-                              return '<i class="' + (i < Math.round(post.avg_rating) ? 'fas' : 'far') + ' fa-star"></i>';
-                          }).join('') + ' <span style="color:#6B7280">(' + post.total_ratings + ')</span>'
-                        : '<span class="no-rating">Chưa có đánh giá</span>';
-
-                    return '<div class="col-12 col-sm-6 col-lg-4 col-xl-3">' +
-                        '<div class="card trade-card d-flex flex-column ' + (isSold ? 'card-sold' : '') + '">' +
-                            '<a href="' + DETAIL_URL + post.id + '" class="d-block card-img-link">' +
-                                '<img src="' + imgSrc + '" class="post-img" alt="' + post.title + '" loading="lazy"' +
-                                     ' onerror="this.onerror=null;this.src=\'' + DEFAULT_IMG + '\'">' +
-                            '</a>' +
-                            '<div class="p-3 d-flex flex-column flex-grow-1">' +
-                                '<div class="d-flex align-items-center justify-content-between mb-2 gap-1 flex-wrap">' +
-                                    '<span class="badge-cat"><i class="' + (post.cat_icon || 'fas fa-book') + '"></i> ' + (post.category_name || '') + '</span>' +
-                                    (isSold
-                                        ? '<span class="status-badge-sold"><i class="fas fa-lock" style="font-size:10px"></i> Đã Pass</span>'
-                                        : '<span class="status-badge-avail"><i class="fas fa-circle" style="font-size:6px"></i> Còn ' + post.quantity + ' cuốn</span>') +
-                                '</div>' +
-                                '<a href="' + DETAIL_URL + post.id + '" class="text-decoration-none text-dark fw-bold mb-1"' +
-                                   ' style="font-size:0.92rem;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.4;">' +
-                                    post.title +
-                                '</a>' +
-                                '<div class="d-flex align-items-center gap-1 mb-2" style="font-size:0.78rem;color:#6B7280;">' +
-                                    '<i class="fas fa-user-circle" style="color:#2563EB;"></i>' +
-                                    '<span>' + (post.full_name || post.username) + '</span>' +
-                                    '<span class="mx-1">·</span>' +
-                                    '<span class="star-display">' + rating + '</span>' +
-                                '</div>' +
-                                '<p class="text-muted mb-2 flex-grow-1" style="font-size:0.8rem;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">' +
-                                    (post.description || 'Không có mô tả') +
-                                '</p>' +
-                                '<hr class="my-2" style="border-color:#F1F5F9;">' +
-                                '<div class="d-flex align-items-center justify-content-between gap-1 flex-wrap">' +
-                                    '<span class="price-tag">' + price + '</span>' +
-                                    '<div class="d-flex align-items-center gap-1">' +
-                                        ((IS_ADMIN || String(post.user_id) === CUR_UID)
-                                            ? '<a href="' + EDIT_URL + post.id + '" class="btn btn-sm btn-outline-secondary rounded-3" style="font-size:0.72rem;padding:3px 7px;" title="Chỉnh sửa">' +
-                                                  '<i class="fas fa-pen"></i>' +
-                                              '</a>'
-                                            : '') +
-                                        '<a href="' + MSG_URL + post.user_id + '" class="btn btn-sm btn-primary-hcmue rounded-3" style="font-size:0.75rem;" title="Nhắn tin">' +
-                                            '<i class="fas fa-comment"></i>' +
-                                        '</a>' +
-                                    '</div>' +
-                                '</div>' +
-                                '<div class="d-flex gap-3 mt-2" style="font-size:0.74rem;color:#9CA3AF;">' +
-                                    '<span><i class="far fa-clock me-1"></i>' + date + '</span>' +
-                                    '<span><i class="far fa-comment me-1"></i>' + post.comment_count + ' bình luận</span>' +
-                                '</div>' +
-                            '</div>' +
-                        '</div>' +
-                    '</div>';
-                }).join('');
-
-                bookList.style.display = '';
+                lastResultJson = JSON.stringify(result.data || []);
+                renderBooksList(result);
             })
             .catch(function () {
                 loadingState.style.display = 'none';
                 bookList.innerHTML = '<div class="col-12 text-center text-danger py-4">Không thể kết nối API. Vui lòng thử lại.</div>';
                 bookList.style.display = '';
+            });
+    }
+
+    // Polling chạy ẩn để cập nhật bài đăng mới / đã duyệt realtime
+    function pollBooks() {
+        const keyword = searchInput.value.trim();
+        const params = new URLSearchParams();
+        if (currentCat) params.append('cat', currentCat);
+        if (keyword)    params.append('q', keyword);
+
+        fetch(API_URL + '?' + params.toString())
+            .then(function (response) { return response.json(); })
+            .then(function (result) {
+                const currentJson = JSON.stringify(result.data || []);
+                // Chỉ vẽ lại nếu danh sách bài đăng có sự thay đổi
+                if (currentJson !== lastResultJson) {
+                    lastResultJson = currentJson;
+                    renderBooksList(result);
+                }
+            })
+            .catch(function (err) {
+                console.warn('Lỗi đồng bộ danh sách bài đăng:', err);
             });
     }
 
@@ -345,5 +370,8 @@
     // Tải danh sách ngay khi trang mở (Initial Load)
     // =========================================================
     fetchBooks();
+
+    // Tự động kiểm tra cập nhật bài đăng mỗi 6 giây
+    setInterval(pollBooks, 6000);
 }());
 </script>

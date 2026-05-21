@@ -73,4 +73,27 @@ class Message_model extends CI_Model {
                         ->where('is_read', 0)
                         ->count_all_results('messages');
     }
+
+    // [AJAX Polling] Lấy tin nhắn mới hơn after_id trong hội thoại 2 người
+    public function get_new_messages($user_id, $other_id, $after_id = 0) {
+        $this->db->select('messages.*,
+            s.username as sender_username, s.full_name as sender_name,
+            p.title as post_title, p.id as post_id_ref');
+        $this->db->from('messages');
+        $this->db->join('users s', 's.id = messages.sender_id', 'left');
+        $this->db->join('posts p', 'p.id = messages.post_id', 'left');
+        $this->db->group_start();
+            $this->db->where('messages.sender_id', $user_id);
+            $this->db->where('messages.receiver_id', $other_id);
+        $this->db->group_end();
+        $this->db->or_group_start();
+            $this->db->where('messages.sender_id', $other_id);
+            $this->db->where('messages.receiver_id', $user_id);
+        $this->db->group_end();
+        if ($after_id > 0) {
+            $this->db->where('messages.id >', $after_id);
+        }
+        $this->db->order_by('messages.created_at', 'ASC');
+        return $this->db->get()->result_array();
+    }
 }

@@ -255,7 +255,7 @@
         </div>
     </div>
 
-    <!-- JS Lọc tab Đang rao / Đã Pass -->
+    <!-- JS Lọc tab Đang rao / Đã Pass & Check updates realtime -->
     <script>
     document.querySelectorAll('#postStatusFilter button').forEach(btn => {
         btn.addEventListener('click', function() {
@@ -267,6 +267,30 @@
             });
         });
     });
+
+    // Realtime kiểm tra thay đổi số lượng bài viết / thanh toán chờ duyệt
+    (function() {
+        const currentPendingPosts = <?= count($pending_posts) ?>;
+        const currentWithdrawals = <?= isset($total_withdrawals) ? (int)$total_withdrawals : 0 ?>;
+
+        setInterval(function() {
+            fetch('<?= site_url("admin/check_updates") ?>', {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'ok') {
+                    if (data.pending_posts !== currentPendingPosts || data.pending_withdrawals !== currentWithdrawals) {
+                        // Tự động tải lại trang khi có bài đăng mới chờ duyệt hoặc yêu cầu thanh toán mới
+                        location.reload();
+                    }
+                }
+            })
+            .catch(err => console.warn('Lỗi kiểm tra cập nhật admin:', err));
+        }, 7000);
+    })();
     </script>
 
 </div>
