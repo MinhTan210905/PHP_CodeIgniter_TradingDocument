@@ -230,8 +230,6 @@
     </div>
 
     <!-- Floating decoration -->
-    <div class="float-card float-card-2">📚 Giáo trình CTDL &amp; Giải thuật — 45.000đ</div>
-    <div class="float-card float-card-1">✅ Còn sách · Nguyễn Văn A · ⭐ 4.9</div>
 </div>
 
 <!-- RIGHT PANEL -->
@@ -271,7 +269,7 @@
                 <div class="input-wrap">
                     <i class="fas fa-envelope input-icon"></i>
                     <input type="email" class="form-control" name="email" required
-                           placeholder="nguyenvana@student.hcmue.edu.vn">
+                           placeholder="Nhập email sinh viên của bạn">
                 </div>
             </div>
             <div class="mb-4">

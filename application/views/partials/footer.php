@@ -31,12 +31,12 @@
                 </div>
             </div>
 
-            <!-- Cột phải: Newsletter -->
+            <!-- Cột phải: Danh sách mong muốn sách -->
             <div class="col-lg-5">
                 <div class="newsletter-box">
                     <h5 class="newsletter-title text-uppercase">Đăng ký nhận tin mới</h5>
                     <p class="newsletter-desc mt-2">
-                        Nhận thông báo ngay khi có người đăng Pass các loại sách hoặc tài liệu bạn đang quan tâm.
+                        Nhận thông báo qua email và tin nhắn khi có người đăng bán sách bạn đang tìm kiếm.
                     </p>
                     
                     <form action="<?= current_url() ?>" method="POST" class="newsletter-form">
