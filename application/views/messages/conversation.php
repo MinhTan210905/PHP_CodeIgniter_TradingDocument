@@ -21,7 +21,7 @@
          style="height:440px;overflow-y:auto;display:flex;flex-direction:column;gap:10px;background:#F8FAFC;">
 
         <?php if (empty($messages)): ?>
-            <div style="display:flex;align-items:center;justify-content:center;height:100%;color:#9CA3AF;font-size:0.87rem;">
+            <div id="noMessagesPlaceholder" style="display:flex;align-items:center;justify-content:center;height:100%;color:#9CA3AF;font-size:0.87rem;">
                 <div class="text-center">
                     <i class="fas fa-comment-dots" style="font-size:2rem;margin-bottom:10px;display:block;"></i>
                     Hãy bắt đầu cuộc trò chuyện!
@@ -67,7 +67,7 @@
                     $content = trim($content);
                 }
                 ?>
-                <div style="display:flex;flex-direction:column;align-items:<?= $is_mine ? 'flex-end' : 'flex-start' ?>;">
+                <div class="message-item" data-id="<?= $msg['id'] ?>" style="display:flex;flex-direction:column;align-items:<?= $is_mine ? 'flex-end' : 'flex-start' ?>;">
                      <div style="
                         max-width:72%;
                         background:<?= $is_mine ? 'var(--hcmue-blue)' : '#fff' ?>;
@@ -118,7 +118,7 @@
     </div>
 
     <!-- Form gửi tin nhắn -->
-    <form action="<?= site_url('message/send') ?>" method="POST" class="d-flex gap-2 align-items-end">
+    <form action="<?= site_url('message/send') ?>" method="POST" id="chatForm" class="d-flex gap-2 align-items-end">
         <input type="hidden" name="receiver_id" value="<?= $other_user['id'] ?>">
         <input type="hidden" name="post_id" value="<?= $this->input->get('post_id') ?>">
         <div class="flex-grow-1">
@@ -133,17 +133,223 @@
 </div>
 
 <script>
-// Auto scroll xuống cuối
-const chatBox = document.getElementById('chatBox');
-if (chatBox) chatBox.scrollTop = chatBox.scrollHeight;
+const currentUserId = <?= json_encode($cur_uid) ?>;
+const otherUserId   = <?= json_encode($other_user['id']) ?>;
+const siteUrl       = <?= json_encode(site_url()) ?>;
+const chatBox       = document.getElementById('chatBox');
+const msgInput      = document.getElementById('msgInput');
+const chatForm      = document.getElementById('chatForm');
+
+let maxMsgId = 0;
+
+// Tìm ID tin nhắn lớn nhất hiện có
+function updateMaxMsgId() {
+    document.querySelectorAll('.message-item').forEach(el => {
+        const id = parseInt(el.getAttribute('data-id'));
+        if (id > maxMsgId) maxMsgId = id;
+    });
+}
+updateMaxMsgId();
+
+// Tự động cuộn xuống cuối
+function scrollToBottom() {
+    if (chatBox) {
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
+}
+scrollToBottom();
+
+// Hàm XSS Escape
+function escapeHtml(text) {
+    const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+    };
+    return text.replace(/[&<>"']/g, function(m) { return map[m]; });
+}
+
+// Hàm phân tích định dạng tin nhắn (lọc link Đơn hàng giống PHP)
+function formatMessageContent(content) {
+    const orderLinkRegex = /https?:\/\/[^\s]+orders\/(detail|rate)\/(\d+)/i;
+    const matches = content.match(orderLinkRegex);
+    let orderActionType = null;
+    let orderId = null;
+    
+    if (matches) {
+        orderActionType = matches[1].toLowerCase();
+        orderId = matches[2];
+        
+        content = content.replace(/https?:\/\/[^\s]+/gi, '');
+        content = content.replace('Vào trang Đơn hàng để xác nhận:', '');
+        content = content.replace('Hãy liên hệ để hẹn giao nhận sách nhé! Xem chi tiết:', '');
+        content = content.replace('Xem chi tiết:', '');
+        content = content.replace('Hãy để lại đánh giá cho người bán nhé:', '');
+        content = content.trim();
+    }
+    
+    return {
+        text: content,
+        orderId: orderId,
+        orderActionType: orderActionType
+    };
+}
+
+// Render HTML cho tin nhắn mới nhận được
+function renderMessageHTML(msg, isMine) {
+    const parsed = formatMessageContent(msg.content);
+    const escapedContent = escapeHtml(parsed.text).replace(/\n/g, '<br>');
+    
+    let orderButtonHtml = '';
+    if (parsed.orderId) {
+        if (parsed.orderActionType === 'rate') {
+            orderButtonHtml = `
+                <div class="mt-2 pt-2 border-top" style="border-color:rgba(255,255,255,0.2) !important;">
+                    <a href="${siteUrl}orders/rate/${parsed.orderId}" 
+                       class="btn btn-sm w-100 rounded-3 fw-bold py-1.5 text-white"
+                       style="background: linear-gradient(135deg, #F59E0B, #D97706); 
+                              font-size:0.78rem; 
+                              border: none;
+                              box-shadow: var(--shadow-sm);">
+                        <i class="fas fa-star me-1"></i> Đánh giá người bán ngay
+                    </a>
+                </div>`;
+        } else {
+            orderButtonHtml = `
+                <div class="mt-2 pt-2 border-top" style="border-color:rgba(255,255,255,0.2) !important;">
+                    <a href="${siteUrl}orders/detail/${parsed.orderId}" 
+                       class="btn btn-sm w-100 rounded-3 fw-bold py-1"
+                       style="background:${isMine ? '#fff' : 'var(--hcmue-blue)'}; 
+                              color:${isMine ? 'var(--hcmue-blue)' : '#fff'}; 
+                              font-size:0.78rem; 
+                              border:1px solid rgba(0,0,0,0.05);">
+                        <i class="fas fa-shopping-bag me-1"></i> Xem chi tiết Đơn hàng
+                    </a>
+                </div>`;
+        }
+    }
+    
+    const align = isMine ? 'flex-end' : 'flex-start';
+    const bg = isMine ? 'var(--hcmue-blue)' : '#fff';
+    const color = isMine ? '#fff' : '#1A1A2E';
+    const radius = isMine ? '18px 18px 6px 18px' : '18px 18px 18px 6px';
+    
+    // Tạo định dạng ngày giờ: HH:MM DD/MM
+    let formattedTime = '';
+    try {
+        const dateObj = new Date(msg.created_at.replace(/-/g, '/')); // thay - bằng / để tương thích Safari
+        let hours = dateObj.getHours().toString().padStart(2, '0');
+        let minutes = dateObj.getMinutes().toString().padStart(2, '0');
+        let day = dateObj.getDate().toString().padStart(2, '0');
+        let month = (dateObj.getMonth() + 1).toString().padStart(2, '0');
+        formattedTime = `${hours}:${minutes} ${day}/${month}`;
+    } catch (e) {
+        formattedTime = 'Vừa xong';
+    }
+    
+    const checkIcon = isMine 
+        ? `<i class="fas fa-${msg.is_read == 1 ? 'check-double' : 'check'} ms-1" style="${msg.is_read == 1 ? 'color:var(--hcmue-blue)' : ''}"></i>`
+        : '';
+        
+    return `
+        <div class="message-item" data-id="${msg.id}" style="display:flex;flex-direction:column;align-items:${align};">
+             <div style="
+                max-width:72%;
+                background:${bg};
+                color:${color};
+                border-radius:${radius};
+                padding:10px 14px;
+                font-size:0.87rem;
+                line-height:1.5;
+                box-shadow:0 2px 8px rgba(0,0,0,0.06);
+                word-break:break-word;
+            ">
+                ${escapedContent}
+                ${orderButtonHtml}
+            </div>
+            <span style="font-size:0.68rem;color:#9CA3AF;margin-top:3px;">
+                ${formattedTime}
+                ${checkIcon}
+            </span>
+        </div>`;
+}
+
+// Gửi tin nhắn qua AJAX
+chatForm.addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const content = msgInput.value.trim();
+    if (!content) return;
+    
+    const formData = new FormData(chatForm);
+    
+    // Xóa input ngay lập tức để tạo cảm giác phản hồi nhanh
+    msgInput.value = '';
+    
+    fetch(`${siteUrl}message/send_ajax`, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.status === 'ok') {
+            // Gửi thành công -> kích hoạt poll ngay lập tức để lấy tin nhắn vừa gửi
+            pollMessages();
+        } else {
+            alert(data.message || 'Lỗi gửi tin nhắn.');
+            msgInput.value = content;
+        }
+    })
+    .catch(err => {
+        console.error(err);
+        alert('Lỗi kết nối mạng, vui lòng thử lại.');
+        msgInput.value = content;
+    });
+});
+
+// Lấy tin nhắn mới qua AJAX Polling
+function pollMessages() {
+    fetch(`${siteUrl}message/poll/${otherUserId}?after_id=${maxMsgId}`, {
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.status === 'ok' && data.messages && data.messages.length > 0) {
+            // Xóa placeholder trống nếu có
+            const placeholder = document.getElementById('noMessagesPlaceholder');
+            if (placeholder) placeholder.remove();
+            
+            data.messages.forEach(msg => {
+                // Kiểm tra xem tin nhắn đã hiển thị chưa
+                if (!document.querySelector(`.message-item[data-id="${msg.id}"]`)) {
+                    const isMine = parseInt(msg.sender_id) === parseInt(currentUserId);
+                    const html = renderMessageHTML(msg, isMine);
+                    chatBox.insertAdjacentHTML('beforeend', html);
+                }
+            });
+            
+            updateMaxMsgId();
+            scrollToBottom();
+        }
+    })
+    .catch(err => console.warn('Lỗi polling tin nhắn:', err));
+}
+
+// Bật tự động nhận tin nhắn mới mỗi 3 giây
+setInterval(pollMessages, 3000);
 
 // Nhấn Enter để gửi (trừ khi giữ Shift thì xuống dòng)
-document.getElementById('msgInput').addEventListener('keydown', function(e) {
+msgInput.addEventListener('keydown', function(e) {
     if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault(); // Ngăn xuống dòng
-        if (this.value.trim() !== '') {
-            this.form.submit();
-        }
+        e.preventDefault();
+        chatForm.dispatchEvent(new Event('submit'));
     }
 });
 </script>
@@ -151,3 +357,4 @@ document.getElementById('msgInput').addEventListener('keydown', function(e) {
 <style>
 .form-control:focus { border-color:var(--hcmue-blue-light) !important; box-shadow:0 0 0 3px rgba(0,63,138,0.1) !important; outline:none; }
 </style>
+
