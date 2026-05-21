@@ -10,6 +10,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
  * @property Comment_model $Comment_model
  * @property Rating_model $Rating_model
  * @property Message_model $Message_model
+ * @property Order_model $Order_model
+ * @property Setting_model $Setting_model
  */
 class Trade extends CI_Controller {
 
