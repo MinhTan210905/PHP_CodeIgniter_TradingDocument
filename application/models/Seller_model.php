@@ -21,7 +21,7 @@ class Seller_model extends CI_Model {
             COUNT(DISTINCT comments.id)     as comment_count');
         $this->db->from('posts');
         $this->db->join('categories', 'categories.id  = posts.category_id', 'left');
-        $this->db->join('ratings',    'ratings.post_id = posts.id',         'left');
+        $this->db->join('ratings',    'ratings.seller_id = posts.user_id',  'left');
         $this->db->join('comments',   'comments.post_id= posts.id',         'left');
         $this->db->where('posts.user_id', $seller_id);
         $this->db->where('posts.status',  'available');

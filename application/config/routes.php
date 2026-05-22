@@ -83,6 +83,9 @@ $route['admin/update_settings']          = 'admin/update_settings';
 $route['admin/disputes']                 = 'admin/disputes';
 $route['admin/resolve_dispute_refund/(:num)']  = 'admin/resolve_dispute_refund/$1';
 $route['admin/resolve_dispute_release/(:num)'] = 'admin/resolve_dispute_release/$1';
+$route['admin/reverse_dispute_decision/(:num)'] = 'admin/reverse_dispute_decision/$1';
+$route['admin/moderation']                     = 'admin/moderation';
+$route['admin/moderation_action']              = 'admin/moderation_action';
 
 // Orders (Đơn hàng)
 $route['orders']                         = 'orders/index';
@@ -109,6 +112,21 @@ $route['wallet/withdraw']                = 'wallet/withdraw';
 $route['wallet/payos_callback']          = 'wallet/payos_callback';
 $route['wallet/payos_cancel']            = 'wallet/payos_cancel';
 
+// Wishlist (Danh sách mong muốn)
+$route['wishlist']                       = 'wishlist/index';
+$route['wishlist/add']                   = 'wishlist/add';
+$route['wishlist/toggle/(:num)']         = 'wishlist/toggle/$1';
+$route['wishlist/delete/(:num)']         = 'wishlist/delete/$1';
+
+// Cron Job (Tác vụ tự động)
+$route['cron/run']                       = 'cron/run';
+
+// Message AJAX (Chat nâng cao)
+$route['message/toggle_pin/(:num)']      = 'message/toggle_pin_ajax/$1';
+$route['message/toggle_mute/(:num)']     = 'message/toggle_mute_ajax/$1';
+$route['message/delete_chat/(:num)']     = 'message/delete_chat_ajax/$1';
+$route['message/mark_read/(:num)']       = 'message/mark_read_ajax/$1';
+
 // API — RESTful endpoints
 $route['api/auth/login']                 = 'api/login';
 $route['api/auth/register']              = 'api/register';
@@ -129,3 +147,4 @@ $route['api/orders/rate/(:num)']         = 'api/order_rate/$1';
 $route['api/seller/(:num)']              = 'api/seller_info/$1';
 $route['api/seller/(:num)/posts']        = 'api/seller_posts/$1';
 $route['api/seller/(:num)/ratings']      = 'api/seller_ratings/$1';
+

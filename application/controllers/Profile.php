@@ -134,8 +134,8 @@ class Profile extends CI_Controller {
 
         // Xóa tài khoản và huỷ session
         $this->Auth_model->delete_user($user_id);
-        $this->session->sess_destroy();
         $this->session->set_flashdata('success', 'Tài khoản của bạn đã được xóa vĩnh viễn.');
+        $this->session->sess_destroy();
         redirect('auth');
     }
 
