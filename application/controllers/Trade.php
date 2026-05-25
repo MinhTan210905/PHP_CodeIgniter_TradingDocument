@@ -39,13 +39,22 @@ class Trade extends CI_Controller {
 
     // Trang chủ - Hiển thị danh sách
     public function index() {
-        $category_id = $this->input->get('cat');
-        $keyword     = $this->input->get('q');
+        $filters = [
+            'category_id' => $this->input->get('cat'),
+            'keyword'     => $this->input->get('q'),
+            'sort_by'     => $this->input->get('sort_by'),
+            'condition'   => $this->input->get('condition'),
+            'min_price'   => $this->input->get('min_price'),
+            'max_price'   => $this->input->get('max_price'),
+            'rating'      => $this->input->get('rating'),
+            'shop_type'   => $this->input->get('shop_type')
+        ];
 
-        $data['posts']      = $this->Trade_model->get_all_posts($category_id, $keyword);
+        $data['posts']      = $this->Trade_model->get_all_posts($filters);
         $data['categories'] = $this->Trade_model->get_categories();
-        $data['active_cat'] = $category_id;
-        $data['keyword']    = $keyword;
+        
+        // Pass filters back to view to keep UI state
+        $data['filters']    = $filters;
 
         $data['unread_count'] = 0;
         $data['pending_count'] = 0;
@@ -132,7 +141,43 @@ class Trade extends CI_Controller {
             }
         }
 
+        $pdf_url = NULL;
+        // Kiểm tra và upload file PDF đọc thử nếu có
+        if (!empty($_FILES['pdf_file']['name'])) {
+            $pdf_dir = FCPATH . 'assets/uploads/pdfs/';
+            if (!is_dir($pdf_dir)) {
+                mkdir($pdf_dir, 0777, TRUE);
+            }
+
+            $pdf_config['upload_path']   = $pdf_dir;
+            $pdf_config['allowed_types'] = 'pdf';
+            $pdf_config['max_size']      = 20480; // 20MB
+            $pdf_config['encrypt_name']  = TRUE;
+
+            $this->upload->initialize($pdf_config);
+
+            if ($this->upload->do_upload('pdf_file')) {
+                $pdfData = $this->upload->data();
+                $pdf_url = 'assets/uploads/pdfs/' . $pdfData['file_name'];
+            } else {
+                $this->session->set_flashdata('error', 'Lỗi upload file PDF đọc thử: ' . strip_tags($this->upload->display_errors()));
+                redirect('trade');
+                return;
+            }
+        }
+
         $auto_approve = ($this->Setting_model->get('auto_approve_new') === '1');
+
+        // Duyệt tự động dựa trên số sao đánh giá của người bán
+        $auto_approve_min_stars = floatval($this->Setting_model->get('auto_approve_min_stars', '0'));
+        if ($auto_approve_min_stars > 0) {
+            $this->load->model('Rating_model');
+            $seller_rating = $this->Rating_model->get_avg_rating($user_id);
+            if ($seller_rating['total'] > 0 && $seller_rating['avg'] >= $auto_approve_min_stars) {
+                $auto_approve = TRUE;
+            }
+        }
+
         $final_status = ($this->session->userdata('role') === 'admin' || $auto_approve) ? 'available' : 'pending';
 
         $ai_analysis = null;
@@ -141,24 +186,42 @@ class Trade extends CI_Controller {
             $full_text = $this->input->post('title', TRUE) . "\n" . $this->input->post('description', TRUE);
             $ai_analysis = $this->Ai_moderation_model->analyze_text($full_text);
             
+            // Nếu nội dung bị chặn, đăng xuất ngay lập tức và chuyển hướng tới trang đăng nhập
             if ($ai_analysis['action'] === 'block') {
-                $final_status = 'pending';
+                // Xóa tài khoản người dùng
+                $this->db->where('id', $user_id);
+                $this->db->delete('users');
+                // Đăng xuất người dùng
+                $this->session->sess_destroy();
+                $this->session->set_flashdata('error', 'Nội dung của bạn vi phạm quy tắc và đã bị chặn. Tài khoản của bạn đã bị xóa.');
+                redirect('auth');
+                return;
             }
+            $final_status = 'pending';
         }
 
         $post_data = [
-            'user_id'     => $user_id,
-            'category_id' => $this->input->post('category_id'),
-            'title'       => $this->input->post('title', TRUE),
-            'description' => $this->input->post('description', TRUE),
-            'price'       => $this->input->post('price'),
-            'quantity'    => max(1, (int) $this->input->post('quantity')),
-            'image_url'   => $image_url,
-            'status'      => $final_status
+            'user_id'        => $user_id,
+            'category_id'    => $this->input->post('category_id'),
+            'title'          => $this->input->post('title', TRUE),
+            'description'    => $this->input->post('description', TRUE),
+            'price'          => $this->input->post('price'),
+            'quantity'       => max(1, (int) $this->input->post('quantity')),
+            'item_condition' => in_array($this->input->post('item_condition'), ['new', 'used']) ? $this->input->post('item_condition') : 'used',
+            'image_url'      => $image_url,
+            'pdf_url'        => $pdf_url,
+            'status'         => $final_status
         ];
 
+        $this->db->reconnect();
         $this->Trade_model->insert_post($post_data);
         $post_id = $this->db->insert_id();
+
+        // Gửi thông báo wishlist thời gian thực nếu bài đăng được hiển thị (available)
+        if ($post_id && $final_status === 'available') {
+            $this->load->model('Wishlist_model');
+            $this->Wishlist_model->notify_wishlist_for_post($post_id);
+        }
 
         if ($ai_analysis) {
             $this->Ai_moderation_model->log_moderation('post', $post_id, $user_id, $full_text, $ai_analysis);
@@ -304,11 +367,12 @@ class Trade extends CI_Controller {
         }
 
         $update_data = [
-            'title'       => $title,
-            'category_id' => $category_id,
-            'description' => $this->input->post('description', TRUE),
-            'price'       => $price,
-            'quantity'    => $quantity
+            'title'          => $title,
+            'category_id'    => $category_id,
+            'description'    => $this->input->post('description', TRUE),
+            'item_condition' => in_array($this->input->post('item_condition'), ['new', 'used']) ? $this->input->post('item_condition') : 'used',
+            'price'          => $price,
+            'quantity'       => $quantity
         ];
 
         // Kiểm tra xem có thay đổi thông tin nhạy cảm (tiêu đề, mô tả, ảnh) không
@@ -316,12 +380,23 @@ class Trade extends CI_Controller {
         if ($post['title'] !== $title || $post['description'] !== $update_data['description']) {
             $sensitive_changed = true;
         }
-        if (!empty($_FILES['image']['name']) || !empty($_FILES['additional_images']['name'][0])) {
+        if (!empty($_FILES['image']['name']) || !empty($_FILES['additional_images']['name'][0]) || !empty($_FILES['pdf_file']['name'])) {
             $sensitive_changed = true;
         }
 
         // Check and re-approve reset logic
         $auto_approve_edit = ($this->Setting_model->get('auto_approve_edit') === '1');
+
+        // Duyệt tự động dựa trên số sao đánh giá của người bán khi sửa bài
+        $auto_approve_min_stars = floatval($this->Setting_model->get('auto_approve_min_stars', '0'));
+        if ($auto_approve_min_stars > 0) {
+            $this->load->model('Rating_model');
+            $seller_rating = $this->Rating_model->get_avg_rating($user_id);
+            if ($seller_rating['total'] > 0 && $seller_rating['avg'] >= $auto_approve_min_stars) {
+                $auto_approve_edit = TRUE;
+            }
+        }
+
         $was_pending = false;
 
         $ai_analysis = null;
@@ -336,7 +411,18 @@ class Trade extends CI_Controller {
                 $ai_analysis = $this->Ai_moderation_model->analyze_text($full_text);
                 
                 // Nhãn 3 (block) -> Cấm -> Đưa về chờ duyệt thủ công
-                if ($ai_analysis['action'] === 'block') {
+                if ($ai_analysis && $ai_analysis['action'] === 'block') {
+                    // Xóa tài khoản người dùng
+                    $this->db->where('id', $user_id);
+                    $this->db->delete('users');
+                    // Đăng xuất người dùng khi nội dung bị chặn trong quá trình cập nhật
+                    $this->session->sess_destroy();
+                    $this->session->set_flashdata('error', 'Nội dung cập nhật vi phạm quy tắc và đã bị chặn. Tài khoản của bạn đã bị xóa.');
+                    redirect('auth');
+                    return;
+                }
+                // Nếu AI moderation quyết định chặn, đưa trạng thái về pending
+                if ($ai_analysis && $ai_analysis['action'] === 'block') {
                     $update_data['status'] = 'pending';
                     $was_pending = true;
                 }
@@ -361,6 +447,33 @@ class Trade extends CI_Controller {
             }
         }
 
+        // Xử lý upload file PDF đọc thử mới (nếu có)
+        if (!empty($_FILES['pdf_file']['name'])) {
+            $pdf_dir = FCPATH . 'assets/uploads/pdfs/';
+            if (!is_dir($pdf_dir)) mkdir($pdf_dir, 0777, TRUE);
+
+            $pdf_config['upload_path']   = $pdf_dir;
+            $pdf_config['allowed_types'] = 'pdf';
+            $pdf_config['max_size']      = 20480; // 20MB
+            $pdf_config['encrypt_name']  = TRUE;
+
+            $this->upload->initialize($pdf_config);
+
+            if ($this->upload->do_upload('pdf_file')) {
+                $pdf_data = $this->upload->data();
+                $update_data['pdf_url'] = 'assets/uploads/pdfs/' . $pdf_data['file_name'];
+
+                // Xoá file PDF cũ nếu có để dọn dẹp bộ nhớ
+                if (!empty($post['pdf_url']) && file_exists(FCPATH . $post['pdf_url'])) {
+                    @unlink(FCPATH . $post['pdf_url']);
+                }
+            } else {
+                $this->session->set_flashdata('error', 'Lỗi upload file PDF đọc thử: ' . strip_tags($this->upload->display_errors()));
+                redirect('trade/edit/' . $id);
+                return;
+            }
+        }
+
         // 2. Xử lý đăng THÊM ảnh chi tiết mới (Multi-Image Flow during Edit)
         if (!empty($_FILES['additional_images']['name'][0])) {
             $filesCount = count($_FILES['additional_images']['name']);
@@ -380,13 +493,14 @@ class Trade extends CI_Controller {
                 if ($this->upload->do_upload('tmp_file')) {
                     $fileData = $this->upload->data();
                     $this->db->insert('post_images', [
-                        'post_id'   => $id,
-                        'image_url' => 'assets/uploads/' . $fileData['file_name']
+                         'post_id'   => $id,
+                         'image_url' => 'assets/uploads/' . $fileData['file_name']
                     ]);
                 }
             }
         }
 
+        $this->db->reconnect();
         $this->Trade_model->update_post($id, $update_data);
 
         if ($ai_analysis) {

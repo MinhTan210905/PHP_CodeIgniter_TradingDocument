@@ -98,12 +98,22 @@ class Auth extends CI_Controller {
         $password = $this->input->post('password');
         $confirm  = $this->input->post('confirm_password');
         $full_name = $this->input->post('full_name', TRUE);
+        $phone     = $this->input->post('phone', TRUE);
 
         // Kiểm tra trống
         if (empty($email) || empty($username) || empty($password) || empty($full_name)) {
             $this->session->set_flashdata('error', 'Vui lòng nhập đầy đủ các trường bắt buộc!');
             redirect('auth/register');
             return;
+        }
+
+        // Kiểm duyệt số điện thoại (nếu có nhập)
+        if (!empty($phone)) {
+            if (!preg_match('/^0[0-9]{9}$/', $phone)) {
+                $this->session->set_flashdata('error', '❌ Số điện thoại phải có đúng 10 chữ số và bắt đầu bằng số 0!');
+                redirect('auth/register');
+                return;
+            }
         }
 
         // Làm sạch và lọc bỏ đuôi nếu người dùng cố tình nhập cả email
@@ -161,7 +171,7 @@ class Auth extends CI_Controller {
             'username'  => $username,
             'email'     => $email,
             'password'  => password_hash($password, PASSWORD_DEFAULT),
-            'phone'     => $this->input->post('phone', TRUE),
+            'phone'     => $phone,
             'phone_visible' => 0,
             'role'      => 'user',
             'otp'       => $otp,

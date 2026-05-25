@@ -73,7 +73,7 @@
                 <div class="main-img-container bg-white d-flex align-items-center justify-content-center p-3" style="height:380px; overflow:hidden; position:relative;">
                     <img id="mainImageDisplay" src="<?= $img_src ?>"
                          class="img-fluid"
-                         style="object-fit:contain; max-height:100%; max-width:100%; border-radius:8px; transition: opacity 0.15s ease;"
+                         style="object-fit:contain; max-height:100%; max-width:100%; border-radius:8px; transition: opacity 0.3s ease-in-out;"
                          alt="<?= htmlspecialchars($post['title']) ?>"
                          onerror="this.onerror=null;this.src='<?= base_url('assets/images/default_book.jpg') ?>';">
                 </div>
@@ -120,8 +120,15 @@
                     <?= htmlspecialchars($post['title']) ?>
                 </h1>
 
-                <!-- Price -->
-                <p class="price-tag mb-3"><?= number_format($post['price'], 0, ',', '.') ?>đ</p>
+                <!-- Price & Read Preview -->
+                <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+                    <p class="price-tag mb-0"><?= number_format($post['price'], 0, ',', '.') ?>đ</p>
+                    <?php if (!empty($post['pdf_url'])): ?>
+                        <button class="btn btn-outline-primary py-2 px-3 fw-bold rounded-pill shadow-sm" data-bs-toggle="modal" data-bs-target="#pdfPreviewModal" style="font-size:0.82rem; border-width:1.5px; transition: all 0.2s ease;">
+                            <i class="fas fa-book-open me-1"></i> Đọc Thử Sách
+                        </button>
+                    <?php endif; ?>
+                </div>
 
                 <!-- Description -->
                 <p class="text-muted mb-3" style="font-size:0.88rem;line-height:1.7;">
@@ -419,24 +426,90 @@
     </div>
 </div>
 
-<!-- Script đổi ảnh chi tiết như Shopee -->
+<!-- Script đổi ảnh chi tiết như Shopee & Carousel tự động -->
 <script>
+let autoSlideInterval = null;
+let currentIndex = 0;
+
 function changeMainImage(newSrc, thumbElement) {
     const mainDisplay = document.getElementById('mainImageDisplay');
     if (!mainDisplay) return;
 
-    // Tạo hiệu ứng mờ dần nhẹ (fade effect)
-    mainDisplay.style.opacity = '0.3';
-
+    mainDisplay.style.opacity = '0';
     setTimeout(() => {
         mainDisplay.src = newSrc;
         mainDisplay.style.opacity = '1';
-    }, 120);
+    }, 200);
 
-    // Cập nhật trạng thái viền đỏ/xanh nổi bật của thumbnail active
+    document.querySelectorAll('.post-thumb-item').forEach((item, index) => {
+        item.classList.remove('active');
+        if (item === thumbElement) {
+            currentIndex = index;
+        }
+    });
+    thumbElement.classList.add('active');
+
+    // Reset lại chu kỳ 5 giây nếu người dùng tự click thủ công
+    if (autoSlideInterval) {
+        clearInterval(autoSlideInterval);
+        autoSlideInterval = setInterval(slideNextImage, 5000);
+    }
+}
+
+function changeMainImageNoReset(newSrc, thumbElement) {
+    const mainDisplay = document.getElementById('mainImageDisplay');
+    if (!mainDisplay) return;
+
+    mainDisplay.style.opacity = '0';
+    setTimeout(() => {
+        mainDisplay.src = newSrc;
+        mainDisplay.style.opacity = '1';
+    }, 200);
+
     document.querySelectorAll('.post-thumb-item').forEach(item => {
         item.classList.remove('active');
     });
     thumbElement.classList.add('active');
 }
+
+function slideNextImage() {
+    const thumbs = document.querySelectorAll('.post-thumb-item');
+    if (thumbs.length > 1) {
+        currentIndex = (currentIndex + 1) % thumbs.length;
+        const nextThumb = thumbs[currentIndex];
+        const img = nextThumb.querySelector('img');
+        if (img) {
+            changeMainImageNoReset(img.src, nextThumb);
+        }
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const thumbs = document.querySelectorAll('.post-thumb-item');
+    if (thumbs.length > 1) {
+        autoSlideInterval = setInterval(slideNextImage, 5000);
+    }
+});
 </script>
+
+<!-- Modal Đọc Thử Sách PDF -->
+<?php if (!empty($post['pdf_url'])): ?>
+<div class="modal fade modal-hcmue" id="pdfPreviewModal" tabindex="-1" aria-labelledby="pdfPreviewModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-content shadow-lg border-0 rounded-4">
+            <div class="modal-header bg-white border-bottom py-3 px-4 d-flex align-items-center justify-content-between">
+                <h5 class="modal-title fw-bold text-dark d-flex align-items-center gap-2" id="pdfPreviewModalLabel">
+                    <i class="fas fa-book-open text-primary"></i> 
+                    <span>Đọc Thử Sách: <?= htmlspecialchars($post['title']) ?></span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-0" style="background: #F1F5F9; border-bottom-left-radius: 16px; border-bottom-right-radius: 16px;">
+                <div class="w-100 d-flex justify-content-center align-items-center" style="position: relative; min-height: 75vh;">
+                    <iframe src="<?= base_url($post['pdf_url']) ?>" style="width: 100%; height: 78vh; border: none;" allow="fullscreen"></iframe>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<?php endif; ?>

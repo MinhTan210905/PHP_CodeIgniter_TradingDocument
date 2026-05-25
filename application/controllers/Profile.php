@@ -48,6 +48,14 @@ class Profile extends CI_Controller {
         $full_name = $this->input->post('full_name', TRUE);
         $phone     = $this->input->post('phone', TRUE);
         
+        if (!empty($phone)) {
+            if (!preg_match('/^0[0-9]{9}$/', $phone)) {
+                $this->session->set_flashdata('error', '❌ Số điện thoại phải có đúng 10 chữ số và bắt đầu bằng số 0!');
+                redirect('profile');
+                return;
+            }
+        }
+        
         $update_data = [];
         if ($full_name) $update_data['full_name'] = $full_name;
         if ($phone !== NULL) $update_data['phone'] = $phone;
@@ -111,6 +119,14 @@ class Profile extends CI_Controller {
         $this->require_login();
         $user_id = $this->session->userdata('user_id');
         $phone   = $this->input->post('phone', TRUE);
+
+        if (!empty($phone)) {
+            if (!preg_match('/^0[0-9]{9}$/', $phone)) {
+                $this->session->set_flashdata('error', '❌ Số điện thoại phải có đúng 10 chữ số và bắt đầu bằng số 0!');
+                redirect('profile');
+                return;
+            }
+        }
 
         $this->Auth_model->update_user($user_id, ['phone' => $phone]);
         $this->session->set_flashdata('success', 'Đã cập nhật số điện thoại!');

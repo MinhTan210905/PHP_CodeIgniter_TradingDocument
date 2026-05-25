@@ -235,7 +235,8 @@
                     <label class="form-label">Số điện thoại</label>
                     <div class="input-wrap">
                         <i class="fas fa-phone input-icon"></i>
-                        <input type="tel" class="form-control" name="phone" placeholder="0912345678">
+                        <input type="tel" class="form-control" name="phone" placeholder="0912345678"
+                               pattern="0[0-9]{9}" title="Số điện thoại phải có đúng 10 chữ số và bắt đầu bằng số 0">
                     </div>
                 </div>
             </div>

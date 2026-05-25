@@ -153,7 +153,7 @@
                 <i class="fas fa-hand-holding-dollar"></i>
             </div>
             <div>
-                <h6 class="fw-bold mb-1" style="font-size:0.86rem; color:#991B1B;">⚠️ Tài khoản của bạn đang có khoản nợ (Số dư âm: <?= number_format($wallet['balance'], 0, ',', '.') ?>đ)</h6>
+                <h6 class="fw-bold mb-1" style="font-size:0.86rem; color:#991B1B;">⚠️ Tài khoản của bạn đang có khoản nợ (Số dư âm: <span class="wallet-maskable" data-amount="<?= number_format($wallet['balance'], 0, ',', '.') ?>"><?= number_format($wallet['balance'], 0, ',', '.') ?></span>đ)</h6>
                 <p class="mb-0 text-muted" style="font-size:0.77rem; color:#7F1D1D !important; line-height:1.4;">
                     Số dư ví của bạn tạm thời bị âm do Ban Quản trị đã thay đổi phán quyết phân xử tranh chấp của một đơn hàng liên quan đến bạn. 
                     Để tiếp tục thực hiện giao dịch mua bán sách hoặc rút tiền, vui lòng nạp thêm tiền vào ví để thanh toán khoản nợ này. Xin cảm ơn!
@@ -168,19 +168,20 @@
     <div class="wallet-hero mb-4">
         <div class="d-flex justify-content-between align-items-start mb-3">
             <div>
-                <div class="wallet-balance-label mb-1">
-                    <i class="fas fa-wallet me-1"></i> Số dư ví HCMUEPay
+                <div class="wallet-balance-label mb-1 d-flex align-items-center gap-2">
+                    <span><i class="fas fa-wallet me-1"></i> Số dư ví HCMUEPay</span>
+                    <i class="far fa-eye" id="toggleBalanceBtn" style="cursor: pointer; font-size: 0.85rem; color: rgba(255,255,255,0.85);" title="Ẩn/Hiện số dư"></i>
                 </div>
                 <div class="wallet-balance-amount">
-                    <?= number_format($wallet['balance'], 0, ',', '.') ?><small>đ</small>
+                    <span class="wallet-maskable" id="mainBalanceText" data-amount="<?= number_format($wallet['balance'], 0, ',', '.') ?>"><?= number_format($wallet['balance'], 0, ',', '.') ?></span><small>đ</small>
                 </div>
             </div>
             <div class="text-end">
                 <div style="font-size:0.7rem; opacity:0.5; margin-bottom:4px;">ID VÍ: #<?= $wallet['id'] ?></div>
                 <?php if ((float)$wallet['holding_balance'] > 0): ?>
-                    <div class="wallet-sub-balance">
+                    <div class="wallet-sub-balance" id="holdingBalanceWrapper">
                         <i class="fas fa-lock" style="font-size:0.7rem;"></i>
-                        Tạm giữ: <?= number_format($wallet['holding_balance'], 0, ',', '.') ?>đ
+                        <span>Tạm giữ: <span class="wallet-maskable" data-amount="<?= number_format($wallet['holding_balance'], 0, ',', '.') ?>"><?= number_format($wallet['holding_balance'], 0, ',', '.') ?></span>đ</span>
                     </div>
                 <?php endif; ?>
             </div>
@@ -388,7 +389,7 @@
                     <div class="mb-3 p-3 rounded-3" style="background:#F8FAFC;">
                         <div class="text-muted small">Số dư khả dụng</div>
                         <div class="fw-bold" style="font-size:1.3rem; color:#059669;">
-                            <?= number_format($wallet['balance'], 0, ',', '.') ?>đ
+                            <span class="wallet-maskable" data-amount="<?= number_format($wallet['balance'], 0, ',', '.') ?>"><?= number_format($wallet['balance'], 0, ',', '.') ?></span>đ
                         </div>
                     </div>
 
@@ -442,3 +443,46 @@
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const toggleBalanceBtn = document.getElementById("toggleBalanceBtn");
+    const maskableElements = document.querySelectorAll(".wallet-maskable");
+    
+    // Đọc trạng thái đã lưu từ localStorage
+    let isHidden = localStorage.getItem("hcmue_wallet_balance_hidden") === "true";
+
+    function updateBalanceVisibility() {
+        if (isHidden) {
+            maskableElements.forEach(el => {
+                el.textContent = "******";
+            });
+            if (toggleBalanceBtn) {
+                toggleBalanceBtn.classList.remove("fa-eye");
+                toggleBalanceBtn.classList.add("fa-eye-slash");
+                toggleBalanceBtn.setAttribute("title", "Hiện số dư");
+            }
+        } else {
+            maskableElements.forEach(el => {
+                el.textContent = el.getAttribute("data-amount");
+            });
+            if (toggleBalanceBtn) {
+                toggleBalanceBtn.classList.remove("fa-eye-slash");
+                toggleBalanceBtn.classList.add("fa-eye");
+                toggleBalanceBtn.setAttribute("title", "Ẩn số dư");
+            }
+        }
+    }
+
+    if (toggleBalanceBtn) {
+        toggleBalanceBtn.addEventListener("click", function () {
+            isHidden = !isHidden;
+            localStorage.setItem("hcmue_wallet_balance_hidden", isHidden ? "true" : "false");
+            updateBalanceVisibility();
+        });
+    }
+
+    // Thiết lập hiển thị ban đầu
+    updateBalanceVisibility();
+});
+</script>

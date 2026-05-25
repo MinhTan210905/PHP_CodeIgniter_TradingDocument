@@ -124,15 +124,8 @@ class Cron extends CI_Controller {
 
                 $post_title_lower = mb_strtolower(trim($post['title']), 'UTF-8');
 
-                // Tính % tương đồng
-                $percent = 0;
-                similar_text($wish_title_lower, $post_title_lower, $percent);
-
-                // Bổ sung: nếu tên wishlist nằm trọn trong tên bài đăng hoặc ngược lại → coi như khớp
-                $contains = (mb_strpos($post_title_lower, $wish_title_lower) !== false)
-                         || (mb_strpos($wish_title_lower, $post_title_lower) !== false);
-
-                if ($percent >= 70 || $contains) {
+                // Sử dụng hàm so khớp thông minh tiếng Việt chuẩn hóa từ Wishlist_model
+                if ($this->Wishlist_model->check_title_match($wish_title_lower, $post_title_lower)) {
                     $price_formatted = number_format($post['price'], 0, ',', '.') . 'đ';
                     $detail_url = site_url('trade/detail/' . $post['id']);
 

@@ -43,6 +43,8 @@ CREATE TABLE IF NOT EXISTS `posts` (
     `price`       DECIMAL(10,2) NOT NULL,
     `quantity`    INT NOT NULL DEFAULT 1,
     `image_url`   VARCHAR(255) DEFAULT 'assets/uploads/default.png',
+    `pdf_url`     VARCHAR(255) DEFAULT NULL,
+    `item_condition` ENUM('new','used') DEFAULT 'used',
     `status`      ENUM('pending','available','sold') DEFAULT 'pending',
     `created_at`  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (`user_id`)     REFERENCES `users`(`id`)      ON DELETE CASCADE,

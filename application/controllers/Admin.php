@@ -74,9 +74,11 @@ class Admin extends CI_Controller {
         
         $auto_approve_new = $this->input->post('auto_approve_new') ? '1' : '0';
         $auto_approve_edit = $this->input->post('auto_approve_edit') ? '1' : '0';
+        $auto_approve_min_stars = $this->input->post('auto_approve_min_stars');
         
         $this->Setting_model->set('auto_approve_new', $auto_approve_new);
         $this->Setting_model->set('auto_approve_edit', $auto_approve_edit);
+        $this->Setting_model->set('auto_approve_min_stars', $auto_approve_min_stars);
         
         $this->session->set_flashdata('success', '✅ Đã cập nhật cấu hình hệ thống thành công!');
         redirect('admin');
@@ -124,6 +126,12 @@ class Admin extends CI_Controller {
         $this->require_admin();
         $user = $this->Auth_model->get_user_by_id($id);
         if ($user) {
+            // Không cho thay đổi quyền của Admin gốc
+            if ($id == 1 || $user['username'] === 'admin') {
+                $this->session->set_flashdata('error', '❌ Không thể thay đổi quyền của tài khoản Admin gốc!');
+                redirect('admin/users');
+                return;
+            }
             $new_role = ($user['role'] === 'admin') ? 'user' : 'admin';
             $this->Auth_model->update_user($id, ['role' => $new_role]);
             $this->session->set_flashdata('success', 'Đã thay đổi quyền người dùng!');
@@ -141,11 +149,28 @@ class Admin extends CI_Controller {
             return;
         }
 
+        // Không cho sửa tài khoản Admin gốc
+        $user = $this->Auth_model->get_user_by_id($id);
+        if ($id == 1 || ($user && $user['username'] === 'admin')) {
+            $this->session->set_flashdata('error', '❌ Không thể sửa đổi thông tin của tài khoản Admin gốc!');
+            redirect('admin/users');
+            return;
+        }
+
+        $phone = $this->input->post('phone', TRUE);
+        if (!empty($phone)) {
+            if (!preg_match('/^0[0-9]{9}$/', $phone)) {
+                $this->session->set_flashdata('error', '❌ Số điện thoại phải có đúng 10 chữ số và bắt đầu bằng số 0!');
+                redirect('admin/users');
+                return;
+            }
+        }
+
         $data = [
             'full_name' => $this->input->post('full_name', TRUE),
             'username'  => $this->input->post('username', TRUE),
             'email'     => $this->input->post('email', TRUE),
-            'phone'     => $this->input->post('phone', TRUE),
+            'phone'     => $phone,
             'role'      => $this->input->post('role', TRUE),
         ];
 
@@ -168,6 +193,15 @@ class Admin extends CI_Controller {
             redirect('admin/users');
             return;
         }
+        
+        // Không cho xóa tài khoản Admin gốc
+        $user = $this->Auth_model->get_user_by_id($id);
+        if ($id == 1 || ($user && $user['username'] === 'admin')) {
+            $this->session->set_flashdata('error', '❌ Không thể xóa tài khoản Admin gốc!');
+            redirect('admin/users');
+            return;
+        }
+
         $this->Auth_model->delete_user($id);
         $this->session->set_flashdata('success', 'Đã xóa tài khoản người dùng!');
         redirect('admin/users');
@@ -181,6 +215,15 @@ class Admin extends CI_Controller {
             redirect('admin/users');
             return;
         }
+
+        // Không cho chặn tài khoản Admin gốc
+        $user = $this->Auth_model->get_user_by_id($id);
+        if ($id == 1 || ($user && $user['username'] === 'admin')) {
+            $this->session->set_flashdata('error', '❌ Không thể chặn tài khoản Admin gốc!');
+            redirect('admin/users');
+            return;
+        }
+
         $this->Auth_model->update_user($id, ['is_banned' => 1]);
         $this->session->set_flashdata('success', 'Đã chặn (ban) tài khoản người dùng!');
         redirect('admin/users');
@@ -189,6 +232,15 @@ class Admin extends CI_Controller {
     // Admin bỏ chặn (unban) tài khoản user
     public function unban_user($id) {
         $this->require_admin();
+
+        // Không cho thao tác tài khoản Admin gốc
+        $user = $this->Auth_model->get_user_by_id($id);
+        if ($id == 1 || ($user && $user['username'] === 'admin')) {
+            $this->session->set_flashdata('error', '❌ Không thể thao tác trên tài khoản Admin gốc!');
+            redirect('admin/users');
+            return;
+        }
+
         $this->Auth_model->update_user($id, ['is_banned' => 0]);
         $this->session->set_flashdata('success', 'Đã bỏ chặn tài khoản người dùng!');
         redirect('admin/users');

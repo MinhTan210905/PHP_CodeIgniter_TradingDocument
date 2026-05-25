@@ -84,6 +84,34 @@
                     </div>
                 </div>
 
+                <!-- Tài liệu đọc thử PDF -->
+                <div class="mb-3">
+                    <label class="form-label fw-600 text-secondary small">Tài liệu đọc thử PDF (Tùy chọn, tối đa 20MB)</label>
+                    <input type="file" class="form-control form-control-sm rounded-3 border-light shadow-none" name="pdf_file" accept="application/pdf" style="background:#f8fafc;">
+                    <?php if(!empty($post['pdf_url'])): ?>
+                        <div class="mt-2 d-flex align-items-center gap-2">
+                            <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1 rounded-2" style="font-size:0.75rem;">
+                                <i class="fas fa-file-pdf me-1"></i> Đã có file đọc thử
+                            </span>
+                            <a href="<?= base_url($post['pdf_url']) ?>" target="_blank" class="text-primary small text-decoration-none fw-semibold">
+                                <i class="fas fa-external-link-alt me-1"></i> Xem file hiện tại
+                            </a>
+                        </div>
+                        <div class="form-text text-muted mt-1" style="font-size:0.7rem;">Tải lên file PDF mới để thay thế file hiện tại.</div>
+                    <?php else: ?>
+                        <div class="form-text text-muted mt-1" style="font-size:0.7rem;">Chưa có tài liệu đọc thử. Bạn có thể tải lên file PDF để người mua có thể xem thử một vài trang sách.</div>
+                    <?php endif; ?>
+                </div>
+
+                <!-- Tình trạng sách -->
+                <div class="mb-4">
+                    <label class="form-label fw-600 text-secondary small">Tình trạng sách *</label>
+                    <select class="form-select form-control-sm rounded-3 border-light shadow-none" name="item_condition" style="background:#f8fafc;" required>
+                        <option value="used" <?= (!isset($post['item_condition']) || $post['item_condition'] === 'used') ? 'selected' : '' ?>>Đã sử dụng</option>
+                        <option value="new" <?= (isset($post['item_condition']) && $post['item_condition'] === 'new') ? 'selected' : '' ?>>Mới</option>
+                    </select>
+                </div>
+
                 <!-- Mô tả -->
                 <div class="mb-4">
                     <label class="form-label fw-600 text-secondary small">Mô tả chi tiết</label>

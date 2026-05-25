@@ -27,6 +27,17 @@ class Ai_moderation_model extends CI_Model {
             return $fallback_res;
         }
 
+        // Ưu tiên kiểm duyệt qua bộ lọc thô cục bộ (local bad words regex)
+        if ($this->local_toxic_filter($text)) {
+            return [
+                'action' => 'block',
+                'label'  => 2,
+                'score'  => 1.0,
+                'scores' => [0 => 0.0, 1 => 0.0, 2 => 1.0],
+                'error'  => 'Matched local toxicity filter'
+            ];
+        }
+
         if (empty($this->api_key)) {
             log_message('error', 'AI Moderation: HF_API_KEY is not defined in .env.');
             return $fallback_res;
@@ -117,6 +128,45 @@ class Ai_moderation_model extends CI_Model {
 
     private function api_url_clean_token($token) {
         return trim(str_replace(['"', "'"], '', $token));
+    }
+
+    private function local_toxic_filter($text) {
+        $text = mb_strtolower($text, 'UTF-8');
+        
+        // Danh sách các từ khóa tục tĩu, nhạy cảm, xúc phạm hoặc toxic bằng tiếng Việt phổ biến
+        $bad_words = [
+            'địt', 'đụ', 'đéo', 'lồn', 'cặc', 'buồi', 'chó đẻ', 'súc sinh', 'óc chó', 'ngu lồn', 
+            'hãm lồn', 'mất dạy', 'vô duyên', 'khốn nạn', 'đm', 'dkm', 'đmm', 'vcl', 'vkl', 'đứt bóng', 
+            'bú cu', 'chịch', 'nứng', 'bứng', 'nện', 'nương', 'đớp', 'đồ ngu', 'đồ tồi', 'khốn nạn', 
+            'mẹ kiếp', 'đốn mạt', 'vô giáo dục', 'đồ điên', 'con điên', 'thằng điên', 'lũ điên',
+            'đầu bò', 'đầu trâu', 'óc lợn', 'ngu xuẩn', 'ngu ngốc', 'ăn cứt', 'ăn phân', 'hút máu',
+            'chết đi', 'đồ hèn', 'ti tiện', 'đê tiện'
+        ];
+
+        foreach ($bad_words as $word) {
+            $pattern = '/\b' . preg_quote($word, '/') . '\b/u';
+            if (preg_match($pattern, $text)) {
+                return true;
+            }
+        }
+        
+        // Khớp thêm một số cụm từ ghép tục tĩu phổ biến không có dấu hoặc viết tắt
+        $raw_bad_patterns = [
+            '/\b(dkm|dm|cl|vcl|vkl|dmm|cc|vl|clgt)\b/i',
+            '/địt\s*(mẹ|cha|cụ|mị|cmn)/iu',
+            '/đụ\s*(má|mẹ|cha|cụ)/iu',
+            '/óc\s*(chó|lợn|bò|trâu)/iu',
+            '/ngu\s*(lồn|vcl|vkl|hãm|đần)/iu',
+            '/đầu\s*(buồi|cặc|bò|tôm)/iu'
+        ];
+        
+        foreach ($raw_bad_patterns as $pattern) {
+            if (preg_match($pattern, $text)) {
+                return true;
+            }
+        }
+        
+        return false;
     }
 
     public function log_moderation($type, $content_id, $user_id, $text, $analysis) {

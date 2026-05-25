@@ -656,3 +656,38 @@ body {
    ============================================================ */
 .link-hcmue { color: var(--primary-mid); font-weight: 600; text-decoration: none; transition: var(--transition); }
 .link-hcmue:hover { color: var(--primary); text-decoration: underline; }
+
+/* ============================================================
+   ADVANCED FILTERS
+   ============================================================ */
+.filter-sidebar {
+    background-color: #fff;
+    border-radius: var(--card-radius);
+    box-shadow: var(--shadow-sm);
+    padding: 20px;
+}
+
+.filter-radio, .filter-checkbox {
+    cursor: pointer;
+    accent-color: var(--primary-mid);
+}
+
+.sort-bar .sort-btn {
+    border-radius: var(--radius-pill);
+    padding: 6px 16px;
+    font-size: 0.8rem;
+    transition: var(--transition);
+}
+
+.sort-bar .sort-btn.active {
+    background-color: var(--primary-hcmue) !important;
+    color: white !important;
+    border-color: var(--primary-hcmue) !important;
+}
+
+.sort-select {
+    border-radius: var(--radius-pill);
+    padding: 6px 16px;
+    font-size: 0.8rem;
+    height: auto;
+}

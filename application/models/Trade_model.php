@@ -8,10 +8,37 @@ class Trade_model extends CI_Model
     {
         parent::__construct();
         $this->load->database();
+        
+        // Tự động kiểm tra và thêm cột pdf_url vào bảng posts nếu chưa tồn tại
+        if (!$this->db->field_exists('pdf_url', 'posts')) {
+            $this->load->dbforge();
+            $fields = [
+                'pdf_url' => [
+                    'type' => 'VARCHAR',
+                    'constraint' => '255',
+                    'default' => NULL,
+                    'null' => TRUE
+                ]
+            ];
+            $this->dbforge->add_column('posts', $fields);
+        }
+        
+        // Tự động kiểm tra và thêm cột item_condition vào bảng posts nếu chưa tồn tại
+        if (!$this->db->field_exists('item_condition', 'posts')) {
+            $this->load->dbforge();
+            $fields = [
+                'item_condition' => [
+                    'type' => 'ENUM("new","used")',
+                    'default' => 'used',
+                    'null' => FALSE
+                ]
+            ];
+            $this->dbforge->add_column('posts', $fields);
+        }
     }
 
     // Read: Lấy toàn bộ bài đăng còn hàng (trang chủ — không hiện sold)
-    public function get_all_posts($category_id = NULL, $keyword = NULL)
+    public function get_all_posts($filters = [])
     {
         $this->db->select('posts.*, users.username, users.full_name, users.phone, users.phone_visible,
             categories.category_name, categories.icon as cat_icon,
@@ -24,18 +51,69 @@ class Trade_model extends CI_Model
         $this->db->join('ratings', 'ratings.seller_id = posts.user_id', 'left');
         $this->db->join('comments', 'comments.post_id = posts.id', 'left');
 
-        if ($category_id) {
-            $this->db->where('posts.category_id', $category_id);
+        if (!empty($filters['category_id'])) {
+            $this->db->where('posts.category_id', $filters['category_id']);
         }
-        if ($keyword) {
-            $this->db->like('posts.title', $keyword);
+        if (!empty($filters['keyword'])) {
+            $this->db->like('posts.title', $filters['keyword']);
+        }
+        
+        // Lọc theo tình trạng
+        if (!empty($filters['condition'])) {
+            $this->db->where('posts.item_condition', $filters['condition']);
+        }
+        // Lọc theo khoảng giá
+        if (isset($filters['min_price']) && is_numeric($filters['min_price'])) {
+            $this->db->where('posts.price >=', $filters['min_price']);
+        }
+        if (isset($filters['max_price']) && is_numeric($filters['max_price'])) {
+            $this->db->where('posts.price <=', $filters['max_price']);
         }
 
         // Chỉ hiện bài CÒN HÀNG trên trang chủ
         $this->db->where('posts.status', 'available');
 
-        $this->db->group_by(['posts.id', 'posts.user_id', 'posts.category_id', 'posts.title', 'posts.description', 'posts.price', 'posts.quantity', 'posts.image_url', 'posts.status', 'posts.created_at', 'users.username', 'users.full_name', 'users.phone', 'users.phone_visible', 'categories.category_name', 'categories.icon']);
-        $this->db->order_by('posts.created_at', 'DESC');
+        // Group by vì có hàm tổng hợp
+        $this->db->group_by(['posts.id', 'posts.user_id', 'posts.category_id', 'posts.title', 'posts.description', 'posts.price', 'posts.quantity', 'posts.image_url', 'posts.pdf_url', 'posts.item_condition', 'posts.status', 'posts.created_at', 'users.username', 'users.full_name', 'users.phone', 'users.phone_visible', 'categories.category_name', 'categories.icon']);
+        
+        // HAVING để lọc theo Rating/Shop yêu thích sau khi GROUP BY
+        $having_clauses = [];
+        if (!empty($filters['shop_type']) && $filters['shop_type'] === 'favorite') {
+            $having_clauses[] = 'avg_rating >= 4.0';
+        }
+        if (!empty($filters['rating']) && is_numeric($filters['rating'])) {
+            $having_clauses[] = 'avg_rating >= ' . (float)$filters['rating'];
+        }
+        if (count($having_clauses) > 0) {
+            $this->db->having(implode(' AND ', $having_clauses));
+        }
+
+        // Sắp xếp
+        if (!empty($filters['sort_by'])) {
+            switch ($filters['sort_by']) {
+                case 'popular':
+                    // Sắp xếp theo số bình luận + đánh giá
+                    $this->db->order_by('(COUNT(DISTINCT comments.id) + COUNT(DISTINCT ratings.id))', 'DESC');
+                    break;
+                case 'relevance':
+                    // Sắp xếp theo mức độ liên quan (ưu tiên tiêu đề khớp chính xác/ngắn hơn lên trước)
+                    $this->db->order_by('LENGTH(posts.title)', 'ASC');
+                    break;
+                case 'price_asc':
+                    $this->db->order_by('posts.price', 'ASC');
+                    break;
+                case 'price_desc':
+                    $this->db->order_by('posts.price', 'DESC');
+                    break;
+                case 'latest':
+                default:
+                    $this->db->order_by('posts.created_at', 'DESC');
+                    break;
+            }
+        } else {
+            $this->db->order_by('posts.created_at', 'DESC');
+        }
+
         return $this->db->get()->result_array();
     }
 

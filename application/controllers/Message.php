@@ -215,4 +215,48 @@ class Message extends CI_Controller {
             'message' => 'Đã đánh dấu đã đọc thành công!'
         ]);
     }
+
+    // [AJAX] Lấy danh sách cuộc hội thoại của user hiện tại
+    public function get_conversations_ajax() {
+        $this->require_login();
+        if (!$this->input->is_ajax_request()) { show_404(); }
+
+        $user_id = $this->session->userdata('user_id');
+        $conversations = $this->Message_model->get_conversations($user_id);
+        
+        foreach($conversations as &$conv) {
+            $conv['avatar_url'] = (!empty($conv['avatar']) && file_exists(FCPATH . $conv['avatar'])) ? base_url($conv['avatar']) : '';
+            $conv['initial'] = strtoupper(substr($conv['full_name'] ?: $conv['username'], 0, 1));
+            $conv['time_str'] = date('H:i d/m', strtotime($conv['created_at']));
+            $conv['content_escaped'] = htmlspecialchars($conv['content']);
+            $conv['full_name_escaped'] = htmlspecialchars($conv['full_name'] ?: $conv['username']);
+            $conv['post_title_escaped'] = htmlspecialchars($conv['post_title'] ?: '');
+        }
+        
+        echo json_encode(['status' => 'ok', 'conversations' => $conversations]);
+    }
+
+    // [AJAX] Lấy danh sách tin nhắn của 1 cuộc hội thoại
+    public function get_messages_ajax($other_id) {
+        $this->require_login();
+        if (!$this->input->is_ajax_request()) { show_404(); }
+
+        $user_id = $this->session->userdata('user_id');
+        
+        // Đánh dấu đã đọc luôn
+        $this->Message_model->mark_as_read($other_id, $user_id);
+        
+        $messages = $this->Message_model->get_conversation($user_id, $other_id);
+        $other_user = $this->Auth_model->get_user_by_id($other_id);
+        
+        echo json_encode([
+            'status' => 'ok',
+            'messages' => $messages,
+            'other_user' => [
+                'id' => $other_user['id'],
+                'full_name' => htmlspecialchars($other_user['full_name'] ?: $other_user['username']),
+                'avatar_url' => (!empty($other_user['avatar']) && file_exists(FCPATH . $other_user['avatar'])) ? base_url($other_user['avatar']) : ''
+            ]
+        ]);
+    }
 }

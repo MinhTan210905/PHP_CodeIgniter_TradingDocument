@@ -56,7 +56,10 @@
                                 <div style="width:32px;height:32px;background:var(--hcmue-blue);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#F5A623;font-weight:700;font-size:0.8rem;flex-shrink:0;">
                                     <?= strtoupper(mb_substr($u['full_name'], 0, 1)) ?>
                                 </div>
-                                <span class="fw-semibold"><?= htmlspecialchars($u['full_name']) ?></span>
+                                <div>
+                                    <span class="fw-semibold d-block"><?= htmlspecialchars($u['full_name']) ?></span>
+                                    <span class="text-muted small" style="font-size: 0.75rem;">@<?= htmlspecialchars($u['username']) ?></span>
+                                </div>
                             </div>
                         </td>
                         <td class="text-muted"><?= htmlspecialchars($u['email']) ?></td>
@@ -77,7 +80,9 @@
                         </td>
                         <td class="text-muted" style="font-size:0.77rem;"><?= date('d/m/Y', strtotime($u['created_at'])) ?></td>
                         <td style="text-align:right;padding-right:16px;">
-                            <?php if ($u['id'] != $this->session->userdata('user_id')): ?>
+                            <?php if ($u['id'] == 1 || $u['username'] === 'admin'): ?>
+                                <span class="badge bg-danger px-2.5 py-1.5 fw-bold rounded-pill" style="font-size:0.72rem; letter-spacing: 0.2px;"><i class="fas fa-crown me-1"></i>Admin Gốc</span>
+                            <?php elseif ($u['id'] != $this->session->userdata('user_id')): ?>
                             <div class="d-flex gap-1 justify-content-end">
                                 <!-- Sửa thông tin -->
                                 <button class="btn btn-sm btn-outline-primary rounded-2" style="font-size:0.72rem;padding:4px 9px;"
@@ -115,7 +120,7 @@
                     </tr>
 
                     <!-- Modal Sửa User -->
-                    <?php if ($u['id'] != $this->session->userdata('user_id')): ?>
+                    <?php if ($u['id'] != $this->session->userdata('user_id') && $u['id'] != 1 && $u['username'] !== 'admin'): ?>
                     <div class="modal fade" id="editModal<?= $u['id'] ?>" tabindex="-1">
                         <div class="modal-dialog modal-dialog-centered">
                             <div class="modal-content border-0 rounded-4 shadow">
@@ -138,7 +143,8 @@
                                             </div>
                                             <div class="col-6">
                                                 <label class="form-label fw-semibold" style="font-size:0.82rem;">Số điện thoại</label>
-                                                <input type="tel" class="form-control" name="phone" value="<?= htmlspecialchars($u['phone'] ?? '') ?>">
+                                                <input type="tel" class="form-control" name="phone" value="<?= htmlspecialchars($u['phone'] ?? '') ?>"
+                                                       pattern="0[0-9]{9}" title="Số điện thoại phải có đúng 10 chữ số và bắt đầu bằng số 0">
                                             </div>
                                             <div class="col-12">
                                                 <label class="form-label fw-semibold" style="font-size:0.82rem;">Email</label>

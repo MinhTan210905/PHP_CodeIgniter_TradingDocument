@@ -66,16 +66,7 @@ header('Content-Type: text/html; charset=UTF-8');
         <!-- Right actions -->
         <div class="d-flex align-items-center gap-2">
             <?php if ($this->session->userdata('logged_in')): ?>
-                <!-- Inbox -->
-                <?php 
-                $CI =& get_instance();
-                $CI->load->model('Message_model');
-                $header_unread = $CI->Message_model->count_unread($this->session->userdata('user_id'));
-                ?>
-                <a href="<?= site_url('message/inbox') ?>" class="nav-icon-btn" title="Hộp thư">
-                    <i class="fas fa-comment-dots"></i>
-                    <span class="nav-badge" id="inboxUnreadBadge" style="<?= $header_unread > 0 ? '' : 'display:none;' ?>"><?= $header_unread ?></span>
-                </a>
+
                 <!-- Đơn hàng -->
                 <a href="<?= site_url('orders') ?>" class="nav-icon-btn" title="Đơn hàng của tôi">
                     <i class="fas fa-shopping-bag"></i>
@@ -212,39 +203,7 @@ header('Content-Type: text/html; charset=UTF-8');
     </div>
 </nav>
 
-<?php if ($this->session->userdata('logged_in')): ?>
-<script>
-// Tự động kiểm tra và cập nhật badge tin nhắn chưa đọc ở header mỗi 4 giây
-(function() {
-    const badge = document.getElementById('inboxUnreadBadge');
-    if (!badge) return;
 
-    function checkTotalUnread() {
-        fetch('<?= site_url("message/total_unread") ?>', {
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest'
-            }
-        })
-        .then(res => res.json())
-        .then(data => {
-            if (data.status === 'ok') {
-                const count = parseInt(data.count);
-                if (count > 0) {
-                    badge.textContent = count;
-                    badge.style.display = '';
-                } else {
-                    badge.style.display = 'none';
-                }
-            }
-        })
-        .catch(err => console.warn('Lỗi đồng bộ tin nhắn:', err));
-    }
-
-    // Chạy định kỳ 4 giây
-    setInterval(checkTotalUnread, 4000);
-})();
-</script>
-<?php endif; ?>
 
 <!-- Modal Đăng Bài -->
 <?php if ($this->session->userdata('logged_in')): ?>
@@ -286,12 +245,21 @@ header('Content-Type: text/html; charset=UTF-8');
                                    required placeholder="1" min="1" max="99" value="1">
                         </div>
                     </div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-12">
+                            <label class="form-label-hcmue">Tình trạng sách *</label>
+                            <select class="form-select form-control-hcmue" name="item_condition" required>
+                                <option value="used" selected>Đã sử dụng</option>
+                                <option value="new">Mới</option>
+                            </select>
+                        </div>
+                    </div>
                     <div class="mb-3">
                         <label class="form-label-hcmue">Mô tả tình trạng sách</label>
                         <textarea class="form-control form-control-hcmue" name="description" rows="3"
                                   placeholder="Sách còn bao nhiêu %, có ghi chú không, tặng kèm gì..."></textarea>
                     </div>
-                    <div class="row g-3 mb-4">
+                    <div class="row g-3 mb-3">
                         <div class="col-md-6">
                             <label class="form-label-hcmue">Ảnh bìa sách (Ảnh chính) *</label>
                             <input type="file" class="form-control form-control-hcmue" name="image" accept="image/*" required>
@@ -300,6 +268,11 @@ header('Content-Type: text/html; charset=UTF-8');
                             <label class="form-label-hcmue">Ảnh chi tiết khác (Nhiều ảnh)</label>
                             <input type="file" class="form-control form-control-hcmue" name="additional_images[]" accept="image/*" multiple>
                         </div>
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label-hcmue">Tài liệu đọc thử PDF (Tùy chọn, tối đa 20MB)</label>
+                        <input type="file" class="form-control form-control-hcmue" name="pdf_file" accept="application/pdf">
+                        <div class="form-text text-muted" style="font-size:0.75rem;">Đăng kèm file PDF (tối đa 20MB) để người mua đọc thử một vài trang sách trước khi chọn mua.</div>
                     </div>
                     <button type="submit" class="btn btn-primary-hcmue w-100 py-3 fs-6 fw-bold">
                         <i class="fas fa-paper-plane me-2"></i>Gửi Bài Đăng

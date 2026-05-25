@@ -135,10 +135,18 @@ class Api extends CI_Controller {
     }
 
     public function search() {
-        $cat = $this->input->get('cat');
-        $q   = $this->input->get('q');
-        $posts = $this->Trade_model->get_all_posts($cat, $q);
-        $this->_json(['status' => 200, 'total' => count($posts), 'filters' => ['cat' => $cat, 'q' => $q], 'data' => $posts]);
+        $filters = [
+            'category_id' => $this->input->get('cat'),
+            'keyword'     => $this->input->get('q'),
+            'sort_by'     => $this->input->get('sort_by'),
+            'condition'   => $this->input->get('condition'),
+            'min_price'   => $this->input->get('min_price'),
+            'max_price'   => $this->input->get('max_price'),
+            'rating'      => $this->input->get('rating'),
+            'shop_type'   => $this->input->get('shop_type')
+        ];
+        $posts = $this->Trade_model->get_all_posts($filters);
+        $this->_json(['status' => 200, 'total' => count($posts), 'filters' => $filters, 'data' => $posts]);
     }
 
     public function detail($id = 0) {

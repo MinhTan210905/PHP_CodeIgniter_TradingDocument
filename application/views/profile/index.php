@@ -77,6 +77,7 @@
                         <input type="tel" class="form-control form-control-sm" name="phone" 
                                value="<?= htmlspecialchars($user['phone'] ?? '') ?>" 
                                placeholder="0912345678"
+                               pattern="0[0-9]{9}" title="Số điện thoại phải có đúng 10 chữ số và bắt đầu bằng số 0"
                                style="border-radius:8px; border:1.5px solid #E5E9F2;">
                     </div>
 
