@@ -18,6 +18,8 @@ Chúng tôi vừa nâng cấp hệ thống lên một tầm cao mới với các
 - 🤖 **AI Kiểm Duyệt Tin Nhắn (Hugging Face)**: Tích hợp mô hình trí tuệ nhân tạo (PhoBERT Toxic GenZ V2) để tự động phát hiện và chặn các tin nhắn chat có chứa từ ngữ thô tục, chửi thề, đảm bảo môi trường giao tiếp văn minh.
 - 🖼️ **Hệ thống Đa Ảnh (Multi-Image Upload)**: Cho phép đăng tải ảnh bìa kèm 5 ảnh chi tiết thực tế cùng lúc với giao diện xem ảnh mượt mà kiểu Shopee.
 - 🔔 **Danh sách Mong muốn (Wishlist)**: Người dùng có thể đăng ký nhận thông báo email khi có sách mình đang tìm kiếm được đăng bán.
+- 📄 **Tải Lên & Xem Trước PDF (PDF Reader)**: Hỗ trợ người dùng đính kèm file PDF tài liệu học tập, giáo trình trực quan khi đăng bài. Người mua có thể đọc thử ngay trên trình duyệt thông qua khung iframe lớn.
+- 🏷️ **Lọc & Cấu hình Tình Trạng Sách**: Phân chia chi tiết tài liệu theo trạng thái "Mới" (New) hoặc "Đã sử dụng" (Used) đi kèm bộ lọc nâng cao trên thanh header.
 
 ---
 
@@ -25,7 +27,7 @@ Chúng tôi vừa nâng cấp hệ thống lên một tầm cao mới với các
 
 *   🔐 **Đăng ký Bằng Mail Trường**: Chỉ chấp nhận tài khoản có đuôi `@student.hcmue.edu.vn`.
 *   📧 **Xác thực OTP Qua Gmail**: Bảo vệ tài khoản tuyệt đối thông qua việc gửi mã OTP 6 số qua email bằng SMTP chuẩn Google.
-*   📖 **Quản Lý Bài Đăng Đa Năng**: Người dùng có thể tạo, chỉnh sửa bài viết, bổ sung ảnh phụ, cập nhật số lượng, hoặc ẩn số điện thoại riêng tư.
+*   📖 **Quản Lý Bài Đăng Đa Năng**: Người dùng có thể tạo, chỉnh sửa bài viết, bổ sung ảnh phụ, tải lên tệp PDF đính kèm, cấu hình tình trạng sách (mới/cũ), cập nhật số lượng, hoặc ẩn số điện thoại riêng tư.
 *   🛍️ **Hệ Thống Đơn Hàng & Phê Duyệt**: Quy trình yêu cầu mua (Escrow Flow) chuyên nghiệp giúp Người bán kiểm duyệt yêu cầu trước khi giao dịch.
 *   🛡️ **Bảng Điều Khiển Của Admin**: Dành cho quản trị viên kiểm duyệt bài đăng, chặn tài khoản vi phạm, duyệt yêu cầu rút tiền.
 *   💬 **Chat Trực Tuyến**: Hệ thống nhắn tin tích hợp hiển thị thông báo tự động và đường dẫn tắt (CTA Link) đến chi tiết đơn hàng.

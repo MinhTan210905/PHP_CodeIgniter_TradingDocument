@@ -27,3 +27,11 @@ Thumbs.db
 debug_otp.txt
 
 /vendor/
+
+# Ignore custom HTML diagram files but keep CodeIgniter index.html files
+*.html
+!**/index.html
+
+# Ignore Word document reports
+*.doc
+*.docx
