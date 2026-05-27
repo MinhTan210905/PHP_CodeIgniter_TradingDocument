@@ -345,6 +345,14 @@ document.getElementById('loginForm').addEventListener('submit', function(e) {
                 </div>`;
             btn.disabled = false;
             btn.innerHTML = origHTML;
+
+            // Cập nhật CSRF token mới để tránh lỗi 403 ở lượt nhập sau
+            if (data.csrf_name && data.csrf_hash) {
+                const csrfInput = form.querySelector(`input[name="${data.csrf_name}"]`);
+                if (csrfInput) {
+                    csrfInput.value = data.csrf_hash;
+                }
+            }
         }
     })
     .catch(() => {

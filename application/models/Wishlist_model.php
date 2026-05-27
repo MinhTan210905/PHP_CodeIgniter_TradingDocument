@@ -126,15 +126,6 @@ class Wishlist_model extends CI_Model {
                 $price_formatted = number_format($post['price'], 0, ',', '.') . 'đ';
                 $detail_url = site_url('trade/detail/' . $post['id']);
 
-                // A. Gửi tin nhắn nội bộ
-                $this->load->model('Message_model');
-                $this->Message_model->send_message([
-                    'sender_id'   => (int)$post['user_id'],
-                    'receiver_id' => (int)$wish['user_id'],
-                    'post_id'     => (int)$post['id'],
-                    'content'     => "📚 [Gợi ý] Có bài đăng mới phù hợp với mong muốn \"{$wish['book_title']}\": \"{$post['title']}\" — Giá: {$price_formatted}. Xem chi tiết: {$detail_url}",
-                ]);
-
                 // B. Gửi email thông báo HTML
                 $this->_send_wishlist_email(
                     $wish['email'],
@@ -242,7 +233,7 @@ class Wishlist_model extends CI_Model {
      */
     private function _send_wishlist_email($to_email, $to_name, $wish_title, $post_title, $price, $seller_name, $detail_url) {
         $this->load->library('email');
-        $this->email->initialize(['mailtype' => 'html']);
+        $this->email->clear();
         
         $smtp_user = $this->config->item('smtp_user');
         if (empty($smtp_user)) {

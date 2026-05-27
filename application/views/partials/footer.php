@@ -428,6 +428,32 @@ let floatingPollInterval = null;
 const csrfName = '<?= $this->security->get_csrf_token_name() ?>';
 let csrfHash = '<?= $this->security->get_csrf_hash() ?>';
 
+// Hàm XSS Escape
+function escapeHtml(text) {
+    if (!text) return '';
+    const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+    };
+    return text.toString().replace(/[&<>"']/g, function(m) { return map[m]; });
+}
+
+// Hàm format thời gian tin nhắn (HH:MM DD/MM)
+function formatChatTime(dateTimeStr) {
+    if (!dateTimeStr) return '';
+    try {
+        const parts = dateTimeStr.split(' ');
+        const dateParts = parts[0].split('-');
+        const timeParts = parts[1].split(':');
+        return `${timeParts[0]}:${timeParts[1]} ${dateParts[2]}/${dateParts[1]}`;
+    } catch(e) {
+        return '';
+    }
+}
+
 // Bật/tắt mở khung chat
 function toggleFloatingChat() {
     const windowEl = document.getElementById('floatingChatWindow');
@@ -673,10 +699,21 @@ function renderFloatingMessages(messages) {
 
     let html = '';
     messages.forEach(m => {
-        const sideClass = m.sender_id == <?= $this->session->userdata('user_id') ?> ? 'sent' : 'received';
+        const isMine = m.sender_id == <?= $this->session->userdata('user_id') ?>;
+        const sideClass = isMine ? 'sent' : 'received';
+        const formattedTime = formatChatTime(m.created_at);
+        const checkIcon = isMine 
+            ? `<i class="fas fa-${m.is_read == 1 ? 'check-double' : 'check'} ms-1" style="${m.is_read == 1 ? 'color:#3B82F6' : ''}; font-size: 8px;"></i>` 
+            : '';
+
         html += `
-            <div class="floating-chat-msg-bubble ${sideClass}" data-msg-id="${m.id}">
-                ${m.content_escaped || escapeHtml(m.content)}
+            <div class="floating-chat-msg-wrapper ${sideClass}" style="display:flex; flex-direction:column; align-self:${isMine ? 'flex-end' : 'flex-start'}; align-items:${isMine ? 'flex-end' : 'flex-start'}; max-width:80%;">
+                <div class="floating-chat-msg-bubble ${sideClass}" data-msg-id="${m.id}" style="margin-bottom:2px;">
+                    ${m.content_escaped || escapeHtml(m.content)}
+                </div>
+                <span style="font-size:0.65rem; color:#94A3B8; margin-bottom:4px; padding: 0 4px;">
+                    ${formattedTime} ${checkIcon}
+                </span>
             </div>
         `;
         lastMessageId = Math.max(lastMessageId, parseInt(m.id));
@@ -716,12 +753,26 @@ function appendFloatingNewMessages(messages) {
         // Tránh trùng tin nhắn
         if (document.querySelector(`[data-msg-id="${m.id}"]`)) return;
 
-        const sideClass = m.sender_id == <?= $this->session->userdata('user_id') ?> ? 'sent' : 'received';
-        const bubble = document.createElement('div');
-        bubble.className = `floating-chat-msg-bubble ${sideClass}`;
-        bubble.setAttribute('data-msg-id', m.id);
-        bubble.innerText = m.content;
-        messagesBody.appendChild(bubble);
+        const isMine = m.sender_id == <?= $this->session->userdata('user_id') ?>;
+        const sideClass = isMine ? 'sent' : 'received';
+        const formattedTime = formatChatTime(m.created_at);
+        const checkIcon = isMine 
+            ? `<i class="fas fa-${m.is_read == 1 ? 'check-double' : 'check'} ms-1" style="${m.is_read == 1 ? 'color:#3B82F6' : ''}; font-size: 8px;"></i>` 
+            : '';
+
+        const wrapper = document.createElement('div');
+        wrapper.className = `floating-chat-msg-wrapper ${sideClass}`;
+        wrapper.style.cssText = `display:flex; flex-direction:column; align-self:${isMine ? 'flex-end' : 'flex-start'}; align-items:${isMine ? 'flex-end' : 'flex-start'}; max-width:80%;`;
+        
+        wrapper.innerHTML = `
+            <div class="floating-chat-msg-bubble ${sideClass}" data-msg-id="${m.id}" style="margin-bottom:2px;">
+                ${m.content_escaped || escapeHtml(m.content)}
+            </div>
+            <span style="font-size:0.65rem; color:#94A3B8; margin-bottom:4px; padding: 0 4px;">
+                ${formattedTime} ${checkIcon}
+            </span>
+        `;
+        messagesBody.appendChild(wrapper);
 
         lastMessageId = Math.max(lastMessageId, parseInt(m.id));
     });

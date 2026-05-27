@@ -80,6 +80,24 @@ class Message_model extends CI_Model {
         return $this->db->insert('messages', $data);
     }
 
+    // Cập nhật trạng thái lịch hẹn
+    public function update_meetup_status($message_id, $status) {
+        $this->db->where('id', $message_id);
+        return $this->db->update('messages', ['meetup_status' => $status]);
+    }
+
+    // Lấy 1 tin nhắn theo ID kèm thông tin liên quan
+    public function get_message_by_id($id) {
+        $this->db->select('messages.*,
+            s.username as sender_username, s.full_name as sender_name,
+            p.title as post_title, p.id as post_id_ref');
+        $this->db->from('messages');
+        $this->db->join('users s', 's.id = messages.sender_id', 'left');
+        $this->db->join('posts p', 'p.id = messages.post_id', 'left');
+        $this->db->where('messages.id', $id);
+        return $this->db->get()->row_array();
+    }
+
     // Đánh dấu đã đọc
     public function mark_as_read($sender_id, $receiver_id) {
         $this->db->where('sender_id', $sender_id);

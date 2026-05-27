@@ -3,13 +3,15 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
 class Ai_moderation_model extends CI_Model {
 
-    private $api_url = "https://api-inference.huggingface.co/models/Minhtan210905/phobert-toxic-genz-v2";
+    // Chuyển sang sử dụng Google Gemini API (gemini-3.5-flash) - cực nhanh và hiểu tiếng Việt cực đỉnh
+    private $api_url_base = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=";
     private $api_key = "";
 
     public function __construct() {
         parent::__construct();
         $this->load->database();
-        $this->api_key = getenv('HF_API_KEY') ?: (isset($_ENV['HF_API_KEY']) ? $_ENV['HF_API_KEY'] : '');
+        // Lấy GEMINI_API_KEY từ file .env (nếu không có thì dùng biến môi trường chung)
+        $this->api_key = getenv('GEMINI_API_KEY') ?: (isset($_ENV['GEMINI_API_KEY']) ? $_ENV['GEMINI_API_KEY'] : '');
     }
 
     public function analyze_text($text) {
@@ -27,7 +29,8 @@ class Ai_moderation_model extends CI_Model {
             return $fallback_res;
         }
 
-        // Ưu tiên kiểm duyệt qua bộ lọc thô cục bộ (local bad words regex)
+        // Lớp 1: Lọc thô siêu nhanh (Local Filter)
+        // Nếu phát hiện từ khóa thô tục rõ ràng -> Block ngay lập tức (0ms, không tốn API)
         if ($this->local_toxic_filter($text)) {
             return [
                 'action' => 'block',
@@ -38,23 +41,41 @@ class Ai_moderation_model extends CI_Model {
             ];
         }
 
+        // Lớp 2: Kiểm duyệt thông minh bằng Gemini API (gemini-1.5-flash)
         if (empty($this->api_key)) {
-            log_message('error', 'AI Moderation: HF_API_KEY is not defined in .env.');
+            log_message('error', 'AI Moderation: GEMINI_API_KEY is not defined in .env.');
             return $fallback_res;
         }
 
-        $payload = json_encode(['inputs' => $text]);
-        $ch = curl_init($this->api_url);
+        $prompt = "Bạn là hệ thống kiểm duyệt nội dung ẩn danh của một ứng dụng trao đổi sách cho sinh viên Đại học Sư Phạm (HCMUE). Hãy phân tích đoạn văn bản sau đây xem có chứa từ ngữ thô tục, chửi thề, kích động, quấy rối, xúc phạm, hoặc ngôn từ độc hại (toxic) theo ngôn ngữ mạng / Gen Z của Việt Nam hay không.\n\nĐoạn văn bản: \"" . $text . "\"\n\nTrả lời CHỈ BẰNG một chuỗi JSON duy nhất, không kèm markdown, không kèm giải thích, có định dạng sau:\n{\"is_toxic\": true/false, \"confidence\": 0.0->1.0}";
+
+        $payload = json_encode([
+            'contents' => [
+                [
+                    'parts' => [
+                        ['text' => $prompt]
+                    ]
+                ]
+            ],
+            'generationConfig' => [
+                'temperature' => 0.1,
+                'maxOutputTokens' => 800,
+                'responseMimeType' => 'application/json'
+            ]
+        ]);
+
+        $url = $this->api_url_base . $this->api_url_clean_token($this->api_key);
+        $ch = curl_init($url);
 
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_POST, true);
         curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
         curl_setopt($ch, CURLOPT_HTTPHEADER, [
-            "Authorization: Bearer " . $this->api_url_clean_token($this->api_key),
             "Content-Type: application/json"
         ]);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 6);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 10);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
 
         $response = curl_exec($ch);
         $err = curl_error($ch);
@@ -69,59 +90,49 @@ class Ai_moderation_model extends CI_Model {
 
         $result = json_decode($response, true);
 
-        if (isset($result['error']) && strpos($result['error'], 'loading') !== false) {
-            log_message('error', 'AI Moderation: Model is currently loading on HF.');
-            $fallback_res['error'] = 'Model loading';
+        if (isset($result['error'])) {
+            $err_msg = isset($result['error']['message']) ? $result['error']['message'] : 'Unknown error';
+            log_message('error', 'AI Moderation Gemini API Error: ' . $err_msg . ' | HTTP Code: ' . $http_code);
+            $fallback_res['error'] = 'Gemini API Error: ' . $err_msg;
             return $fallback_res;
         }
 
-        if (empty($result) || isset($result['error'])) {
-            $err_msg = isset($result['error']) ? $result['error'] : 'Unknown error';
-            log_message('error', 'AI Moderation API Error: ' . $err_msg . ' | HTTP Code: ' . $http_code);
-            $fallback_res['error'] = 'API Error: ' . $err_msg;
+        // Lấy text JSON từ kết quả trả về của Gemini
+        $generated_text = '';
+        if (isset($result['candidates'][0]['content']['parts'][0]['text'])) {
+            $generated_text = trim($result['candidates'][0]['content']['parts'][0]['text']);
+        }
+
+        if (empty($generated_text)) {
             return $fallback_res;
         }
 
-        $predictions = isset($result[0]) ? $result[0] : [];
-        if (empty($predictions)) {
+        // Parse JSON từ Gemini
+        $ai_response = json_decode($generated_text, true);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            log_message('error', 'AI Moderation Gemini parsing error. Raw output: ' . $generated_text);
             return $fallback_res;
         }
 
-        $scores = [0 => 0.0, 1 => 0.0, 2 => 0.0];
-        foreach ($predictions as $pred) {
-            $label_str = $pred['label'];
-            $score_val = (float)$pred['score'];
+        $is_toxic   = isset($ai_response['is_toxic']) ? filter_var($ai_response['is_toxic'], FILTER_VALIDATE_BOOLEAN) : false;
+        $confidence = isset($ai_response['confidence']) ? (float)$ai_response['confidence'] : 0.0;
 
-            $label_num = 0;
-            if (preg_match('/\d+/', $label_str, $matches)) {
-                $label_num = (int)$matches[0];
-            }
+        $toxic_score     = $is_toxic ? $confidence : (1.0 - $confidence);
+        $non_toxic_score = $is_toxic ? (1.0 - $confidence) : $confidence;
 
-            if (isset($scores[$label_num])) {
-                $scores[$label_num] = $score_val;
-            }
-        }
-
-        $pred_label = 0;
-        $max_score = 0.0;
-        foreach ($scores as $lbl => $sc) {
-            if ($sc > $max_score) {
-                $max_score = $sc;
-                $pred_label = $lbl;
-            }
-        }
-
-        $action = 'allow';
-        // Nhãn 3 (label 2) bị cấm, nhãn 1 2 (label 0, 1) bình thường
-        if ($pred_label == 2 && $scores[2] > 0.50) {
-            $action = 'block';
+        // Quyết định action: block nếu AI phán đoán là toxic
+        $action     = 'allow';
+        $pred_label = 0;  // 0 = clean
+        if ($is_toxic && $confidence > 0.5) {
+            $action     = 'block';
+            $pred_label = 2;  // 2 = toxic (giữ tương thích với schema database)
         }
 
         return [
             'action' => $action,
             'label'  => $pred_label,
-            'score'  => $max_score,
-            'scores' => $scores,
+            'score'  => $toxic_score > $non_toxic_score ? $toxic_score : $non_toxic_score,
+            'scores' => [0 => $non_toxic_score, 1 => 0.0, 2 => $toxic_score],
             'error'  => null
         ];
     }
