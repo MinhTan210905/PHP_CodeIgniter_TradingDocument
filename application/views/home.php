@@ -12,7 +12,7 @@
                 
                 <!-- Dropdown Lịch sử & Gợi ý tìm kiếm -->
                 <div id="searchSuggestionsDropdown" class="position-absolute bg-white rounded-3 shadow-lg border border-light p-2 mt-2 w-100 d-none" 
-                     style="top: 100%; left: 0; z-index: 10000; max-height: 320px; overflow-y: auto;">
+                     style="top: 100%; left: 0; z-index: 10000; max-height: 380px; overflow-y: auto;">
                     <!-- Lịch sử tìm kiếm -->
                     <div id="searchHistorySection">
                         <div class="d-flex align-items-center justify-content-between px-2 py-1 text-secondary fw-bold" style="font-size: 0.72rem; letter-spacing: 0.5px;">
@@ -20,6 +20,15 @@
                             <button type="button" class="btn btn-link p-0 text-muted text-decoration-none" onclick="clearAllSearchHistory()" style="font-size: 0.7rem;">Xóa tất cả</button>
                         </div>
                         <div id="searchHistoryList" class="d-flex flex-column gap-1"></div>
+                    </div>
+                    
+                    <!-- Từ khóa thịnh hành -->
+                    <div id="searchTrendingSection" class="mt-2.5">
+                        <div class="px-2 py-1 text-secondary fw-bold d-flex align-items-center gap-1.5" style="font-size: 0.72rem; letter-spacing: 0.5px;">
+                            <i class="fas fa-fire text-danger" style="animation: bounce-gentle 1.5s infinite;"></i>
+                            <span>TỪ KHÓA THỊNH HÀNH</span>
+                        </div>
+                        <div id="searchTrendingList" class="d-flex flex-wrap gap-2 p-2"></div>
                     </div>
                     
                     <!-- Gợi ý liên quan -->
@@ -320,6 +329,43 @@
     background: #F1F5F9;
     color: var(--primary-mid);
 }
+
+/* Trending keyword chips */
+.trending-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #F8FAFC;
+    border: 1px solid #E2E8F0;
+    border-radius: 20px;
+    padding: 6px 14px;
+    font-size: 0.8rem;
+    font-weight: 550;
+    color: #475569;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.trending-chip:hover {
+    background: var(--primary-pale);
+    border-color: var(--primary-mid);
+    color: var(--primary);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(37, 99, 235, 0.08);
+}
+.trending-chip .hot-badge {
+    background: linear-gradient(135deg, #EF4444, #F59E0B);
+    color: #fff;
+    font-size: 0.62rem;
+    font-weight: 700;
+    padding: 1px 5px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    line-height: 1;
+}
+@keyframes bounce-gentle {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-2px); }
+}
 </style>
 
 <script>
@@ -329,6 +375,28 @@
     // =========================================================
     let currentCat = '';    // ID danh mục đang lọc (rỗng = tất cả)
     let searchTimer = null; // Timer cho debounce
+
+    const trendingKeywords = [
+        { text: 'Tâm lý học sư phạm', hot: true },
+        { text: 'Giáo trình Triết học', hot: true },
+        { text: 'Lập trình C++', hot: false },
+        { text: 'Tiếng Anh đại học', hot: false },
+        { text: 'Phương pháp dạy học', hot: true },
+        { text: 'Rèn luyện nghiệp vụ', hot: false },
+        { text: 'Đại số tuyến tính', hot: false },
+        { text: 'Giáo dục học', hot: false }
+    ];
+
+    function renderTrendingKeywords() {
+        const listEl = document.getElementById('searchTrendingList');
+        if (!listEl) return;
+        listEl.innerHTML = trendingKeywords.map(k => `
+            <div class="trending-chip" onclick="selectSuggestion('${k.text.replace(/'/g, "\\'")}')">
+                <span>${escapeHtml(k.text)}</span>
+                ${k.hot ? '<span class="hot-badge">Hot</span>' : ''}
+            </div>
+        `).join('');
+    }
 
     // Lấy tham chiếu đến các phần tử HTML quan trọng
     const searchInput  = document.getElementById('apiSearchInput');
@@ -670,16 +738,19 @@
 
     function renderSearchHistory() {
         const history = JSON.parse(localStorage.getItem('hcmue_search_history') || '[]');
+        
+        // Show the dropdown and render trending keywords
+        suggestionsDropdown.classList.remove('d-none');
+        const trendingSec = document.getElementById('searchTrendingSection');
+        if (trendingSec) trendingSec.classList.remove('d-none');
+        renderTrendingKeywords();
+
         if (history.length === 0) {
             historySection.classList.add('d-none');
-            if (suggestionsSection.classList.contains('d-none')) {
-                suggestionsDropdown.classList.add('d-none');
-            }
             return;
         }
 
         historySection.classList.remove('d-none');
-        suggestionsDropdown.classList.remove('d-none');
 
         historyListEl.innerHTML = history.map(item => `
             <div class="suggestion-item d-flex align-items-center justify-content-between py-2 px-3 rounded-2" onclick="selectSuggestion('${item.replace(/'/g, "\\'")}')">
@@ -716,15 +787,19 @@
 
         const matched = books.filter(b => b.title.toLowerCase().includes(query.toLowerCase())).slice(0, 5);
 
+        const trendingSec = document.getElementById('searchTrendingSection');
+
         if (matched.length === 0) {
             suggestionsSection.classList.add('d-none');
             if (historySection.classList.contains('d-none')) {
+                if (trendingSec) trendingSec.classList.add('d-none');
                 suggestionsDropdown.classList.add('d-none');
             }
             return;
         }
 
         historySection.classList.add('d-none'); // Ẩn lịch sử khi đang gõ
+        if (trendingSec) trendingSec.classList.add('d-none'); // Ẩn từ khóa thịnh hành khi đang gõ
         suggestionsSection.classList.remove('d-none');
         suggestionsDropdown.classList.remove('d-none');
 
