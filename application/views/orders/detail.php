@@ -401,8 +401,14 @@ $cur_step = $timeline[$order['status']] ?? 1;
 
         qrModal.addEventListener('show.bs.modal', function () {
             if (!html5QrcodeScanner) {
+                // Tăng độ nhạy: tăng fps, nới lỏng qrbox, hỗ trợ lật hình
                 html5QrcodeScanner = new Html5QrcodeScanner(
-                    "qr-reader", { fps: 10, qrbox: {width: 250, height: 250}, aspectRatio: 1.0 }, false);
+                    "qr-reader", { 
+                        fps: 20, 
+                        qrbox: {width: 250, height: 250}, 
+                        disableFlip: false,
+                        supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA]
+                    }, false);
                 html5QrcodeScanner.render(onScanSuccess, function(){});
             }
         });
@@ -430,34 +436,34 @@ $cur_step = $timeline[$order['status']] ?? 1;
                 html5QrcodeScanner = null;
             }
 
-            $.ajax({
-                url: '<?= site_url("orders/verify_handover") ?>',
-                type: 'POST',
-                data: { code: code },
-                dataType: 'json',
-                timeout: 10000,
-                success: function(res) {
-                    if (res.success) {
-                        if (btnVerifyOtp) {
-                            btnVerifyOtp.innerHTML = '<i class="fas fa-check-circle me-2"></i>Thành công!';
-                            btnVerifyOtp.classList.remove('btn-success');
-                            btnVerifyOtp.classList.add('btn-primary');
-                        }
-                        setTimeout(function() { location.reload(); }, 1000);
-                    } else {
-                        alert('❌ ' + res.message);
-                        resetBtn();
+            fetch('<?= site_url("orders/verify_handover") ?>', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({ code: code })
+            })
+            .then(function(response) {
+                if (!response.ok) {
+                    throw new Error('HTTP ' + response.status);
+                }
+                return response.json();
+            })
+            .then(function(res) {
+                if (res.success) {
+                    if (btnVerifyOtp) {
+                        btnVerifyOtp.innerHTML = '<i class="fas fa-check-circle me-2"></i>Thành công!';
+                        btnVerifyOtp.classList.remove('btn-success');
+                        btnVerifyOtp.classList.add('btn-primary');
                     }
-                },
-                error: function(xhr, status, error) {
-                    console.error('Verify error:', status, xhr.status, xhr.responseText);
-                    if (status === 'timeout') {
-                        alert('⚠️ Máy chủ phản hồi quá chậm. Vui lòng thử lại.');
-                    } else {
-                        alert('❌ Lỗi kết nối (HTTP ' + xhr.status + '). Thử lại nhé!');
-                    }
+                    setTimeout(function() { location.reload(); }, 1000);
+                } else {
+                    alert('❌ ' + res.message);
                     resetBtn();
                 }
+            })
+            .catch(function(error) {
+                console.error('Verify error:', error);
+                alert('❌ Lỗi kết nối. Vui lòng thử lại!');
+                resetBtn();
             });
         }
 
