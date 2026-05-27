@@ -78,7 +78,7 @@ header('Content-Type: text/html; charset=UTF-8');
                 </a>
                 <!-- Mong muốn sách -->
                 <a href="<?= site_url('wishlist') ?>" class="nav-icon-btn" title="Danh sách mong muốn">
-                    <i class="fas fa-bell"></i>
+                    <i class="fas fa-heart"></i>
                 </a>
                 <!-- Đăng bài -->
                 <button class="btn-dang-bai" data-bs-toggle="modal" data-bs-target="#createPostModal">
@@ -128,7 +128,7 @@ header('Content-Type: text/html; charset=UTF-8');
                         </li>
                         <li>
                             <a class="dropdown-item py-2" href="<?= site_url('wishlist') ?>">
-                                <i class="fas fa-bell me-2 text-warning"></i>Danh sách mong muốn
+                                <i class="fas fa-heart me-2 text-danger"></i>Danh sách mong muốn
                             </a>
                         </li>
                         <li>

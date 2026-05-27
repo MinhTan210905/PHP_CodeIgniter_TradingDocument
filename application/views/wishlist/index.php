@@ -12,7 +12,7 @@
             <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
                 <div>
                     <div class="text-white fw-bold" style="font-size:1.15rem;">
-                        <i class="fas fa-bell me-2"></i>Danh sách mong muốn sách
+                        <i class="fas fa-heart me-2"></i>Danh sách mong muốn sách
                     </div>
                     <div class="text-white opacity-75" style="font-size:0.82rem;">
                         Hệ thống sẽ tự động thông báo khi có sách phù hợp được đăng bán.
