@@ -88,19 +88,23 @@ $route['admin/moderation']                     = 'admin/moderation';
 $route['admin/moderation_action']              = 'admin/moderation_action';
 
 // Orders (Đơn hàng)
-$route['orders']                         = 'orders/index';
-$route['orders/detail/(:num)']           = 'orders/detail/$1';
-$route['orders/request/(:num)']          = 'orders/request_buy/$1';
-$route['orders/confirm/(:num)']          = 'orders/confirm/$1';
-$route['orders/reject/(:num)']           = 'orders/reject/$1';
-$route['orders/received/(:num)']         = 'orders/received/$1';
-$route['orders/dispute/(:num)']          = 'orders/dispute/$1';
-$route['orders/cancel/(:num)']           = 'orders/cancel/$1';
-$route['orders/rate/(:num)']             = 'orders/rate/$1';
-$route['orders/submit_rating/(:num)']    = 'orders/submit_rating/$1';
-$route['orders/checkout/(:num)']         = 'orders/checkout/$1';
-$route['orders/process_checkout/(:num)'] = 'orders/process_checkout/$1';
-$route['orders/delivered/(:num)']        = 'orders/delivered/$1';
+$route['orders']                              = 'orders/index';
+$route['orders/detail/(:num)']                = 'orders/detail/$1';
+$route['orders/request/(:num)']               = 'orders/request_buy/$1';
+$route['orders/confirm/(:num)']               = 'orders/confirm/$1';
+$route['orders/reject/(:num)']                = 'orders/reject/$1';
+$route['orders/received/(:num)']              = 'orders/received/$1';
+$route['orders/dispute/(:num)']               = 'orders/dispute/$1';
+$route['orders/cancel/(:num)']                = 'orders/cancel/$1';
+$route['orders/rate/(:num)']                  = 'orders/rate/$1';
+$route['orders/submit_rating/(:num)']         = 'orders/submit_rating/$1';
+$route['orders/checkout/(:num)']              = 'orders/checkout/$1';
+$route['orders/process_checkout/(:num)']      = 'orders/process_checkout/$1';
+$route['orders/delivered/(:num)']             = 'orders/delivered/$1';
+// AJAX endpoints cho xác thực QR/OTP và báo cáo
+$route['orders/verify_handover']              = 'orders/verify_handover';
+$route['orders/report_seller/(:num)']         = 'orders/report_seller/$1';
+$route['orders/ajax_action_count']            = 'orders/ajax_get_action_required_count';
 
 // Seller (Sàn người bán)
 $route['seller/(:num)']                  = 'seller/view/$1';

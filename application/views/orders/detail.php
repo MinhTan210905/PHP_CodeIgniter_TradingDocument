@@ -384,6 +384,17 @@ $cur_step = $timeline[$order['status']] ?? 1;
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://unpkg.com/html5-qrcode"></script>
 <script>
+    // Hàm lấy CSRF token tươi từ cookie (tránh token cũ bị vô hiệu do csrf_regenerate=TRUE)
+    function getCsrfToken() {
+        const name = '<?= $this->security->get_csrf_cookie_name() ?>=';
+        const cookies = document.cookie.split(';');
+        for (let c of cookies) {
+            c = c.trim();
+            if (c.startsWith(name)) return decodeURIComponent(c.substring(name.length));
+        }
+        return '<?= $this->security->get_csrf_hash() ?>'; // fallback
+    }
+
     document.addEventListener("DOMContentLoaded", function() {
         <?php if ($is_buyer && $order['status'] === 'processing' && !empty($order['qr_token'])): ?>
         new QRCode(document.getElementById("qrcodeDisplay"), {
@@ -418,42 +429,68 @@ $cur_step = $timeline[$order['status']] ?? 1;
         });
 
         let isVerifying = false;
+        const btnVerifyOtp = document.getElementById('btnVerifyOtp');
+
         function verifyHandover(code) {
             if (isVerifying) return;
             isVerifying = true;
+
+            // Hiện loading trên nút OTP
+            if (btnVerifyOtp) {
+                btnVerifyOtp.disabled = true;
+                btnVerifyOtp.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Đang xác thực...';
+            }
             
             // Tạm ẩn scanner để tránh quét liên tục
             if (html5QrcodeScanner) {
                 try { html5QrcodeScanner.clear().catch(e => console.warn(e)); } catch(e) { console.warn(e); }
             }
 
-            $.post('<?= site_url("orders/verify_handover") ?>', { 
-                code: code,
-                '<?= $this->security->get_csrf_token_name() ?>': '<?= $this->security->get_csrf_hash() ?>'
-            }, function(response) {
+            // Lấy CSRF token mới nhất từ cookie (tránh token stale khi csrf_regenerate=TRUE)
+            const csrfData = {};
+            csrfData['<?= $this->security->get_csrf_token_name() ?>'] = getCsrfToken();
+
+            $.post('<?= site_url("orders/verify_handover") ?>', 
+                Object.assign({ code: code }, csrfData),
+            function(response) {
                 try {
-                    const res = JSON.parse(response);
+                    const res = (typeof response === 'object') ? response : JSON.parse(response);
                     if (res.success) {
-                        alert('Thành công: ' + res.message);
-                        location.reload();
+                        // Thay alert bằng hiển thị đẹp hơn
+                        btnVerifyOtp && (btnVerifyOtp.innerHTML = '<i class="fas fa-check-circle me-2"></i>Thành công!');
+                        btnVerifyOtp && btnVerifyOtp.classList.replace('btn-success', 'btn-primary');
+                        setTimeout(() => location.reload(), 1200);
                     } else {
-                        alert('Lỗi: ' + res.message);
+                        alert('❌ ' + res.message);
                         isVerifying = false;
-                        // Resume scanning
-                        if (document.getElementById('scan-tab').classList.contains('active')) {
+                        if (btnVerifyOtp) {
+                            btnVerifyOtp.disabled = false;
+                            btnVerifyOtp.innerHTML = 'Xác thực OTP';
+                        }
+                        // Khởi động lại scanner nếu đang ở tab QR
+                        if (document.getElementById('scan-tab') && document.getElementById('scan-tab').classList.contains('active')) {
                              html5QrcodeScanner = new Html5QrcodeScanner(
                                 "qr-reader", { fps: 10, qrbox: {width: 250, height: 250}, aspectRatio: 1.0 }, false);
                              html5QrcodeScanner.render(onScanSuccess, onScanFailure);
                         }
                     }
                 } catch(e) {
-                    alert('Lỗi phản hồi từ máy chủ: Vui lòng thử lại.');
+                    alert('⚠️ Lỗi phản hồi từ máy chủ. Vui lòng thử lại.');
                     console.error("JSON Parse Error:", e, response);
                     isVerifying = false;
+                    if (btnVerifyOtp) {
+                        btnVerifyOtp.disabled = false;
+                        btnVerifyOtp.innerHTML = 'Xác thực OTP';
+                    }
                 }
-            }).fail(function() {
-                alert('Lỗi kết nối máy chủ.');
+            }).fail(function(xhr) {
+                console.error('AJAX fail:', xhr.status, xhr.responseText);
+                alert('❌ Lỗi kết nối máy chủ (HTTP ' + xhr.status + '). Vui lòng thử lại.');
                 isVerifying = false;
+                if (btnVerifyOtp) {
+                    btnVerifyOtp.disabled = false;
+                    btnVerifyOtp.innerHTML = 'Xác thực OTP';
+                }
             });
         }
 
@@ -462,19 +499,22 @@ $cur_step = $timeline[$order['status']] ?? 1;
         }
 
         function onScanFailure(error) {
-            // Ignore scan failures
+            // Bỏ qua lỗi quét thất bại (thường xuyên xảy ra khi không có QR trong frame)
         }
 
-        document.getElementById('btnVerifyOtp').addEventListener('click', function() {
-            const otp = document.getElementById('otpInput').value.trim();
-            if (otp.length === 6) {
+        if (btnVerifyOtp) {
+            btnVerifyOtp.addEventListener('click', function() {
+                const otp = document.getElementById('otpInput').value.trim();
+                if (otp.length !== 6 || !/^\d{6}$/.test(otp)) {
+                    alert('⚠️ Vui lòng nhập đúng 6 chữ số OTP!');
+                    return;
+                }
                 verifyHandover(otp);
-            } else {
-                alert('Vui lòng nhập đủ 6 số OTP');
-            }
-        });
+            });
+        }
         <?php endif; ?>
     });
 </script>
+
 
 
