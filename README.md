@@ -15,6 +15,8 @@
 
 Chúng tôi vừa nâng cấp hệ thống lên một tầm cao mới với các tính năng hiện đại:
 - 🤖 **AI Kiểm Duyệt Ngôn Từ Độc Hại (Google Gemini 3.5 Flash)**: Tích hợp mô hình trí tuệ nhân tạo Google Gemini 3.5 Flash siêu nhanh làm hệ thống kiểm duyệt tin bài công cộng. Hệ thống bao gồm 2 lớp phòng vệ: Lớp 1 (Local Regex - 0ms) để chặn ngay lập tức từ tục tĩu phổ biến giúp tiết kiệm tối đa API Key, Lớp 2 (Gemini 3.5 Flash) phân tích sâu sắc từ lóng, toxic Gen Z Việt Nam trong đăng bán sách (`Trade`) và bình luận (`Comment`).
+- 💬 **Trợ lý ảo HCMUE AI Assistant (Chatbot Gemini)**: Tích hợp Chatbot trí tuệ nhân tạo Gemini 3.5 Flash hỗ trợ hướng dẫn, tư vấn, giải đáp các thắc mắc về nền tảng trao đổi sách cho sinh viên một cách nhanh chóng, tự nhiên và thân thiện.
+- 🔐 **Xác thực Giao nhận An toàn Kép (QR Code & OTP Secure Handover)**: Quy trình bàn giao tài liệu an toàn tuyệt đối 2 lớp. Người bán quét mã QR động hoặc nhập mã OTP 6 số của người mua khi giao sách để hoàn tất đơn giao dịch. Hệ thống cập nhật trạng thái đơn hàng và ví tiền của người bán ngay lập tức nhờ sức mạnh của Pusher realtime.
 - 🖼️ **Hệ thống Đa Ảnh (Multi-Image Upload)**: Cho phép đăng tải ảnh bìa kèm 5 ảnh chi tiết thực tế cùng lúc với giao diện xem ảnh mượt mà có tích hợp nút chuyển ảnh nhanh (Carousel) trái phải.
 - 🔔 **Mong muốn sách & Email HTML chuyên nghiệp (Wishlist)**: Cho phép sinh viên đăng ký theo dõi sách cần tìm. Hệ thống tự động so khớp thông minh (không dấu tiếng Việt, trùng >70%) và lập tức gửi **Email thông báo dạng HTML tuyệt đẹp** trực tiếp vào hòm thư.
 - 📄 **Tải Lên & Xem Trước PDF (PDF Reader)**: Hỗ trợ người dùng đính kèm file PDF tài liệu học tập, giáo trình trực quan khi đăng bài. Người mua có thể đọc thử ngay trên trình duyệt thông qua khung iframe lớn.
