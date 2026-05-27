@@ -50,6 +50,81 @@ header('Content-Type: text/html; charset=UTF-8');
             color: #ffffff !important;
             border-color: rgba(255,255,255,0.4) !important;
         }
+        /* Cực hình: Căn giữa tuyệt đối số thông báo đỏ trên header - Chống cache trình duyệt */
+        .navbar-hcmue .nav-badge {
+            position: absolute !important;
+            top: -6px !important;
+            right: -6px !important;
+            background: #EF4444 !important;
+            color: #ffffff !important;
+            font-size: 9px !important;
+            font-weight: 800 !important;
+            border-radius: 50% !important;
+            width: 18px !important;
+            height: 18px !important;
+            display: flex;
+            align-items: center !important;
+            justify-content: center !important;
+            border: 1.5px solid #ffffff !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            line-height: 1 !important;
+            box-sizing: border-box !important;
+        }
+
+        /* Announcement Marquee Bar */
+        .announcement-bar {
+            background: linear-gradient(90deg, #F0F9FF 0%, #E0F2FE 100%);
+            border-bottom: 1px solid #BAE6FD;
+            color: #0369A1;
+            font-size: 0.82rem;
+            font-weight: 600;
+            height: 38px;
+            display: flex;
+            align-items: center;
+            overflow: hidden;
+            position: relative;
+            padding: 0 45px 0 20px;
+            z-index: 999;
+        }
+        .announcement-marquee {
+            display: flex;
+            align-items: center;
+            white-space: nowrap;
+            animation: marquee-scroll 25s linear infinite;
+            padding-left: 100%;
+        }
+        .announcement-marquee:hover {
+            animation-play-state: paused;
+        }
+        .announcement-close {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: transparent;
+            border: none;
+            color: #0369A1;
+            font-size: 0.85rem;
+            cursor: pointer;
+            opacity: 0.7;
+            transition: opacity 0.2s;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+        }
+        .announcement-close:hover {
+            opacity: 1;
+            background: rgba(3, 105, 161, 0.08);
+        }
+        @keyframes marquee-scroll {
+            0% { transform: translate3d(0, 0, 0); }
+            100% { transform: translate3d(-100%, 0, 0); }
+        }
+    </style>
         
         /* Cực hình: Căn giữa tuyệt đối số thông báo đỏ trên header - Chống cache trình duyệt */
         .navbar-hcmue .nav-badge {
@@ -71,6 +146,59 @@ header('Content-Type: text/html; charset=UTF-8');
             margin: 0 !important;
             line-height: 1 !important;
             box-sizing: border-box !important;
+=======
+        /* Announcement Marquee Bar */
+        .announcement-bar {
+            background: linear-gradient(90deg, #F0F9FF 0%, #E0F2FE 100%);
+            border-bottom: 1px solid #BAE6FD;
+            color: #0369A1;
+            font-size: 0.82rem;
+            font-weight: 600;
+            height: 38px;
+            display: flex;
+            align-items: center;
+            overflow: hidden;
+            position: relative;
+            padding: 0 45px 0 20px;
+            z-index: 999;
+        }
+        .announcement-marquee {
+            display: flex;
+            align-items: center;
+            white-space: nowrap;
+            animation: marquee-scroll 25s linear infinite;
+            padding-left: 100%;
+        }
+        .announcement-marquee:hover {
+            animation-play-state: paused;
+        }
+        .announcement-close {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: transparent;
+            border: none;
+            color: #0369A1;
+            font-size: 0.85rem;
+            cursor: pointer;
+            opacity: 0.7;
+            transition: opacity 0.2s;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+        }
+        .announcement-close:hover {
+            opacity: 1;
+            background: rgba(3, 105, 161, 0.08);
+        }
+        @keyframes marquee-scroll {
+            0% { transform: translate3d(0, 0, 0); }
+            100% { transform: translate3d(-100%, 0, 0); }
+>>>>>>> origin/FindTrendingWord
         }
     </style>
     <link rel="stylesheet" href="<?= base_url('assets/css/style.css?v=4.3') ?>">
@@ -242,6 +370,41 @@ header('Content-Type: text/html; charset=UTF-8');
         </div>
     </div>
 </nav>
+
+<?php
+$CI_ann =& get_instance();
+$CI_ann->load->model('Setting_model');
+$site_announcement = $CI_ann->Setting_model->get('site_announcement', 'Chào mừng đến với diễn đàn pass tài liệu của Trường Đại học Sư phạm thành phố Hồ Chí Minh');
+$is_home = ($CI_ann->router->fetch_class() === 'trade' && $CI_ann->router->fetch_method() === 'index');
+if (!$is_home && !empty(trim($site_announcement))):
+?>
+<div class="announcement-bar" id="siteAnnouncementBar">
+    <div class="d-flex align-items-center me-3" style="position: absolute; left: 16px; background: inherit; z-index: 2; padding-right: 10px;">
+        <i class="fas fa-bullhorn text-primary me-2" style="font-size:0.9rem;"></i>
+    </div>
+    <div class="announcement-marquee">
+        <span><?= htmlspecialchars($site_announcement) ?></span>
+    </div>
+    <button type="button" class="announcement-close" onclick="dismissAnnouncement()" title="Đóng thông báo">
+        <i class="fas fa-times"></i>
+    </button>
+</div>
+<script>
+function dismissAnnouncement() {
+    const bar = document.getElementById('siteAnnouncementBar');
+    if (bar) {
+        bar.style.display = 'none';
+        sessionStorage.setItem('dismiss_announcement', '1');
+    }
+}
+document.addEventListener('DOMContentLoaded', function() {
+    if (sessionStorage.getItem('dismiss_announcement') === '1') {
+        const bar = document.getElementById('siteAnnouncementBar');
+        if (bar) bar.style.display = 'none';
+    }
+});
+</script>
+<?php endif; ?>
 
 
 

@@ -40,6 +40,26 @@
                     </div>
                 </div>
             </div>
+            
+            <!-- Dòng thông báo chạy chữ (Marquee Banner) chiếm chỗ trống -->
+            <?php
+            $CI_ann =& get_instance();
+            $CI_ann->load->model('Setting_model');
+            $site_announcement = $CI_ann->Setting_model->get('site_announcement', 'Chào mừng đến với diễn đàn pass tài liệu của Trường Đại học Sư phạm thành phố Hồ Chí Minh');
+            if (!empty(trim($site_announcement))):
+            ?>
+            <div class="search-announcement-marquee flex-grow-1 d-flex align-items-center" style="min-width: 250px; overflow: hidden; background: linear-gradient(90deg, #F0F9FF 0%, #E0F2FE 100%); border: 1.5px solid #BAE6FD; border-radius: 20px; height: 42px; padding: 0 16px 0 38px; position: relative;">
+                <div class="d-flex align-items-center" style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); z-index: 2; pointer-events: none;">
+                    <i class="fas fa-bullhorn text-primary" style="font-size:0.9rem; animation: marquee-bell 1.5s infinite;"></i>
+                </div>
+                <div class="search-marquee-scroll-wrap" style="width: 100%; overflow: hidden; white-space: nowrap;">
+                    <span class="search-marquee-text-content" style="display: inline-block; padding-left: 100%; animation: search-marquee-scroll-animation 28s linear infinite; font-size: 0.82rem; font-weight: 600; color: #0369A1; cursor: default;">
+                        <?= htmlspecialchars($site_announcement) ?>
+                    </span>
+                </div>
+            </div>
+            <?php endif; ?>
+
             <!-- Nút lọc danh mục: Phân nhóm "Xem thêm" cho giao diện cực sang xịn -->
             <?php 
                 $limit_visible = 6;
@@ -365,6 +385,26 @@
 @keyframes bounce-gentle {
     0%, 100% { transform: translateY(0); }
     50% { transform: translateY(-2px); }
+}
+/* CSS cho chạy chữ thông báo trang chủ */
+.search-marquee-text-content {
+    animation-play-state: running;
+}
+.search-announcement-marquee:hover .search-marquee-text-content {
+    animation-play-state: paused;
+}
+@keyframes search-marquee-scroll-animation {
+    0% { transform: translate3d(0, 0, 0); }
+    100% { transform: translate3d(-100%, 0, 0); }
+}
+@keyframes marquee-bell {
+    0%, 100% { transform: rotate(0); }
+    15% { transform: rotate(-15deg); }
+    30% { transform: rotate(15deg); }
+    45% { transform: rotate(-10deg); }
+    60% { transform: rotate(10deg); }
+    75% { transform: rotate(-5deg); }
+    85% { transform: rotate(5deg); }
 }
 </style>
 
