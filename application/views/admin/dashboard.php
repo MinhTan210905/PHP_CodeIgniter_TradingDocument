@@ -102,16 +102,17 @@
                 <div class="col-md-4 mb-3 mb-md-0">
                     <div class="d-flex align-items-center gap-2">
                         <label class="fw-600 text-nowrap mb-0" for="autoApproveMinStars" style="font-size:0.88rem;">
-                            <i class="fas fa-star text-warning me-1"></i>Duyệt theo Đánh giá:
+                            <i class="fas fa-star text-warning me-1"></i>Duyệt theo Đánh giá (sao):
                         </label>
-                        <select class="form-select form-select-sm" name="auto_approve_min_stars" id="autoApproveMinStars" style="border-radius:8px; font-size:0.83rem; width:140px;">
-                            <option value="0" <?= (isset($app_settings['auto_approve_min_stars']) && $app_settings['auto_approve_min_stars'] == '0') ? 'selected' : '' ?>>Tắt</option>
-                            <option value="4.0" <?= (isset($app_settings['auto_approve_min_stars']) && $app_settings['auto_approve_min_stars'] == '4.0') ? 'selected' : '' ?>>Từ 4.0⭐ trở lên</option>
-                            <option value="4.5" <?= (isset($app_settings['auto_approve_min_stars']) && $app_settings['auto_approve_min_stars'] == '4.5') ? 'selected' : '' ?>>Từ 4.5⭐ trở lên</option>
-                            <option value="5.0" <?= (isset($app_settings['auto_approve_min_stars']) && $app_settings['auto_approve_min_stars'] == '5.0') ? 'selected' : '' ?>>Từ 5.0⭐ trở lên</option>
-                        </select>
+                        <input type="number" step="0.1" min="0" max="5" 
+                               class="form-control form-control-sm" 
+                               name="auto_approve_min_stars" 
+                               id="autoApproveMinStars" 
+                               style="border-radius:8px; font-size:0.83rem; width:80px;"
+                               value="<?= htmlspecialchars($app_settings['auto_approve_min_stars'] ?? '0') ?>"
+                               placeholder="VD: 4.5">
                     </div>
-                    <small class="text-muted d-block" style="font-size:0.75rem; margin-top:2px;">Tự duyệt nếu Người bán có số sao >= mức cấu hình</small>
+                    <small class="text-muted d-block" style="font-size:0.75rem; margin-top:2px;">Nhập từ 0 đến 5 (0 là tắt). Tự duyệt nếu người bán có số sao >= mức này.</small>
                 </div>
 
                 <div class="col-md-2 text-md-end">
@@ -234,9 +235,6 @@
                     <button type="button" class="btn btn-sm btn-outline-secondary rounded-end-3 fw-bold" data-filter="sold" style="font-size:0.78rem;padding:4px 14px;">
                         <i class="fas fa-lock me-1" style="font-size:10px;"></i>Đã Pass
                     </button>
-                    <a href="<?= site_url('admin/users') ?>" class="btn btn-sm btn-outline-hcmue rounded-3" style="font-size:0.8rem;">
-                        <i class="fas fa-users me-1"></i> Người dùng
-                    </a>
                 </div>
             </div>
         </div>

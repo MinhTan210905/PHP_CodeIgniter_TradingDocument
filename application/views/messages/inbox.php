@@ -10,7 +10,7 @@
             </a>
         </div>
     <?php else: ?>
-        <div class="card border-0 rounded-4 shadow-sm overflow-hidden" id="inboxListContainer">
+        <div class="card border-0 rounded-4 shadow-sm" id="inboxListContainer">
             <?php foreach($conversations as $i => $conv): ?>
                 <div class="d-flex align-items-center justify-content-between p-3 conv-item 
                             <?= $conv['unread_count'] > 0 ? 'unread' : '' ?> 
@@ -115,6 +115,14 @@
 
 <style>
 .conv-item { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+.conv-item:first-of-type {
+    border-top-left-radius: 16px !important;
+    border-top-right-radius: 16px !important;
+}
+.conv-item:last-of-type {
+    border-bottom-left-radius: 16px !important;
+    border-bottom-right-radius: 16px !important;
+}
 .conv-item:hover { background: #F8FAFC; }
 .conv-item.unread { background: #EEF5FF; }
 .conv-item.unread:hover { background: #E3EEFF; }

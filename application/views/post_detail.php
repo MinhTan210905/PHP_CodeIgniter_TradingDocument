@@ -36,36 +36,31 @@
 }
 .carousel-nav-btn {
     position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 40px;
-    height: 40px;
-    background: rgba(255, 255, 255, 0.75);
-    border: 1px solid rgba(0, 0, 0, 0.05);
-    border-radius: 50%;
+    top: 0;
+    height: 100%;
+    width: 50%;
+    background: transparent;
+    border: none;
     display: flex;
     align-items: center;
-    justify-content: center;
-    color: #1E293B;
     cursor: pointer;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 4px 10px rgba(0,0,0,0.06);
     z-index: 10;
+    transition: all 0.2s ease;
+    outline: none;
 }
-.carousel-nav-btn:hover {
-    background: #ffffff;
-    color: var(--primary);
-    box-shadow: 0 4px 15px rgba(30, 64, 175, 0.18);
-    transform: translateY(-50%) scale(1.05);
-}
-.carousel-nav-btn:active {
-    transform: translateY(-50%) scale(0.95);
+.carousel-nav-btn i {
+    display: none;
 }
 .carousel-nav-btn.prev {
-    left: 15px;
+    left: 0;
+    cursor: w-resize;
 }
 .carousel-nav-btn.next {
-    right: 15px;
+    right: 0;
+    cursor: e-resize;
+}
+.carousel-nav-btn:hover {
+    background: rgba(0, 0, 0, 0.02);
 }
 </style>
 <div class="container py-4" style="max-width:900px;">
