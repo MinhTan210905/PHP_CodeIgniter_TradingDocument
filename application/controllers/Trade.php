@@ -61,7 +61,7 @@ class Trade extends CI_Controller {
         if ($this->session->userdata('logged_in')) {
             $uid = $this->session->userdata('user_id');
             $data['unread_count']  = $this->Message_model->count_unread($uid);
-            $data['pending_count'] = $this->Order_model->count_pending_for_seller($uid);
+            $data['pending_count'] = $this->Order_model->count_action_required($uid);
         }
 
         $this->load->view('partials/header', $data);
@@ -87,7 +87,7 @@ class Trade extends CI_Controller {
             $uid = $this->session->userdata('user_id');
             $data['has_rated']     = $this->Rating_model->has_rated($uid, $id);
             $data['unread_count']  = $this->Message_model->count_unread($uid);
-            $data['pending_count'] = $this->Order_model->count_pending_for_seller($uid);
+            $data['pending_count'] = $this->Order_model->count_action_required($uid);
         } else {
             $data['unread_count']  = 0;
             $data['pending_count'] = 0;
@@ -332,7 +332,7 @@ class Trade extends CI_Controller {
         $data['categories'] = $this->Trade_model->get_categories();
         $data['additional_images'] = $this->Trade_model->get_post_images($id);
         $data['unread_count']  = $this->Message_model->count_unread($user_id);
-        $data['pending_count'] = $this->Order_model->count_pending_for_seller($user_id);
+        $data['pending_count'] = $this->Order_model->count_action_required($user_id);
 
         $this->load->view('partials/header', $data);
         $this->load->view('edit_post', $data);

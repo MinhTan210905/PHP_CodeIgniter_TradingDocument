@@ -49,7 +49,7 @@ $cur_step = $timeline[$order['status']] ?? 1;
                 $steps = [
                     ['icon' => 'fa-shopping-cart', 'label' => 'Yêu cầu'],
                     ['icon' => 'fa-handshake',      'label' => 'Xác nhận'],
-                    ['icon' => 'fa-box-open',        'label' => $order['status'] === 'completed' ? 'Hoàn thành' : ($order['status'] === 'disputed' ? 'Tranh chấp' : 'Nhận hàng')],
+                    ['icon' => 'fa-qrcode',        'label' => $order['status'] === 'completed' ? 'Hoàn thành' : ($order['status'] === 'disputed' ? 'Tranh chấp' : 'Giao nhận')],
                 ];
                 foreach ($steps as $i => $step):
                     $done    = ($i + 1) <= $cur_step;
@@ -180,18 +180,12 @@ $cur_step = $timeline[$order['status']] ?? 1;
                     <i class="fas fa-wallet me-1"></i>Thanh toán / Chọn phương thức
                 </a>
             <?php elseif ($order['status'] === 'processing'): ?>
-                <span class="btn btn-outline-secondary rounded-3 fw-bold disabled">
-                    <i class="fas fa-hourglass-half me-1"></i>Chờ người bán đi giao sách
-                </span>
-            <?php elseif ($order['status'] === 'delivering'): ?>
-                <a href="<?= site_url('orders/received/' . $order['id']) ?>"
-                   class="btn btn-success rounded-3 fw-bold"
-                   onclick="return confirm('Xác nhận bạn đã thực sự nhận được tài liệu này từ người bán?');">
-                    <i class="fas fa-check me-1"></i>Đã nhận hàng
-                </a>
+                <button class="btn btn-primary-hcmue rounded-3 fw-bold" data-bs-toggle="modal" data-bs-target="#buyerQrModal">
+                    <i class="fas fa-qrcode me-1"></i>Mã QR / OTP Giao nhận
+                </button>
                 <button class="btn btn-outline-danger rounded-3 fw-semibold"
                         data-bs-toggle="modal" data-bs-target="#disputeModalDetail">
-                    <i class="fas fa-exclamation-triangle me-1"></i>Chưa nhận được (Báo cáo)
+                    <i class="fas fa-exclamation-triangle me-1"></i>Khiếu nại / Yêu cầu hủy
                 </button>
             <?php endif; ?>
 
@@ -201,6 +195,10 @@ $cur_step = $timeline[$order['status']] ?? 1;
                    class="btn rounded-3 fw-bold text-dark" style="background:var(--hcmue-gold);">
                     <i class="fas fa-star me-1"></i>Đánh giá người bán
                 </a>
+                <button class="btn btn-outline-danger rounded-3 fw-semibold"
+                        data-bs-toggle="modal" data-bs-target="#reportSellerModal">
+                    <i class="fas fa-flag me-1"></i>Báo cáo người bán
+                </button>
             <?php endif; ?>
 
         <!-- === CÁC NÚT HÀNH ĐỘNG DÀNH CHO NGƯỜI BÁN === -->
@@ -227,8 +225,8 @@ $cur_step = $timeline[$order['status']] ?? 1;
             <!-- Hành động Processing -->
             <?php if ($order['status'] === 'processing'): ?>
                 <button class="btn btn-success rounded-3 fw-bold"
-                        data-bs-toggle="modal" data-bs-target="#deliveryProofModal">
-                    <i class="fas fa-camera me-1"></i>Đã giao hàng (Gửi minh chứng)
+                        data-bs-toggle="modal" data-bs-target="#qrScanModal">
+                    <i class="fas fa-qrcode me-1"></i>Quét QR / Nhập OTP giao hàng
                 </button>
                 <a href="<?= site_url('orders/cancel/' . $order['id']) ?>"
                    class="btn btn-outline-danger rounded-3 fw-semibold"
@@ -281,488 +279,188 @@ $cur_step = $timeline[$order['status']] ?? 1;
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 rounded-4 shadow">
             <div class="modal-header" style="background:linear-gradient(135deg,#D93025,#E53935);border-radius:16px 16px 0 0;">
-                <h5 class="modal-title text-white fw-bold"><i class="fas fa-exclamation-triangle me-2"></i>Báo cáo vấn đề</h5>
+                <h5 class="modal-title text-white fw-bold"><i class="fas fa-exclamation-triangle me-2"></i>Khiếu nại / Yêu cầu hủy</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <form action="<?= site_url('orders/dispute/' . $order['id']) ?>" method="POST">
                 <div class="modal-body p-4">
-                    <p class="text-muted" style="font-size:0.88rem;">Vui lòng mô tả chi tiết vấn đề gặp phải để Ban quản trị hỗ trợ giải quyết:</p>
+                    <p class="text-muted" style="font-size:0.88rem;">Vui lòng mô tả chi tiết vấn đề gặp phải để Ban quản trị hỗ trợ giải quyết (Tiền của bạn vẫn đang được tạm giữ an toàn):</p>
                     <textarea class="form-control" name="dispute_reason" rows="3" style="border-radius:12px; font-size:0.88rem;"
                               placeholder="Ví dụ: Chưa nhận được sách như đã hẹn, hoặc tài liệu không đúng mô tả..." required></textarea>
                 </div>
                 <div class="modal-footer border-top-0 pt-0">
                     <button type="button" class="btn btn-light rounded-3" data-bs-dismiss="modal">Đóng</button>
-                    <button type="submit" class="btn btn-danger rounded-3 fw-bold px-4">Gửi phản hồi</button>
+                    <button type="submit" class="btn btn-danger rounded-3 fw-bold px-4">Gửi khiếu nại</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
 
-<!-- Modal Đã Giao Hàng (Tải lên minh chứng - Cho Người bán) -->
-<div class="modal fade" id="deliveryProofModal" tabindex="-1" data-bs-backdrop="static">
+<!-- Modal Báo cáo người bán (Cho Người mua khi giao dịch đã xong) -->
+<div class="modal fade" id="reportSellerModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 rounded-4 shadow">
-            <div class="modal-header d-flex align-items-center justify-content-between" style="background:linear-gradient(135deg,#059669,#10B981);border-radius:16px 16px 0 0; width: 100%;">
-                <h5 class="modal-title text-white fw-bold mb-0"><i class="fas fa-camera me-2"></i>Minh chứng giao hàng</h5>
-                <div class="d-flex align-items-center gap-2">
-                    <span id="countdownBadge" class="badge bg-danger d-flex align-items-center gap-1 px-2.5 py-1.5 fs-7 fw-bold shadow-sm" style="font-family: monospace;">
-                        <i class="fas fa-hourglass-half animate-pulse"></i><span id="timerText">05:00</span>
-                    </span>
-                    <button type="button" class="btn-close btn-close-white ms-2" data-bs-dismiss="modal" style="margin:0;"></button>
-                </div>
+            <div class="modal-header" style="background:linear-gradient(135deg,#D93025,#E53935);border-radius:16px 16px 0 0;">
+                <h5 class="modal-title text-white fw-bold"><i class="fas fa-flag me-2"></i>Báo cáo người bán</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <form action="<?= site_url('orders/delivered/' . $order['id']) ?>" method="POST" id="proofForm">
-                <!-- Ẩn field chứa dữ liệu base64 của ảnh chụp -->
-                <input type="hidden" name="delivery_proof_base64" id="deliveryProofBase64" required>
-                
-                <div class="modal-body p-3 text-center">
-                    <p class="text-muted mb-2" style="font-size:0.85rem;">Vui lòng chụp ảnh minh chứng tại thời điểm giao hàng. Hệ thống sẽ tự động ghi nhận địa chỉ và thời gian thực vào ảnh.</p>
-                    
-                    <!-- Bảng trạng thái xác thực máy ảnh và vị trí -->
-                    <div id="cameraStatus" class="alert alert-warning py-2 px-3 mb-3 rounded-3 text-center" style="font-size:0.85rem; font-weight: 500;">
-                        <i class="fas fa-spinner fa-spin me-2"></i>Đang xác thực Máy ảnh và Vị trí GPS của bạn...
-                    </div>
-                    
-                    <div id="cameraContainer" class="position-relative bg-dark rounded-4 overflow-hidden mb-3 mx-auto" style="aspect-ratio: 3/4; max-width: 300px; display:flex; justify-content:center; align-items:center;">
-                        <video id="cameraVideo" autoplay playsinline style="width:100%; height:100%; object-fit:cover;"></video>
-                        <canvas id="cameraCanvas" style="display:none;"></canvas>
-                        <img id="photoResult" style="display:none; width:100%; height:100%; object-fit:cover;">
-                        
-                        <!-- Lớp phủ (Overlay) thông tin trên giao diện chụp -->
-                        <div id="cameraOverlay" class="position-absolute text-start text-white p-2" style="bottom:10px; left:10px; right:10px; background:rgba(0,0,0,0.5); border-radius:8px; font-size:0.7rem; pointer-events: none;">
-                            <div id="overlayTime" class="fw-bold mb-1"><i class="fas fa-clock me-1"></i>Đang lấy thời gian...</div>
-                            <div id="overlayLoc"><i class="fas fa-map-marker-alt me-1"></i>Đang lấy vị trí...</div>
-                        </div>
-                    </div>
-
-                    <div class="d-flex justify-content-center gap-3">
-                        <button type="button" id="btnCapture" class="btn btn-primary-hcmue rounded-circle shadow disabled" style="width:64px; height:64px;" disabled>
-                            <i class="fas fa-camera fs-3"></i>
-                        </button>
-                        <button type="button" id="btnRetake" class="btn btn-secondary rounded-circle shadow" style="width:64px; height:64px; display:none;">
-                            <i class="fas fa-redo fs-3"></i>
-                        </button>
-                    </div>
+            <form action="<?= site_url('orders/report_seller/' . $order['id']) ?>" method="POST">
+                <div class="modal-body p-4">
+                    <p class="text-muted" style="font-size:0.88rem;">Vì giao dịch đã được xác nhận (quét QR) nên dòng tiền đã được chuyển giao và không thể hoàn lại tự động.</p>
+                    <p class="text-muted" style="font-size:0.88rem;">Tuy nhiên, nếu bạn phát hiện hành vi lừa đảo tinh vi sau đó (VD: sách giả, rách trang bên trong mà lúc gặp không để ý), bạn có thể báo cáo tài khoản này để Admin xem xét xử lý (Ban tài khoản).</p>
+                    <textarea class="form-control mt-2" name="report_reason" rows="3" style="border-radius:12px; font-size:0.88rem;"
+                              placeholder="Mô tả rõ hành vi gian lận của người bán..." required></textarea>
                 </div>
                 <div class="modal-footer border-top-0 pt-0">
                     <button type="button" class="btn btn-light rounded-3" data-bs-dismiss="modal">Đóng</button>
-                    <button type="button" id="btnSubmitProof" class="btn btn-success rounded-3 fw-bold px-4 disabled">Xác nhận Đã giao</button>
+                    <button type="submit" class="btn btn-danger rounded-3 fw-bold px-4">Gửi báo cáo</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
 
-<script>
-document.addEventListener("DOMContentLoaded", function() {
-    const modal = document.getElementById('deliveryProofModal');
-    const video = document.getElementById('cameraVideo');
-    const canvas = document.getElementById('cameraCanvas');
-    const photoResult = document.getElementById('photoResult');
-    const btnCapture = document.getElementById('btnCapture');
-    const btnRetake = document.getElementById('btnRetake');
-    const btnSubmit = document.getElementById('btnSubmitProof');
-    const base64Input = document.getElementById('deliveryProofBase64');
-    
-    const overlayTime = document.getElementById('overlayTime');
-    const overlayLoc = document.getElementById('overlayLoc');
-    
-    let stream = null;
-    let locationString = "Đang xác định vị trí...";
-    let timeInterval = null;
-    let countdownInterval = null;
-    let remainingTime = 300; // 5 phút (300 giây)
-    let hasLocation = false;
-    let hasCamera = false;
-
-    // Định nghĩa các cơ sở HCMUE để nhận diện tức thì trong phạm vi 300m
-    const CS1 = { lat: 10.759928, lon: 106.678736, name: "ĐH Sư phạm TPHCM - CS An Dương Vương" };
-    const CS2 = { lat: 10.789182, lon: 106.674895, name: "ĐH Sư phạm TPHCM - CS Lê Văn Sỹ" };
-
-    // Tính khoảng cách Haversine giữa 2 tọa độ (mét)
-    function getDistance(lat1, lon1, lat2, lon2) {
-        const R = 6371e3; // bán kính Trái Đất tính theo mét
-        const φ1 = lat1 * Math.PI / 180;
-        const φ2 = lat2 * Math.PI / 180;
-        const Δφ = (lat2 - lat1) * Math.PI / 180;
-        const Δλ = (lon2 - lon1) * Math.PI / 180;
-
-        const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
-                  Math.cos(φ1) * Math.cos(φ2) *
-                  Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-        return R * c;
-    }
-
-    // Cập nhật trạng thái kích hoạt của Nút chụp hình
-    function updateValidationStatus() {
-        const cameraStatus = document.getElementById('cameraStatus');
-        
-        if (remainingTime <= 0) {
-            cameraStatus.className = "alert alert-danger py-2 px-3 mb-3 rounded-3 text-center";
-            cameraStatus.innerHTML = `<i class="fas fa-times-circle me-2"></i>Đã hết thời gian chụp minh chứng. Vui lòng đóng và mở lại!`;
-            btnCapture.disabled = true;
-            btnCapture.classList.add('disabled');
-            return;
-        }
-
-        if (hasLocation && hasCamera) {
-            cameraStatus.className = "alert alert-success py-2 px-3 mb-3 rounded-3 text-center";
-            cameraStatus.innerHTML = `<i class="fas fa-check-circle me-2"></i>Đã xác thực thiết bị! Bạn có thể chụp ảnh minh chứng ngay.`;
-            btnCapture.disabled = false;
-            btnCapture.classList.remove('disabled');
-        } else {
-            btnCapture.disabled = true;
-            btnCapture.classList.add('disabled');
-
-            let statusHTML = `<i class="fas fa-spinner fa-spin me-2"></i>Đang xác minh: `;
-            let pending = [];
-            if (!hasCamera) pending.push("Máy ảnh <i class='fas fa-camera ms-1'></i>");
-            if (!hasLocation) pending.push("Vị trí GPS <i class='fas fa-map-marker-alt ms-1'></i>");
-            
-            statusHTML += pending.join(" và ") + "...";
-            cameraStatus.className = "alert alert-warning py-2 px-3 mb-3 rounded-3 text-center";
-            cameraStatus.innerHTML = statusHTML;
-        }
-    }
-
-    // Xử lý khi hết thời gian 5 phút
-    function handleTimeout() {
-        if (stream) {
-            stream.getTracks().forEach(track => track.stop());
-            stream = null;
-        }
-        
-        const cameraStatus = document.getElementById('cameraStatus');
-        cameraStatus.className = "alert alert-danger py-2 px-3 mb-3 rounded-3 text-center";
-        cameraStatus.innerHTML = `<i class="fas fa-times-circle me-2"></i>Hết thời gian phiên chụp minh chứng (5 phút). Vui lòng đóng và mở lại.`;
-        
-        video.style.display = 'none';
-        photoResult.style.display = 'none';
-        document.getElementById('cameraOverlay').style.display = 'none';
-        base64Input.value = '';
-        
-        btnCapture.disabled = true;
-        btnCapture.classList.add('disabled');
-        btnCapture.style.display = 'inline-block';
-        btnRetake.style.display = 'none';
-        btnSubmit.classList.add('disabled');
-    }
-
-    // Dịch tọa độ thành địa chỉ chi tiết qua API OpenStreetMap Nominatim
-    function fetchAddressFromCoords(lat, lon) {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 3500); // 3.5s timeout
-
-        fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1`, {
-            signal: controller.signal,
-            headers: { 'Accept-Language': 'vi,en;q=0.9' }
-        })
-        .then(res => res.json())
-        .then(data => {
-            clearTimeout(timeoutId);
-            const addr = data.address;
-            if (addr) {
-                let parts = [];
-                // 1. Tên địa điểm nổi bật nếu có
-                const place = addr.amenity || addr.building || addr.shop || addr.tourism || addr.historic || addr.school || addr.university || addr.mall || addr.hotel;
-                if (place) parts.push(place);
-                
-                // 2. Số nhà + Tên đường
-                let street = "";
-                if (addr.house_number) street += addr.house_number + " ";
-                if (addr.road) street += addr.road;
-                if (street) parts.push(street);
-                
-                // 3. Phường / Xã
-                const ward = addr.quarter || addr.suburb || addr.neighbourhood || addr.village || addr.hamlet;
-                if (ward && !parts.includes(ward)) parts.push(ward);
-                
-                // 4. Quận / Huyện
-                const district = addr.city_district || addr.district || addr.county;
-                if (district && !parts.includes(district)) parts.push(district);
-                
-                // 5. Tỉnh / Thành phố
-                const city = addr.city || addr.state || addr.province;
-                if (city && !parts.includes(city)) parts.push(city);
-                
-                let cleanAddr = parts.filter(p => p && typeof p === 'string').join(', ');
-                cleanAddr = cleanAddr.replace(', Việt Nam', ''); // Bỏ quốc gia cho ngắn gọn
-                
-                locationString = cleanAddr || `GPS: ${lat.toFixed(5)}, ${lon.toFixed(5)}`;
-            } else {
-                locationString = `GPS: ${lat.toFixed(5)}, ${lon.toFixed(5)}`;
-            }
-            overlayLoc.innerHTML = `<i class="fas fa-map-marker-alt me-1"></i>${locationString}`;
-            
-            hasLocation = true;
-            updateValidationStatus();
-        })
-        .catch(() => {
-            clearTimeout(timeoutId);
-            locationString = `GPS: ${lat.toFixed(5)}, ${lon.toFixed(5)}`;
-            overlayLoc.innerHTML = `<i class="fas fa-map-marker-alt me-1"></i>${locationString}`;
-            
-            hasLocation = true;
-            updateValidationStatus();
-        });
-    }
-
-    // Xử lý khi có tọa độ latitude & longitude
-    function handleLocationCoords(lat, lon) {
-        const distCS1 = getDistance(lat, lon, CS1.lat, CS1.lon);
-        const distCS2 = getDistance(lat, lon, CS2.lat, CS2.lon);
-
-        if (distCS1 <= 300) {
-            locationString = CS1.name;
-            overlayLoc.innerHTML = `<i class="fas fa-map-marker-alt me-1"></i>${locationString}`;
-            hasLocation = true;
-            updateValidationStatus();
-        } else if (distCS2 <= 300) {
-            locationString = CS2.name;
-            overlayLoc.innerHTML = `<i class="fas fa-map-marker-alt me-1"></i>${locationString}`;
-            hasLocation = true;
-            updateValidationStatus();
-        } else {
-            fetchAddressFromCoords(lat, lon);
-        }
-    }
-
-    // Vẽ watermark thông tin giao hàng chuyên nghiệp, tự động xuống dòng và cân chỉnh kích thước
-    function drawWatermark(ctx, canvasWidth, canvasHeight, timeStr, locStr) {
-        const fontSize = Math.max(13, Math.round(canvasWidth * 0.028));
-        ctx.font = "bold " + fontSize + "px Arial";
-        
-        const margin = Math.round(canvasWidth * 0.03);
-        const padding = Math.round(canvasWidth * 0.02);
-        const maxWidth = canvasWidth - (margin * 2) - (padding * 2);
-        
-        // Cắt chuỗi địa chỉ thành các dòng nhỏ phù hợp với bề rộng khung ảnh
-        const words = locStr.split(" ");
-        let lines = [];
-        let currentLine = "Vị trí: " + words[0];
-        
-        for (let i = 1; i < words.length; i++) {
-            let testLine = currentLine + " " + words[i];
-            let metrics = ctx.measureText(testLine);
-            if (metrics.width > maxWidth) {
-                lines.push(currentLine);
-                currentLine = words[i];
-            } else {
-                currentLine = testLine;
-            }
-        }
-        lines.push(currentLine);
-        
-        const timeLine = "Thời gian: " + timeStr;
-        const lineHeight = fontSize * 1.4;
-        const totalLines = 1 + lines.length;
-        const boxHeight = (totalLines * lineHeight) + (padding * 2);
-        const boxY = canvasHeight - margin - boxHeight;
-        
-        // Vẽ hình chữ nhật nền đen mờ bo viền nhẹ
-        ctx.fillStyle = "rgba(0, 0, 0, 0.65)";
-        ctx.fillRect(margin, boxY, canvasWidth - (margin * 2), boxHeight);
-        
-        // Vẽ chữ
-        ctx.fillStyle = "white";
-        ctx.fillText(timeLine, margin + padding, boxY + padding + fontSize);
-        
-        for (let i = 0; i < lines.length; i++) {
-            ctx.fillText(lines[i], margin + padding, boxY + padding + fontSize + ((i + 1) * lineHeight));
-        }
-    }
-
-    // Khi bật Modal
-    modal.addEventListener('show.bs.modal', function () {
-        // Cập nhật thời gian liên tục
-        timeInterval = setInterval(() => {
-            const now = new Date();
-            overlayTime.innerHTML = `<i class="fas fa-clock me-1"></i>${now.toLocaleDateString('vi-VN')} ${now.toLocaleTimeString('vi-VN')}`;
-        }, 1000);
-
-        // Khởi động đếm ngược 5 phút
-        remainingTime = 300;
-        document.getElementById('timerText').innerText = "05:00";
-        document.getElementById('countdownBadge').className = "badge bg-danger d-flex align-items-center gap-1 px-2.5 py-1.5 fs-7 fw-bold shadow-sm";
-        
-        clearInterval(countdownInterval);
-        countdownInterval = setInterval(() => {
-            remainingTime--;
-            if (remainingTime <= 0) {
-                clearInterval(countdownInterval);
-                document.getElementById('timerText').innerText = "00:00";
-                handleTimeout();
-            } else {
-                const m = Math.floor(remainingTime / 60).toString().padStart(2, '0');
-                const s = (remainingTime % 60).toString().padStart(2, '0');
-                document.getElementById('timerText').innerText = `${m}:${s}`;
-                
-                // Hiệu ứng cảnh báo khi còn dưới 1 phút (nhấp nháy nhanh badge đỏ)
-                if (remainingTime <= 60) {
-                    document.getElementById('countdownBadge').classList.add('animate-pulse');
-                }
-            }
-        }, 1000);
-
-        hasLocation = false;
-        hasCamera = false;
-        updateValidationStatus();
-
-        // Hàm dự phòng lấy vị trí qua IP (Khi không dùng được GPS thiết bị hoặc không chạy qua HTTPS/localhost)
-        const fallbackToIPLocation = () => {
-            fetch('https://get.geojs.io/v1/ip/geo.json')
-                .then(res => res.json())
-                .then(data => {
-                    const lat = parseFloat(data.latitude);
-                    const lon = parseFloat(data.longitude);
-                    if (!isNaN(lat) && !isNaN(lon)) {
-                        handleLocationCoords(lat, lon);
-                    } else {
-                        let city = data.city ? data.city : "Không xác định";
-                        locationString = `Khu vực: ${city} (Vị trí ước tính qua IP)`;
-                        overlayLoc.innerHTML = `<i class="fas fa-map-marker-alt me-1"></i>${locationString}`;
-                        hasLocation = true;
-                        updateValidationStatus();
-                    }
-                })
-                .catch(() => {
-                    locationString = "Vị trí không xác định (Lỗi mạng)";
-                    overlayLoc.innerHTML = `<i class="fas fa-map-marker-alt me-1"></i>${locationString}`;
-                    hasLocation = false;
-                    updateValidationStatus();
-                });
-        };
-
-        // Lấy tọa độ (Ưu tiên GPS thiết bị có độ chính xác cao)
-        if (navigator.geolocation && (window.isSecureContext || location.hostname === 'localhost')) {
-            navigator.geolocation.getCurrentPosition(
-                pos => {
-                    handleLocationCoords(pos.coords.latitude, pos.coords.longitude);
-                },
-                err => {
-                    if (err.code === err.PERMISSION_DENIED) {
-                        const cameraStatus = document.getElementById('cameraStatus');
-                        cameraStatus.className = "alert alert-danger py-2 px-3 mb-3 rounded-3 text-center";
-                        cameraStatus.innerHTML = `<i class="fas fa-exclamation-triangle me-2"></i>Lỗi định vị: Vui lòng cho phép quyền Vị trí (GPS) trong cài đặt để tiếp tục minh chứng.`;
-                        hasLocation = false;
-                        updateValidationStatus();
-                    } else {
-                        fallbackToIPLocation();
-                    }
-                },
-                { enableHighAccuracy: true, timeout: 6000, maximumAge: 0 }
-            );
-        } else {
-            fallbackToIPLocation();
-        }
-
-        // Bật Camera (ưu tiên camera sau trên điện thoại di động)
-        navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
-            .then(s => {
-                stream = s;
-                video.srcObject = stream;
-                video.style.display = 'block';
-                photoResult.style.display = 'none';
-                btnCapture.style.display = 'inline-block';
-                btnRetake.style.display = 'none';
-                btnSubmit.classList.add('disabled');
-                
-                hasCamera = true;
-                updateValidationStatus();
-            })
-            .catch(err => {
-                const cameraStatus = document.getElementById('cameraStatus');
-                cameraStatus.className = "alert alert-danger py-2 px-3 mb-3 rounded-3 text-center";
-                cameraStatus.innerHTML = `<i class="fas fa-exclamation-triangle me-2"></i>Lỗi camera: ${err.message}. Vui lòng cấp quyền truy cập Camera để tiếp tục.`;
-                hasCamera = false;
-                updateValidationStatus();
-            });
-    });
-
-    // Khi tắt Modal
-    modal.addEventListener('hidden.bs.modal', function () {
-        if (stream) {
-            stream.getTracks().forEach(track => track.stop());
-            stream = null;
-        }
-        clearInterval(timeInterval);
-        clearInterval(countdownInterval);
-        
-        // Khôi phục trạng thái ban đầu của overlay và kết quả
-        video.style.display = 'block';
-        photoResult.style.display = 'none';
-        document.getElementById('cameraOverlay').style.display = 'block';
-        base64Input.value = '';
-        btnSubmit.classList.add('disabled');
-    });
-
-    // Chụp ảnh và ghép Watermark
-    btnCapture.addEventListener('click', function() {
-        if (!stream || !hasCamera || !hasLocation) return;
-        
-        // Thiết lập kích thước canvas bằng kích thước video thực
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        const ctx = canvas.getContext('2d');
-        
-        // Vẽ frame video hiện tại lên canvas
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        
-        // Vẽ overlay text lên canvas dạng hộp watermark Shopee chuyên nghiệp
-        const now = new Date();
-        const timeStr = `${now.toLocaleDateString('vi-VN')} ${now.toLocaleTimeString('vi-VN')}`;
-        const locStr = (typeof locationString !== 'undefined' ? locationString : "Vị trí không xác định");
-        
-        drawWatermark(ctx, canvas.width, canvas.height, timeStr, locStr);
-        
-        // Chuyển canvas thành Base64
-        const dataURL = canvas.toDataURL('image/jpeg', 0.82);
-        base64Input.value = dataURL;
-        
-        // Đổi view sang ảnh kết quả
-        video.style.display = 'none';
-        photoResult.src = dataURL;
-        photoResult.style.display = 'block';
-        
-        btnCapture.style.display = 'none';
-        btnRetake.style.display = 'inline-block';
-        btnSubmit.classList.remove('disabled');
-    });
-
-    // Chụp lại
-    btnRetake.addEventListener('click', function() {
-        if (remainingTime <= 0) return; // Nếu hết giờ thì không cho chụp lại
-        
-        video.style.display = 'block';
-        photoResult.style.display = 'none';
-        base64Input.value = '';
-        
-        btnCapture.style.display = 'inline-block';
-        btnRetake.style.display = 'none';
-        btnSubmit.classList.add('disabled');
-    });
-
-    // Gửi Form minh chứng
-    btnSubmit.addEventListener('click', function() {
-        if (base64Input.value && remainingTime > 0) {
-            document.getElementById('proofForm').submit();
-        }
-    });
-});
-</script>
-
-<!-- Hiển thị Minh chứng giao hàng -->
-<?php if (!empty($order['delivery_proof'])): ?>
-    <div class="card border-0 rounded-4 shadow-sm p-4 mb-4 mt-4">
-        <h6 class="fw-bold mb-3" style="color:var(--hcmue-blue);"><i class="fas fa-camera-retro me-2"></i>Minh chứng giao hàng từ người bán</h6>
-        <div class="text-center">
-            <img src="<?= base_url($order['delivery_proof']) ?>" alt="Minh chứng giao hàng" class="img-fluid rounded-3 shadow-sm" style="max-height: 400px; object-fit: contain;">
-            <div class="mt-2 text-muted" style="font-size:0.8rem;">Ảnh chụp minh chứng giao hàng từ người bán.</div>
+<!-- Modal Hiển thị QR cho Người Mua -->
+<div class="modal fade" id="buyerQrModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 rounded-4 shadow">
+            <div class="modal-header" style="background:linear-gradient(135deg,var(--hcmue-blue),var(--hcmue-blue-light));border-radius:16px 16px 0 0;">
+                <h5 class="modal-title text-white fw-bold"><i class="fas fa-qrcode me-2"></i>Mã xác nhận giao nhận</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4 text-center">
+                <p class="text-muted mb-3" style="font-size:0.9rem;">Khi gặp mặt người bán, hãy đưa mã QR này cho người bán quét để hoàn tất giao dịch.</p>
+                <div class="d-flex justify-content-center mb-4">
+                    <div id="qrcodeDisplay" style="padding:15px; background:white; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.1);"></div>
+                </div>
+                <div class="mb-2 text-muted" style="font-size:0.85rem;">Hoặc đọc mã OTP 6 số này cho người bán:</div>
+                <div class="fw-bold fs-2" style="color:var(--hcmue-gold); letter-spacing:8px;"><?= isset($order['otp_code']) ? htmlspecialchars($order['otp_code']) : '------' ?></div>
+            </div>
         </div>
     </div>
-<?php endif; ?>
+</div>
+
+<!-- Modal Quét QR / Nhập OTP cho Người Bán -->
+<div class="modal fade" id="qrScanModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 rounded-4 shadow">
+            <div class="modal-header" style="background:linear-gradient(135deg,#059669,#10B981);border-radius:16px 16px 0 0;">
+                <h5 class="modal-title text-white fw-bold"><i class="fas fa-qrcode me-2"></i>Xác thực giao hàng</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" id="closeQrModal"></button>
+            </div>
+            <div class="modal-body p-4 text-center">
+                <ul class="nav nav-pills nav-fill mb-3 rounded-3 p-1 bg-light" id="qrTab" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active rounded-3 fw-bold" id="scan-tab" data-bs-toggle="tab" data-bs-target="#scan" type="button" role="tab">Quét mã QR</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link rounded-3 fw-bold" id="otp-tab" data-bs-toggle="tab" data-bs-target="#otp" type="button" role="tab">Nhập mã OTP</button>
+                    </li>
+                </ul>
+                <div class="tab-content" id="qrTabContent">
+                    <div class="tab-pane fade show active" id="scan" role="tabpanel">
+                        <div id="qr-reader" style="width:100%; border-radius:12px; overflow:hidden;" class="mb-3"></div>
+                        <div class="text-muted" style="font-size:0.85rem;">Đưa camera vào mã QR trên màn hình của người mua.</div>
+                    </div>
+                    <div class="tab-pane fade" id="otp" role="tabpanel">
+                        <div class="py-4">
+                            <label class="form-label text-muted fw-bold mb-3">Nhập mã OTP 6 số từ người mua</label>
+                            <input type="text" id="otpInput" class="form-control form-control-lg text-center fw-bold mb-4" style="font-size:2rem; letter-spacing:8px;" maxlength="6" placeholder="------">
+                            <button class="btn btn-success rounded-3 fw-bold px-5 py-2 w-100" id="btnVerifyOtp">Xác thực OTP</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://unpkg.com/html5-qrcode"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        <?php if ($is_buyer && $order['status'] === 'processing' && !empty($order['qr_token'])): ?>
+        new QRCode(document.getElementById("qrcodeDisplay"), {
+            text: "<?= htmlspecialchars($order['qr_token']) ?>",
+            width: 200,
+            height: 200,
+            colorDark : "#000000",
+            colorLight : "#ffffff",
+            correctLevel : QRCode.CorrectLevel.H
+        });
+        <?php endif; ?>
+
+        <?php if (!$is_buyer && $order['status'] === 'processing'): ?>
+        let html5QrcodeScanner = null;
+
+        const qrModal = document.getElementById('qrScanModal');
+        qrModal.addEventListener('show.bs.modal', function () {
+            if (!html5QrcodeScanner) {
+                html5QrcodeScanner = new Html5QrcodeScanner(
+                    "qr-reader", { fps: 10, qrbox: {width: 250, height: 250}, aspectRatio: 1.0 }, false);
+                html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+            }
+        });
+
+        qrModal.addEventListener('hidden.bs.modal', function () {
+            if (html5QrcodeScanner) {
+                html5QrcodeScanner.clear().catch(error => {
+                    console.error("Failed to clear html5QrcodeScanner. ", error);
+                });
+                html5QrcodeScanner = null;
+            }
+        });
+
+        let isVerifying = false;
+        function verifyHandover(code) {
+            if (isVerifying) return;
+            isVerifying = true;
+            
+            // Tạm ẩn scanner để tránh quét liên tục
+            if (html5QrcodeScanner) {
+                html5QrcodeScanner.clear();
+            }
+
+            $.post('<?= site_url("orders/verify_handover") ?>', { code: code }, function(response) {
+                const res = JSON.parse(response);
+                if (res.success) {
+                    alert('Thành công: ' + res.message);
+                    location.reload();
+                } else {
+                    alert('Lỗi: ' + res.message);
+                    isVerifying = false;
+                    // Resume scanning
+                    if (document.getElementById('scan-tab').classList.contains('active')) {
+                         html5QrcodeScanner = new Html5QrcodeScanner(
+                            "qr-reader", { fps: 10, qrbox: {width: 250, height: 250}, aspectRatio: 1.0 }, false);
+                         html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+                    }
+                }
+            }).fail(function() {
+                alert('Lỗi kết nối máy chủ.');
+                isVerifying = false;
+            });
+        }
+
+        function onScanSuccess(decodedText, decodedResult) {
+            verifyHandover(decodedText);
+        }
+
+        function onScanFailure(error) {
+            // Ignore scan failures
+        }
+
+        document.getElementById('btnVerifyOtp').addEventListener('click', function() {
+            const otp = document.getElementById('otpInput').value.trim();
+            if (otp.length === 6) {
+                verifyHandover(otp);
+            } else {
+                alert('Vui lòng nhập đủ 6 số OTP');
+            }
+        });
+        <?php endif; ?>
+    });
+</script>
 
 

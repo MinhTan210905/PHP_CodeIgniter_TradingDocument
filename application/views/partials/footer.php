@@ -856,9 +856,9 @@ function syncUnreadCount() {
             if (badge) {
                 if (count > 0) {
                     badge.innerText = count;
-                    badge.style.display = 'block';
+                    badge.classList.remove('d-none');
                 } else {
-                    badge.style.display = 'none';
+                    badge.classList.add('d-none');
                 }
             }
             if (floatingBadge) {
@@ -872,6 +872,28 @@ function syncUnreadCount() {
         }
     });
 }
+
+function syncActionRequiredCount() {
+    fetch('<?= site_url("orders/ajax_get_action_required_count") ?>', {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            const count = data.count;
+            const actionBadges = document.querySelectorAll('.action-required-badge');
+            actionBadges.forEach(badge => {
+                if (count > 0) {
+                    badge.innerText = count;
+                    badge.classList.remove('d-none');
+                } else {
+                    badge.classList.add('d-none');
+                }
+            });
+        }
+    });
+}
+
 
 window.floatingMarkAsRead = function(event, otherId) {
     event.stopPropagation();
@@ -952,6 +974,64 @@ function escapeHtml(text) {
 
 // Khởi chạy khi tài liệu sẵn sàng
 document.addEventListener('DOMContentLoaded', function() {
+      if (typeof globalPusher !== 'undefined' && globalPusher !== null) {
+          const userId = <?= $this->session->userdata('user_id') ?? 'null' ?>;
+          if (userId) {
+              const channel = globalPusher.subscribe('chat-channel-' + userId);
+              channel.bind('order-update', function(data) {
+                  if (data && data.message) {
+                      // Tạo Toast thông báo nhỏ
+                      const toast = document.createElement('div');
+                      toast.style.position = 'fixed';
+                      toast.style.top = '80px';
+                      toast.style.right = '20px';
+                      toast.style.background = '#3B82F6';
+                      toast.style.color = '#fff';
+                      toast.style.padding = '12px 20px';
+                      toast.style.borderRadius = '8px';
+                      toast.style.boxShadow = '0 4px 6px rgba(0,0,0,0.1)';
+                      toast.style.zIndex = '9999';
+                      toast.style.fontWeight = '500';
+                      toast.innerHTML = '<i class="fas fa-bell me-2"></i> ' + data.message;
+                      document.body.appendChild(toast);
+                      setTimeout(() => toast.remove(), 4000);
+
+                      // Cập nhật badge
+                      fetch('<?= site_url("orders/ajax_get_action_required_count") ?>', {
+                          headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                      })
+                      .then(res => res.json())
+                      .then(resData => {
+                          if (resData.status === 'ok') {
+                              let badge = document.querySelector('a[href*="orders"] .nav-badge');
+                              if (badge) {
+                                  if (resData.count > 0) {
+                                      badge.innerText = resData.count;
+                                      badge.classList.remove('d-none');
+                                  } else {
+                                      badge.classList.add('d-none');
+                                  }
+                              } else if (resData.count > 0) {
+                                  const orderIcon = document.querySelector('a[href*="orders"]');
+                                  if (orderIcon) {
+                                      badge = document.createElement('span');
+                                      badge.className = 'nav-badge';
+                                      badge.innerText = resData.count;
+                                      orderIcon.appendChild(badge);
+                                  }
+                              }
+                          }
+                      });
+
+                      // Tự load lại trang detail nếu đang mở đúng đơn đó
+                      if (data.order_id && window.location.href.includes('orders/detail/' + data.order_id)) {
+                          setTimeout(() => window.location.reload(), 1500);
+                      }
+                  }
+              });
+          }
+      }
+
     // Sửa nút Hộp thư trên Header để khi click sẽ mở chat widget
     const headerTrigger = document.getElementById('headerInboxTrigger');
     if (headerTrigger) {
@@ -971,9 +1051,311 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Tự động kiểm tra unread badge định kỳ mỗi 15 giây
+    
     syncUnreadCount();
+    syncActionRequiredCount();
     setInterval(syncUnreadCount, 15000);
+    setInterval(syncActionRequiredCount, 15000);
+
+    // Bind Pusher if available
+    if (typeof globalPusher !== 'undefined' && globalPusher) {
+        var userChannel = globalPusher.subscribe('user-<?= $this->session->userdata("user_id") ?>');
+        
+        // When new message arrives
+        userChannel.bind('new-message', function(data) {
+            syncUnreadCount();
+            if (typeof syncInboxList === 'function') {
+                syncInboxList(); // If we are on inbox page
+            }
+        });
+
+        // When order event arrives (e.g. buyer checkout, seller verify QR)
+        userChannel.bind('order-event', function(data) {
+            syncActionRequiredCount();
+            if (data.message) {
+                // Show a toast or alert (optional, let's just use alert for simplicity or nothing if we don't want intrusive)
+                // We'll just sync the badge.
+            }
+        });
+    }
+
 });
 </script>
 <?php endif; ?>
 
+<!-- ========================================== -->
+<!--       HCMUE AI CHATBOT WIDGET              -->
+<!-- ========================================== -->
+<style>
+/* CSS cho Bot Chat */
+.ai-chat-widget {
+    position: fixed;
+    bottom: 24px;
+    left: 24px;
+    z-index: 1050;
+    font-family: 'Inter', sans-serif;
+}
+.ai-chat-trigger {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #8B5CF6 0%, #6D28D9 100%);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    box-shadow: 0 4px 16px rgba(109, 40, 217, 0.4);
+    border: none;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    outline: none;
+}
+.ai-chat-trigger:hover {
+    transform: scale(1.08) rotate(5deg);
+    box-shadow: 0 6px 22px rgba(109, 40, 217, 0.5);
+}
+.ai-chat-window {
+    position: absolute;
+    bottom: 76px;
+    left: 0;
+    width: 360px;
+    height: 500px;
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(15,23,42,0.15);
+    display: none;
+    flex-direction: column;
+    overflow: hidden;
+    transform: translateY(20px) scale(0.95);
+    opacity: 0;
+    transform-origin: bottom left;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1px solid rgba(0,0,0,0.06);
+}
+.ai-chat-window.open {
+    display: flex;
+    transform: translateY(0) scale(1);
+    opacity: 1;
+}
+.ai-chat-header {
+    background: linear-gradient(135deg, #8B5CF6 0%, #6D28D9 100%);
+    color: #fff;
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.ai-chat-header-title {
+    font-size: 1rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.ai-chat-header-close {
+    background: transparent;
+    border: none;
+    color: rgba(255,255,255,0.85);
+    font-size: 18px;
+    cursor: pointer;
+}
+.ai-chat-body {
+    flex-grow: 1;
+    overflow-y: auto;
+    background: #F8FAFC;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.ai-chat-msg {
+    max-width: 85%;
+    padding: 10px 14px;
+    border-radius: 14px;
+    font-size: 0.9rem;
+    line-height: 1.4;
+    word-wrap: break-word;
+}
+.ai-chat-msg.bot {
+    background: #fff;
+    border: 1px solid #E2E8F0;
+    color: #333;
+    border-bottom-left-radius: 4px;
+    align-self: flex-start;
+}
+.ai-chat-msg.user {
+    background: #8B5CF6;
+    color: #fff;
+    border-bottom-right-radius: 4px;
+    align-self: flex-end;
+}
+.ai-chat-footer {
+    padding: 12px;
+    background: #fff;
+    border-top: 1px solid #E2E8F0;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+.ai-chat-input {
+    flex-grow: 1;
+    background: #F1F5F9;
+    border: none;
+    border-radius: 20px;
+    padding: 10px 16px;
+    font-size: 0.9rem;
+    outline: none;
+}
+.ai-chat-send {
+    background: #8B5CF6;
+    color: #fff;
+    border: none;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.ai-chat-send:hover {
+    background: #6D28D9;
+}
+.ai-typing {
+    display: flex;
+    gap: 4px;
+    padding: 4px 8px;
+    align-items: center;
+}
+.ai-typing span {
+    width: 6px;
+    height: 6px;
+    background: #94A3B8;
+    border-radius: 50%;
+    animation: aiTyping 1.4s infinite ease-in-out both;
+}
+.ai-typing span:nth-child(1) { animation-delay: -0.32s; }
+.ai-typing span:nth-child(2) { animation-delay: -0.16s; }
+@keyframes aiTyping {
+    0%, 80%, 100% { transform: scale(0); }
+    40% { transform: scale(1); }
+}
+</style>
+
+<div class="ai-chat-widget">
+    <button class="ai-chat-trigger" onclick="toggleAiChat()" title="Trợ lý ảo AI">
+        <i class="fas fa-robot"></i>
+    </button>
+    <div class="ai-chat-window" id="aiChatWindow">
+        <div class="ai-chat-header">
+            <div class="ai-chat-header-title">
+                <i class="fas fa-magic"></i> HCMUE AI Assistant
+            </div>
+            <button class="ai-chat-header-close" onclick="toggleAiChat()"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="ai-chat-body" id="aiChatBody">
+            <div class="ai-chat-msg bot">
+                Xin chào! 👋 Mình là trợ lý AI của BookSwap. Bạn cần mình hướng dẫn sử dụng tính năng nào của web không?
+            </div>
+        </div>
+        <div class="ai-chat-footer">
+            <input type="text" id="aiChatInput" class="ai-chat-input" placeholder="Nhập câu hỏi..." onkeypress="handleAiChatKey(event)">
+            <button class="ai-chat-send" onclick="sendAiMessage()">
+                <i class="fas fa-paper-plane"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+let isAiTyping = false;
+
+function toggleAiChat() {
+    const w = document.getElementById('aiChatWindow');
+    if (w.classList.contains('open')) {
+        w.classList.remove('open');
+        setTimeout(() => w.style.display = 'none', 300);
+    } else {
+        w.style.display = 'flex';
+        setTimeout(() => w.classList.add('open'), 10);
+        document.getElementById('aiChatInput').focus();
+    }
+}
+
+function handleAiChatKey(e) {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        sendAiMessage();
+    }
+}
+
+function scrollAiChat() {
+    const body = document.getElementById('aiChatBody');
+    body.scrollTop = body.scrollHeight;
+}
+
+function appendAiMessage(text, sender) {
+    const body = document.getElementById('aiChatBody');
+    const div = document.createElement('div');
+    div.className = 'ai-chat-msg ' + sender;
+    div.innerHTML = text;
+    body.appendChild(div);
+    scrollAiChat();
+}
+
+function showAiTyping() {
+    const body = document.getElementById('aiChatBody');
+    const div = document.createElement('div');
+    div.className = 'ai-chat-msg bot';
+    div.id = 'aiTypingIndicator';
+    div.innerHTML = '<div class="ai-typing"><span></span><span></span><span></span></div>';
+    body.appendChild(div);
+    scrollAiChat();
+}
+
+function hideAiTyping() {
+    const el = document.getElementById('aiTypingIndicator');
+    if (el) el.remove();
+}
+
+function sendAiMessage() {
+    if (isAiTyping) return;
+    const input = document.getElementById('aiChatInput');
+    const msg = input.value.trim();
+    if (!msg) return;
+
+    appendAiMessage(escapeHtml(msg), 'user');
+    input.value = '';
+    isAiTyping = true;
+    showAiTyping();
+
+    const formData = new FormData();
+    formData.append('message', msg);
+    var csrfName = '<?= $this->security->get_csrf_token_name() ?>';
+    var csrfHash = '<?= $this->security->get_csrf_hash() ?>';
+    formData.append(csrfName, csrfHash);
+
+    fetch('<?= site_url("chatbot/ask") ?>', {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        body: formData
+    })
+    .then(res => res.json())
+    .then(data => {
+        hideAiTyping();
+        isAiTyping = false;
+        if (data.status === 'success') {
+            appendAiMessage(data.reply, 'bot');
+        } else {
+            appendAiMessage('<span style="color:red;">Lỗi: ' + escapeHtml(data.message) + '</span>', 'bot');
+        }
+    })
+    .catch(err => {
+        hideAiTyping();
+        isAiTyping = false;
+        appendAiMessage('<span style="color:red;">Lỗi kết nối mạng!</span>', 'bot');
+    });
+}
+</script>

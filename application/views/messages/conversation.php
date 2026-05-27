@@ -523,13 +523,8 @@ function pollMessages() {
 
 // KHỞI TẠO PUSHER CHANNELS (REAL-TIME CHAT)
 try {
-    const pusherAppKey = '430b3850d19e9367913c';
-    const pusherCluster = 'ap1';
-
-    const pusher = new Pusher(pusherAppKey, {
-        cluster: pusherCluster,
-        forceTLS: true
-    });
+    if (typeof globalPusher !== 'undefined' && globalPusher !== null) {
+        const pusher = globalPusher;
 
     // Đăng ký lắng nghe kênh chat riêng của User hiện tại
     const channel = pusher.subscribe('chat-channel-' + currentUserId);

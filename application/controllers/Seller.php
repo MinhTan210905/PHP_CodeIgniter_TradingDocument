@@ -33,7 +33,7 @@ class Seller extends CI_Controller {
         if ($this->session->userdata('logged_in')) {
             $uid = $this->session->userdata('user_id');
             $data['unread_count']  = $this->Message_model->count_unread($uid);
-            $data['pending_count'] = $this->Order_model->count_pending_for_seller($uid);
+            $data['pending_count'] = $this->Order_model->count_action_required($uid);
         }
 
         $this->load->view('partials/header', $data);

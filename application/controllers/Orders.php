@@ -18,6 +18,19 @@ class Orders extends CI_Controller {
         $this->load->helper(['url', 'form']);
     }
 
+    // [AJAX] API lấy số đơn hàng cần xử lý
+    public function ajax_get_action_required_count() {
+        if (!$this->session->userdata('logged_in')) {
+            echo json_encode(['success' => false, 'error' => 'Not logged in']);
+            return;
+        }
+        $user_id = $this->session->userdata('user_id');
+        $this->load->model('Order_model');
+        $count = $this->Order_model->count_action_required($user_id);
+        echo json_encode(['success' => true, 'count' => $count]);
+    }
+
+
     private function require_login() {
         if (!$this->session->userdata('logged_in')) {
             $this->session->set_flashdata('error', 'Bạn cần đăng nhập để thực hiện thao tác này.');
@@ -33,7 +46,7 @@ class Orders extends CI_Controller {
         $data['orders_as_buyer']  = $this->Order_model->get_orders_as_buyer($user_id);
         $data['orders_as_seller'] = $this->Order_model->get_orders_as_seller($user_id);
         $data['unread_count']     = $this->Message_model->count_unread($user_id);
-        $data['pending_count']    = $this->Order_model->count_pending_for_seller($user_id);
+        $data['pending_count']    = $this->Order_model->count_action_required($user_id);
         $data['active_tab']       = $this->input->get('tab') ?: 'buy';
 
         $this->load->view('partials/header', $data);
@@ -58,7 +71,7 @@ class Orders extends CI_Controller {
         $data['is_seller']    = ($order['seller_id'] == $user_id);
         $data['is_buyer']     = ($order['buyer_id']  == $user_id);
         $data['unread_count'] = $this->Message_model->count_unread($user_id);
-        $data['pending_count']= $this->Order_model->count_pending_for_seller($user_id);
+        $data['pending_count']= $this->Order_model->count_action_required($user_id);
 
         $this->load->view('partials/header', $data);
         $this->load->view('orders/detail', $data);
@@ -187,6 +200,7 @@ class Orders extends CI_Controller {
             'content'     => "❌ Đơn hàng \"{$order['post_title']}\" đã bị từ chối. Lý do: {$reject_reason}",
         ]);
 
+        $this->trigger_pusher_order($order['buyer_id'], 'Người bán đã từ chối yêu cầu mua của bạn.', $order_id);
         $this->session->set_flashdata('success', 'Đã từ chối đơn hàng.');
         redirect('orders?tab=sell');
     }
@@ -290,90 +304,7 @@ class Orders extends CI_Controller {
         }
     }
 
-    // Người bán xác nhận đã giao hàng
-    public function delivered($order_id) {
-        $this->require_login();
-        $seller_id = $this->session->userdata('user_id');
-        $order = $this->Order_model->get_order_by_id($order_id);
-
-        if (!$order || $order['seller_id'] != $seller_id || $order['status'] !== 'processing') {
-            $this->session->set_flashdata('error', 'Không thể xác nhận giao hàng cho đơn này!');
-            redirect('orders?tab=sell');
-            return;
-        }
-
-        $update_data = ['status' => 'delivering'];
-
-        $base64_image = $this->input->post('delivery_proof_base64');
-        
-        if (!empty($base64_image)) {
-            $upload_dir = FCPATH . 'assets/uploads/proofs/';
-            if (!is_dir($upload_dir)) mkdir($upload_dir, 0777, TRUE);
-            
-            // Extract base64 data
-            $image_parts = explode(";base64,", $base64_image);
-            if (count($image_parts) == 2) {
-                $image_type_aux = explode("image/", $image_parts[0]);
-                $image_type = strtolower(trim($image_type_aux[1] ?? ''));
-
-                // FIX #5: Validate loại file ảnh để chống upload file PHP giả dạng ảnh (RCE)
-                $allowed_types = ['jpeg', 'jpg', 'png', 'gif', 'webp'];
-                if (!in_array($image_type, $allowed_types)) {
-                    $this->session->set_flashdata('error', 'Loại file không hợp lệ! Chỉ chấp nhận: jpg, png, gif, webp.');
-                    redirect('orders/detail/' . $order_id);
-                    return;
-                }
-
-                $image_base64 = base64_decode($image_parts[1]);
-                $file_name = uniqid('proof_') . '.' . $image_type;
-                $file_path = $upload_dir . $file_name;
-                
-                if (file_put_contents($file_path, $image_base64)) {
-                    $update_data['delivery_proof'] = 'assets/uploads/proofs/' . $file_name;
-                } else {
-                    $this->session->set_flashdata('error', 'Lỗi khi lưu ảnh minh chứng!');
-                    redirect('orders/detail/' . $order_id);
-                    return;
-                }
-            } else {
-                $this->session->set_flashdata('error', 'Dữ liệu ảnh không hợp lệ!');
-                redirect('orders/detail/' . $order_id);
-                return;
-            }
-        } else {
-            $this->session->set_flashdata('error', 'Vui lòng chụp ảnh minh chứng giao hàng trực tiếp tại thời điểm giao!');
-            redirect('orders/detail/' . $order_id);
-            return;
-        }
-
-        $this->db->where('id', $order_id)->update('orders', $update_data);
-
-        // Gửi tin nhắn cho người mua
-        $seller_name = $this->session->userdata('full_name');
-        $this->Message_model->send_message([
-            'sender_id'   => $seller_id,
-            'receiver_id' => $order['buyer_id'],
-            'post_id'     => $order['post_id'],
-            'content'     => "📦 [{$seller_name}] đã xác nhận giao sách thành công. Vui lòng kiểm tra sản phẩm và xác nhận nhận sách trên hệ thống.",
-        ]);
-
-        $this->session->set_flashdata('success', 'Đã xác nhận giao hàng! Chờ người mua xác nhận.');
-        redirect('orders?tab=sell');
-    }
-
-    // Người mua xác nhận đã nhận hàng
-    public function received($order_id) {
-        $this->require_login();
-        $buyer_id = $this->session->userdata('user_id');
-        $order    = $this->Order_model->get_order_by_id($order_id);
-
-        if (!$order || $order['buyer_id'] != $buyer_id || $order['status'] !== 'delivering') {
-            $this->session->set_flashdata('error', 'Không thể xác nhận nhận hàng ở trạng thái này!');
-            redirect('orders?tab=buy');
-            return;
-        }
-
-        if ($order['payment_method'] === 'cod') {
+    if ($order['payment_method'] === 'cod') {
             $this->Order_model->update_status($order_id, 'completed', ['payment_status' => 'paid']);
         } else {
             $this->Order_model->update_status($order_id, 'completed');
@@ -452,7 +383,7 @@ class Orders extends CI_Controller {
         $data['order']         = $order;
         $data['already_rated'] = $already_rated;
         $data['unread_count']  = $this->Message_model->count_unread($buyer_id);
-        $data['pending_count'] = $this->Order_model->count_pending_for_seller($buyer_id);
+        $data['pending_count'] = $this->Order_model->count_action_required($buyer_id);
 
         $this->load->view('partials/header', $data);
         $this->load->view('orders/rate', $data);
@@ -543,4 +474,100 @@ class Orders extends CI_Controller {
         $this->session->set_flashdata('success', 'Đã hủy đơn hàng' . ($was_wallet_paid ? ' và hoàn tiền.' : '.'));
         redirect('orders');
     }
+
+
+    // Helper gửi sự kiện Pusher cho đơn hàng
+    private function trigger_pusher_order($user_id, $message, $order_id) {
+        $app_id  = getenv('PUSHER_APP_ID') ?: (isset($_ENV['PUSHER_APP_ID']) ? $_ENV['PUSHER_APP_ID'] : '1906752');
+        $app_key = getenv('PUSHER_APP_KEY') ?: (isset($_ENV['PUSHER_APP_KEY']) ? $_ENV['PUSHER_APP_KEY'] : 'e030a21054a86bd511ce');
+        $app_sec = getenv('PUSHER_APP_SECRET') ?: (isset($_ENV['PUSHER_APP_SECRET']) ? $_ENV['PUSHER_APP_SECRET'] : '7cb493c0bc5894b4625b');
+        $app_clu = getenv('PUSHER_APP_CLUSTER') ?: (isset($_ENV['PUSHER_APP_CLUSTER']) ? $_ENV['PUSHER_APP_CLUSTER'] : 'ap1');
+
+        if (class_exists('Pusher\Pusher')) {
+            try {
+                $pusher = new Pusher\Pusher($app_key, $app_sec, $app_id, ['cluster' => $app_clu, 'useTLS' => true]);
+                $pusher->trigger('user-'.$user_id, 'order-event', [
+                    'message' => $message,
+                    'order_id' => $order_id
+                ]);
+            } catch (Exception $e) { }
+        }
+    }
+
+    public function verify_handover() {
+        $this->require_login();
+        $seller_id = $this->session->userdata('user_id');
+        $code = $this->input->post('code', TRUE);
+
+        if (empty($code)) {
+            echo json_encode(['success' => false, 'message' => 'Mã xác nhận trống!']);
+            return;
+        }
+
+        $this->db->where('seller_id', $seller_id);
+        $this->db->where('status', 'processing');
+        $this->db->group_start();
+        $this->db->where('qr_token', $code);
+        $this->db->or_where('otp_code', $code);
+        $this->db->group_end();
+        $order = $this->db->get('orders')->row_array();
+
+        if (!$order) {
+            echo json_encode(['success' => false, 'message' => 'Mã xác nhận không hợp lệ hoặc đơn hàng không tồn tại!']);
+            return;
+        }
+
+        $update_data = ['status' => 'completed'];
+        if ($order['payment_method'] === 'cod') {
+            $update_data['payment_status'] = 'paid';
+        }
+        $this->db->where('id', $order['id'])->update('orders', $update_data);
+
+        if ($order['payment_method'] === 'wallet' && $order['payment_status'] === 'paid') {
+            $this->load->model('Wallet_model');
+            $this->Wallet_model->release_escrow($order['seller_id'], $order['id'], $order['price'] * $order['quantity']);
+        }
+
+        $seller_name = $this->session->userdata('full_name');
+        $this->Message_model->send_message([
+            'sender_id'   => $seller_id,
+            'receiver_id' => $order['buyer_id'],
+            'post_id'     => $order['post_id'],
+            'content'     => "🎉 [$seller_name] đã giao sách và hoàn tất giao dịch. Cảm ơn bạn đã tin dùng HCMUE BookSwap! Hãy để lại đánh giá cho người bán tại đây: " . site_url('orders/rate/' . $order['id']),
+        ]);
+        
+        $this->trigger_pusher_order($order['buyer_id'], 'Đơn hàng đã giao thành công. Vui lòng đánh giá người bán!', $order['id']);
+        $this->trigger_pusher_order($seller_id, 'Xác thực thành công. Giao dịch hoàn tất!', $order['id']);
+
+        echo json_encode(['success' => true, 'message' => 'Xác nhận giao hàng thành công! Giao dịch hoàn tất.']);
+    }
+
+    public function report_seller($order_id) {
+        $this->require_login();
+        $buyer_id = $this->session->userdata('user_id');
+        $order = $this->Order_model->get_order_by_id($order_id);
+
+        if (!$order || $order['buyer_id'] != $buyer_id || $order['status'] !== 'completed') {
+            $this->session->set_flashdata('error', 'Không thể báo cáo đơn hàng này!');
+            redirect('orders?tab=buy');
+            return;
+        }
+
+        $reason = $this->input->post('report_reason', TRUE);
+        // We will just use the disputes table for reports as well, with a special status 'reported'
+        // Or if 'reports' doesn't exist, we fallback to disputes but without changing order status from completed.
+        // Actually let's just insert into disputes table.
+        $this->db->insert('disputes', [
+            'order_id' => $order_id,
+            'created_by' => $buyer_id,
+            'reason' => 'BÁO CÁO SAU GIAO DỊCH: ' . $reason,
+            'status' => 'pending',
+            'created_at' => date('Y-m-d H:i:s')
+        ]);
+
+        $this->session->set_flashdata('success', 'Đã gửi báo cáo thành công. Admin sẽ xem xét.');
+        redirect('orders/detail/' . $order_id);
+    }
+
+
 }

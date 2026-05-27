@@ -505,7 +505,7 @@ class Admin extends CI_Controller {
             return;
         }
 
-        $admin_note = $this->input->post('admin_note', TRUE) ?: 'Ban Quản trị đã xem xét lại minh chứng và đảo ngược quyết định.';
+        $admin_note = $this->input->post('admin_note', TRUE) ?: 'Ban Quản trị đã xem xét lại lý do và đảo ngược quyết định.';
         $amount = $order['price'] * $order['quantity'];
         $current_status = $order['status'];
 

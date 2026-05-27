@@ -84,6 +84,24 @@ class Order_model extends CI_Model {
                         ->count_all_results('orders');
     }
 
+    // Đếm số lượng đơn hàng cần người dùng xử lý (Action Required)
+    public function count_action_required($user_id) {
+        // Đơn chờ người bán xác nhận
+        $seller_action = $this->db->where('seller_id', $user_id)
+                                  ->where('status', 'pending')
+                                  ->count_all_results('orders');
+        
+        // Đơn chờ người mua thanh toán (chọn phương thức)
+        $buyer_action = $this->db->where('buyer_id', $user_id)
+                                 ->group_start()
+                                     ->where('status', 'confirmed')
+                                     // Thêm các trạng thái khác của buyer nếu cần trong tương lai
+                                 ->group_end()
+                                 ->count_all_results('orders');
+                                 
+        return $seller_action + $buyer_action;
+    }
+
     // Lấy đơn confirmed của người mua (để hiện nút "Đã nhận")
     public function get_confirmed_order($post_id, $buyer_id) {
         $this->db->where('post_id',  $post_id);

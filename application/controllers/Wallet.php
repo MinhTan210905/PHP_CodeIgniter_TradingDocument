@@ -38,7 +38,7 @@ class Wallet extends CI_Controller {
         $data['withdrawals']  = $this->Wallet_model->get_withdraw_requests($user_id);
         $data['user']         = $this->Auth_model->get_user_by_id($user_id);
         $data['unread_count'] = $this->Message_model->count_unread($user_id);
-        $data['pending_count'] = $this->Order_model->count_pending_for_seller($user_id);
+        $data['pending_count'] = $this->Order_model->count_action_required($user_id);
 
         $this->load->view('partials/header', $data);
         $this->load->view('wallet/index', $data);

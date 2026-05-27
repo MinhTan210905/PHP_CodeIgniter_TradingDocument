@@ -164,24 +164,7 @@
                             </div>
                         </div>
 
-                        <!-- Minh chứng giao hàng -->
-                        <?php if (!empty($d['delivery_proof'])): ?>
-                        <div class="p-3 rounded-3 mb-3" style="background:#D1FAE5;border:1px solid #A7F3D0;">
-                            <div class="fw-bold mb-2" style="font-size:0.8rem;color:#065F46;">
-                                <i class="fas fa-camera me-1"></i>Minh chứng giao hàng từ người bán:
-                            </div>
-                            <div class="text-center">
-                                <img src="<?= base_url($d['delivery_proof']) ?>" alt="Minh chứng" class="img-fluid rounded-3 shadow-sm" style="max-height:300px;object-fit:contain;cursor:pointer;" onclick="window.open(this.src, '_blank')">
-                                <div class="text-muted mt-1" style="font-size:0.72rem;"><i class="fas fa-search-plus me-1"></i>Nhấn ảnh để xem phóng to</div>
-                            </div>
-                        </div>
-                        <?php else: ?>
-                        <div class="p-3 rounded-3 mb-3" style="background:#FFF7ED;border:1px solid #FED7AA;">
-                            <div style="font-size:0.85rem;color:#C2410C;">
-                                <i class="fas fa-exclamation-circle me-1"></i><strong>Người bán chưa gửi minh chứng giao hàng.</strong> Đây có thể là bằng chứng bất lợi cho người bán.
-                            </div>
-                        </div>
-                        <?php endif; ?>
+
                     </div>
                     
                     <div class="modal-footer" style="background:#F9FAFB; border-radius:0 0 16px 16px;">
@@ -221,7 +204,7 @@
                             </div>
                             <label class="form-label fw-bold" style="font-size:0.88rem;">Ghi chú kết luận của Admin:</label>
                             <textarea class="form-control rounded-3" name="admin_note" rows="3" required
-                                      placeholder="VD: Người bán không có minh chứng giao hàng hợp lệ..."></textarea>
+                                      placeholder="VD: Lý do khiếu nại không hợp lệ..."></textarea>
                         </div>
                         <div class="modal-footer border-top-0">
                             <button type="button" class="btn btn-light rounded-3" data-bs-toggle="modal" data-bs-target="#disputeModal<?= $d['id'] ?>">Trở lại</button>
@@ -257,7 +240,7 @@
                             </div>
                             <label class="form-label fw-bold" style="font-size:0.88rem;">Ghi chú kết luận của Admin:</label>
                             <textarea class="form-control rounded-3" name="admin_note" rows="3" required
-                                      placeholder="VD: Người bán đã có minh chứng giao hàng rõ ràng với GPS..."></textarea>
+                                      placeholder="VD: Người bán đã giao sách đầy đủ..."></textarea>
                         </div>
                         <div class="modal-footer border-top-0">
                             <button type="button" class="btn btn-light rounded-3" data-bs-toggle="modal" data-bs-target="#disputeModal<?= $d['id'] ?>">Trở lại</button>
@@ -432,17 +415,7 @@
                             <div style="font-size:0.85rem;color:#334155;line-height:1.6; white-space: pre-wrap;"><?= htmlspecialchars($r['reject_reason']) ?></div>
                         </div>
 
-                        <!-- Minh chứng giao hàng -->
-                        <?php if (!empty($r['delivery_proof'])): ?>
-                        <div class="p-3 rounded-3 mb-3" style="background:#D1FAE5;border:1px solid #A7F3D0;">
-                            <div class="fw-bold mb-2" style="font-size:0.8rem;color:#065F46;">
-                                <i class="fas fa-camera me-1"></i>Minh chứng giao hàng từ người bán:
-                            </div>
-                            <div class="text-center">
-                                <img src="<?= base_url($r['delivery_proof']) ?>" alt="Minh chứng" class="img-fluid rounded-3 shadow-sm" style="max-height:220px;object-fit:contain;cursor:pointer;" onclick="window.open(this.src, '_blank')">
-                            </div>
-                        </div>
-                        <?php endif; ?>
+
 
                         <!-- Form Đảo Ngược Quyết Định (Kháng Cáo) -->
                         <div class="p-3 rounded-3 mt-4" style="background:#FFF7ED; border:1px solid #FED7AA;">

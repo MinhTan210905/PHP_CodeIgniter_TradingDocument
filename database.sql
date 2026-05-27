@@ -246,6 +246,22 @@ CREATE TABLE IF NOT EXISTS `ai_moderation_logs` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================================
+-- BẢNG USER_REPORTS (Báo cáo người dùng)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS `user_reports` (
+    `id`               INT AUTO_INCREMENT PRIMARY KEY,
+    `reporter_id`      INT NOT NULL,
+    `reported_user_id` INT NOT NULL,
+    `order_id`         INT NULL,
+    `reason`           TEXT NOT NULL,
+    `status`           ENUM('pending', 'resolved', 'dismissed') DEFAULT 'pending',
+    `created_at`       TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (`reporter_id`)      REFERENCES `users`(`id`)   ON DELETE CASCADE,
+    FOREIGN KEY (`reported_user_id`) REFERENCES `users`(`id`)   ON DELETE CASCADE,
+    FOREIGN KEY (`order_id`)         REFERENCES `orders`(`id`)  ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================================
 -- DỮ LIỆU MẪU
 -- ============================================================
 

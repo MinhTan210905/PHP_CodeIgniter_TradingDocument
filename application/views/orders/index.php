@@ -272,7 +272,7 @@ $active_tab = $active_tab ?? 'buy';
                             <?php elseif ($o['status'] === 'processing'): ?>
                                 <a href="<?= site_url('orders/detail/' . $o['id']) ?>"
                                    class="btn btn-sm btn-success rounded-3 fw-bold" style="font-size:0.78rem;">
-                                    <i class="fas fa-camera me-1"></i>Đã giao sách (Tải minh chứng)
+                                    <i class="fas fa-qrcode me-1"></i>Tiến hành giao (Quét QR)
                                 </a>
                                 <a href="<?= site_url('orders/cancel/' . $o['id']) ?>"
                                    class="btn btn-sm btn-outline-secondary rounded-3 ms-2" style="font-size:0.78rem;"

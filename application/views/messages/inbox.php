@@ -190,9 +190,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 const count = parseInt(data.count);
                 if (count > 0) {
                     badge.textContent = count;
-                    badge.style.display = '';
+                    badge.classList.remove('d-none');
                 } else {
-                    badge.style.display = 'none';
+                    badge.classList.add('d-none');
                 }
             }
         })

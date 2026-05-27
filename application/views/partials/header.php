@@ -18,9 +18,21 @@ header('Content-Type: text/html; charset=UTF-8');
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <!-- Thư viện quét mã vạch ISBN qua Camera -->
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-    <!-- Thư viện Pusher JS (Real-time Chat) -->
+    <!-- Thư viện Pusher JS (Real-time Chat & Orders) -->
     <script src="https://js.pusher.com/8.0.1/pusher.min.js"></script>
     <link rel="icon" type="image/png" href="<?= base_url('assets/images/logo_hcmue.png') ?>">
+    <script>
+        // Global Pusher Instance
+        var globalPusher = null;
+        <?php if ($this->session->userdata('logged_in')): ?>
+        const pusherAppKey = '430b3850d19e9367913c'; // Từ conversation.php
+        const pusherCluster = 'ap1';
+        globalPusher = new Pusher(pusherAppKey, {
+            cluster: pusherCluster,
+            forceTLS: true
+        });
+        <?php endif; ?>
+    </script>
     <style>
         :root {
             --nav-height: 76px;
@@ -57,19 +69,22 @@ header('Content-Type: text/html; charset=UTF-8');
             right: -6px !important;
             background: #EF4444 !important;
             color: #ffffff !important;
-            font-size: 9px !important;
+            font-size: 10px !important;
             font-weight: 800 !important;
             border-radius: 50% !important;
             width: 18px !important;
             height: 18px !important;
-            display: flex;
+            display: flex !important;
             align-items: center !important;
             justify-content: center !important;
             border: 1.5px solid #ffffff !important;
             padding: 0 !important;
             margin: 0 !important;
-            line-height: 1 !important;
+            line-height: 0 !important;
             box-sizing: border-box !important;
+        }
+        .navbar-hcmue .nav-badge.d-none {
+            display: none !important;
         }
 
         /* Announcement Marquee Bar */
@@ -146,11 +161,16 @@ header('Content-Type: text/html; charset=UTF-8');
             <?php if ($this->session->userdata('logged_in')): ?>
 
                 <!-- Đơn hàng -->
+                <?php 
+                if (!isset($pending_count)) {
+                    $CI_o =& get_instance();
+                    $CI_o->load->model('Order_model');
+                    $pending_count = $CI_o->Order_model->count_action_required($this->session->userdata('user_id'));
+                }
+                ?>
                 <a href="<?= site_url('orders') ?>" class="nav-icon-btn" title="Đơn hàng của tôi">
                     <i class="fas fa-shopping-bag"></i>
-                    <?php if (isset($pending_count) && $pending_count > 0): ?>
-                        <span class="nav-badge"><?= $pending_count ?></span>
-                    <?php endif; ?>
+                    <span class="nav-badge action-required-badge <?= $pending_count > 0 ? '' : 'd-none' ?>"><?= $pending_count ?></span>
                 </a>
                 <!-- Tin nhắn -->
                 <?php 
@@ -163,7 +183,7 @@ header('Content-Type: text/html; charset=UTF-8');
                     <?php if ($header_unread_count > 0): ?>
                         <span class="nav-badge bg-danger" id="inboxUnreadBadge"><?= $header_unread_count ?></span>
                     <?php else: ?>
-                        <span class="nav-badge bg-danger" id="inboxUnreadBadge" style="display:none;"></span>
+                        <span class="nav-badge bg-danger d-none" id="inboxUnreadBadge"></span>
                     <?php endif; ?>
                 </a>
                 <!-- Mong muốn sách -->
@@ -224,9 +244,7 @@ header('Content-Type: text/html; charset=UTF-8');
                         <li>
                             <a class="dropdown-item py-2" href="<?= site_url('orders') ?>">
                                 <i class="fas fa-shopping-bag me-2 text-success"></i>Đơn hàng của tôi
-                                <?php if (isset($pending_count) && $pending_count > 0): ?>
-                                    <span class="badge bg-warning text-dark ms-1" style="font-size:0.7rem;"><?= $pending_count ?></span>
-                                <?php endif; ?>
+                                <span class="badge bg-warning text-dark ms-1 action-required-badge <?= (isset($pending_count) && $pending_count > 0) ? '' : 'd-none' ?>" style="font-size:0.7rem;"><?= isset($pending_count) ? $pending_count : 0 ?></span>
                             </a>
                         </li>
                         <li>

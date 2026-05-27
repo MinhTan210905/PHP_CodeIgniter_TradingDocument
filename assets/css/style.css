@@ -176,13 +176,14 @@ body {
     font-size      : 0.58rem;
     font-weight    : 800;
     border-radius  : 50%;
-    width          : 17px;
-    height         : 17px;
+    width          : 18px;
+    height         : 18px;
     display        : flex;
     align-items    : center;
     justify-content: center;
-    line-height    : 1;
-    border         : 2px solid #fff;
+    line-height    : 0;
+    padding        : 0;
+    border         : 1.5px solid #fff;
 }
 
 /* User chip */

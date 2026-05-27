@@ -173,16 +173,24 @@ class Wishlist_model extends CI_Model {
         }
 
         $intersect = array_intersect($wish_words, $post_words);
-        $match_percent = (count($intersect) / count($wish_words)) * 100;
-
-        if ($match_percent >= 70) {
+        
+        // Tính tỉ lệ khớp từ dựa trên chuỗi ngắn hơn (giúp khớp tốt khi một bên cực dài, một bên cực ngắn)
+        $min_words = min(count($wish_words), count($post_words));
+        $match_percent_relative = (count($intersect) / $min_words) * 100;
+        if ($match_percent_relative >= 70) {
             return true;
         }
 
-        // 4. Fallback dùng similar_text trên chuỗi bỏ dấu
+        // Hoặc tỉ lệ khớp từ của Wishlist >= 60% (đáp ứng đúng các từ quan trọng trong wishlist người mua cần tìm)
+        $match_percent_wish = (count($intersect) / count($wish_words)) * 100;
+        if ($match_percent_wish >= 60) {
+            return true;
+        }
+
+        // 4. Fallback dùng similar_text trên chuỗi bỏ dấu (Hạ ngưỡng xuống 60% để linh hoạt khi gõ sai/thiếu nhẹ)
         $sim_percent = 0;
         similar_text($wish_no_accent, $post_no_accent, $sim_percent);
-        if ($sim_percent >= 70) {
+        if ($sim_percent >= 60) {
             return true;
         }
 
@@ -190,42 +198,33 @@ class Wishlist_model extends CI_Model {
     }
 
     /**
-     * Hàm loại bỏ dấu tiếng Việt chuẩn xác
+     * Hàm loại bỏ dấu tiếng Việt chuẩn xác hỗ trợ cả Dựng sẵn (NFC) và Tổ hợp (NFD)
      */
     public function remove_accents($str) {
-        $accents_map = [
-            'à','á','ạ','ả','ã','â','ầ','ấ','ậ','ẩ','ẫ','ă','ằ','ắ','ặ','ẳ','ẵ',
-            'è','é','ẹ','ẻ','ẽ','ê','ề','ế','ệ','ể','ễ',
-            'ì','í','ị','ỉ','ĩ',
-            'ò','ó','ọ','ỏ','õ','ô','ồ','ố','ộ','ổ','ỗ','ơ','ờ','ớ','ợ','ở','ỡ',
-            'ù','ú','ụ','ủ','ũ','ư','ừ','ứ','ự','ử','ữ',
-            'ỳ','ý','ỵ','ỷ','ỹ',
-            'đ',
-            'À','Á','Ạ','Ả','Ã','Â','Ầ','Ấ','Ậ','Ẩ','Ẫ','Ă','Ằ','Ắ','Ặ','Ẳ','Ẵ',
-            'È','É','Ẹ','Ẻ','Ẽ','Ê','Ề','Ế','Ệ','Ể','Ễ',
-            'Ì','Í','Ị','Ỉ','Ĩ',
-            'Ò','Ó','Ọ','Ỏ','Õ','Ô','Ồ','Ố','Ộ','Ổ','Ỗ','Ơ','Ờ','Ớ','Ợ','Ở','Ỡ',
-            'Ù','Ú','Ụ','Ủ','Ũ','Ư','Ừ','Ứ','Ự','Ử','Ữ',
-            'Ỳ','Ý','Ỵ','Ỷ','Ỹ',
-            'Đ'
-        ];
-        $non_accents_map = [
-            'a','a','a','a','a','a','a','a','a','a','a','a','a','a','a','a','a',
-            'e','e','e','e','e','e','e','e','e','e','e','e',
-            'i','i','i','i','i',
-            'o','o','o','o','o','o','o','o','o','o','o','o','o','o','o','o','o',
-            'u','u','u','u','u','u','u','u','u','u','u','u',
-            'y','y','y','y','y',
-            'd',
-            'a','a','a','a','a','a','a','a','a','a','a','a','a','a','a','a','a',
-            'e','e','e','e','e','e','e','e','e','e','e','e',
-            'i','i','i','i','i',
-            'o','o','o','o','o','o','o','o','o','o','o','o','o','o','o','o','o',
-            'u','u','u','u','u','u','u','u','u','u','u','u',
-            'y','y','y','y','y',
-            'd'
-        ];
-        return str_replace($accents_map, $non_accents_map, $str);
+        if (class_exists('Normalizer')) {
+            $str = Normalizer::normalize($str, Normalizer::FORM_C);
+        }
+        
+        $str = preg_replace("/(à|á|ạ|ả|ã|â|ầ|ấ|ậ|ẩ|ẫ|ă|ằ|ắ|ặ|ẳ|ẵ)/u", 'a', $str);
+        $str = preg_replace("/(è|é|ẹ|ẻ|ẽ|ê|ề|ế|ệ|ể|ễ)/u", 'e', $str);
+        $str = preg_replace("/(ì|í|ị|ỉ|ĩ)/u", 'i', $str);
+        $str = preg_replace("/(ò|ó|ọ|ỏ|õ|ô|ồ|ố|ộ|ổ|ỗ|ơ|ờ|ớ|ợ|ở|ỡ)/u", 'o', $str);
+        $str = preg_replace("/(ù|ú|ụ|ủ|ũ|ư|ừ|ứ|ự|ử|ữ)/u", 'u', $str);
+        $str = preg_replace("/(ỳ|ý|ỵ|ỷ|ỹ)/u", 'y', $str);
+        $str = preg_replace("/(đ)/u", 'd', $str);
+        
+        $str = preg_replace("/(À|Á|Ạ|Ả|Ã|Â|Ầ|Ấ|Ậ|Ẩ|Ẫ|Ă|Ằ|Ắ|Ặ|Ẳ|Ẵ)/u", 'a', $str);
+        $str = preg_replace("/(È|É|Ẹ|Ẻ|Ẽ|Ê|Ề|Ế|Ệ|Ể|Ễ)/u", 'e', $str);
+        $str = preg_replace("/(Ì|Í|Ị|Ỉ|Ĩ)/u", 'i', $str);
+        $str = preg_replace("/(Ò|Ó|Ọ|Ỏ|Õ|Ô|Ồ|Ố|Ộ|Ổ|Ỗ|Ơ|Ờ|Ớ|Ợ|Ở|Ỡ)/u", 'o', $str);
+        $str = preg_replace("/(Ù|Ú|Ụ|Ủ|Ũ|Ư|Ừ|Ứ|Ự|Ử|Ữ)/u", 'u', $str);
+        $str = preg_replace("/(Ý|Ỳ|Ỵ|Ỷ|Ỹ)/u", 'y', $str);
+        $str = preg_replace("/(Đ)/u", 'd', $str);
+        
+        // Loại bỏ các dấu tổ hợp (diacritics marks) nếu còn sót lại
+        $str = preg_replace('/[\x{0300}-\x{036f}]/u', '', $str);
+        
+        return $str;
     }
 
     /**
