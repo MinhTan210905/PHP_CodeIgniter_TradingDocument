@@ -34,6 +34,39 @@
     background: #FFFFFF;
     transition: all 0.3s ease;
 }
+.carousel-nav-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 40px;
+    height: 40px;
+    background: rgba(255, 255, 255, 0.75);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #1E293B;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.06);
+    z-index: 10;
+}
+.carousel-nav-btn:hover {
+    background: #ffffff;
+    color: var(--primary);
+    box-shadow: 0 4px 15px rgba(30, 64, 175, 0.18);
+    transform: translateY(-50%) scale(1.05);
+}
+.carousel-nav-btn:active {
+    transform: translateY(-50%) scale(0.95);
+}
+.carousel-nav-btn.prev {
+    left: 15px;
+}
+.carousel-nav-btn.next {
+    right: 15px;
+}
 </style>
 <div class="container py-4" style="max-width:900px;">
 
@@ -76,6 +109,16 @@
                          style="object-fit:contain; max-height:100%; max-width:100%; border-radius:8px; transition: opacity 0.3s ease-in-out;"
                          alt="<?= htmlspecialchars($post['title']) ?>"
                          onerror="this.onerror=null;this.src='<?= base_url('assets/images/default_book.jpg') ?>';">
+                    
+                    <?php if(!empty($additional_images)): ?>
+                        <!-- Nút điều hướng ảnh trái phải -->
+                        <button type="button" class="carousel-nav-btn prev" onclick="navigatePrev()" aria-label="Ảnh trước">
+                            <i class="fas fa-chevron-left"></i>
+                        </button>
+                        <button type="button" class="carousel-nav-btn next" onclick="navigateNext()" aria-label="Ảnh sau">
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
+                    <?php endif; ?>
                 </div>
                 
                 <!-- Hàng ảnh phụ (Thumbnails) -->
@@ -481,6 +524,34 @@ function slideNextImage() {
         if (img) {
             changeMainImageNoReset(img.src, nextThumb);
         }
+    }
+}
+
+function slidePrevImage() {
+    const thumbs = document.querySelectorAll('.post-thumb-item');
+    if (thumbs.length > 1) {
+        currentIndex = (currentIndex - 1 + thumbs.length) % thumbs.length;
+        const prevThumb = thumbs[currentIndex];
+        const img = prevThumb.querySelector('img');
+        if (img) {
+            changeMainImageNoReset(img.src, prevThumb);
+        }
+    }
+}
+
+function navigateNext() {
+    slideNextImage();
+    if (autoSlideInterval) {
+        clearInterval(autoSlideInterval);
+        autoSlideInterval = setInterval(slideNextImage, 5000);
+    }
+}
+
+function navigatePrev() {
+    slidePrevImage();
+    if (autoSlideInterval) {
+        clearInterval(autoSlideInterval);
+        autoSlideInterval = setInterval(slideNextImage, 5000);
     }
 }
 
