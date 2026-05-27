@@ -304,38 +304,6 @@ class Orders extends CI_Controller {
         }
     }
 
-    if ($order['payment_method'] === 'cod') {
-            $this->Order_model->update_status($order_id, 'completed', ['payment_status' => 'paid']);
-        } else {
-            $this->Order_model->update_status($order_id, 'completed');
-        }
-
-        // Nếu thanh toán qua ví, giải ngân cho người bán
-        if ($order['payment_method'] === 'wallet' && $order['payment_status'] === 'paid') {
-            $this->load->model('Wallet_model');
-            $this->Wallet_model->release_escrow($order['seller_id'], $order_id, $order['price'] * $order['quantity']);
-        }
-
-        // Gửi tin nhắn tự động dẫn đến trang đánh giá
-        $this->Message_model->send_message([
-            'sender_id'   => $order['seller_id'],
-            'receiver_id' => $buyer_id,
-            'post_id'     => $order['post_id'],
-            'content'     => "🎉 Giao dịch hoàn tất! Cảm ơn bạn đã tin dùng HCMUE BookSwap. Hãy để lại đánh giá cho người bán tại đây: " . site_url('orders/rate/' . $order_id),
-        ]);
-
-        // Thông báo cho người bán
-        $buyer_name = $this->session->userdata('full_name');
-        $this->Message_model->send_message([
-            'sender_id'   => $buyer_id,
-            'receiver_id' => $order['seller_id'],
-            'post_id'     => $order['post_id'],
-            'content'     => "✅ [{$buyer_name}] đã xác nhận nhận sách \"{$order['post_title']}\". Giao dịch hoàn tất!",
-        ]);
-
-        $this->session->set_flashdata('success', '✅ Xác nhận nhận sách thành công! Vui lòng để lại đánh giá cho người bán.');
-        redirect('orders/rate/' . $order_id);
-    }
 
     // Người mua báo tranh chấp
     public function dispute($order_id) {
