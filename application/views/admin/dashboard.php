@@ -120,6 +120,20 @@
                     </button>
                 </div>
             </div>
+            
+            <!-- Dòng cấu hình thông báo chạy chữ -->
+            <div class="row mt-3">
+                <div class="col-12">
+                    <label class="fw-600 mb-1.5" for="siteAnnouncement" style="font-size:0.88rem;">
+                        <i class="fas fa-bullhorn text-primary me-1"></i>Thông báo chạy chữ (Marquee Banner):
+                    </label>
+                    <input type="text" class="form-control" name="site_announcement" id="siteAnnouncement" 
+                           placeholder="Nhập nội dung thông báo (VD: thông báo bảo trì, chào mừng tân sinh viên...)" 
+                           value="<?= htmlspecialchars($app_settings['site_announcement'] ?? 'Chào mừng đến với diễn đàn pass tài liệu của Trường Đại học Sư phạm thành phố Hồ Chí Minh') ?>"
+                           style="border-radius:10px; font-size:0.85rem;">
+                    <small class="text-muted d-block mt-1" style="font-size:0.75rem;">Để trống nếu muốn tắt thông báo chạy chữ ở ngoài trang chủ.</small>
+                </div>
+            </div>
         </form>
     </div>
 

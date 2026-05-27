@@ -13,7 +13,7 @@ class Setting_model extends CI_Model {
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
         
         // Chèn các cài đặt mặc định nếu chưa có
-        $this->db->query("INSERT IGNORE INTO settings (skey, svalue) VALUES ('auto_approve_new', '0'), ('auto_approve_edit', '0'), ('auto_approve_min_stars', '0')");
+        $this->db->query("INSERT IGNORE INTO settings (skey, svalue) VALUES ('auto_approve_new', '0'), ('auto_approve_edit', '0'), ('auto_approve_min_stars', '0'), ('site_announcement', 'Chào mừng đến với diễn đàn pass tài liệu của Trường Đại học Sư phạm thành phố Hồ Chí Minh')");
     }
 
     public function get($key, $default = '0') {
