@@ -424,26 +424,32 @@ $cur_step = $timeline[$order['status']] ?? 1;
             
             // Tạm ẩn scanner để tránh quét liên tục
             if (html5QrcodeScanner) {
-                html5QrcodeScanner.clear();
+                try { html5QrcodeScanner.clear().catch(e => console.warn(e)); } catch(e) { console.warn(e); }
             }
 
             $.post('<?= site_url("orders/verify_handover") ?>', { 
                 code: code,
                 '<?= $this->security->get_csrf_token_name() ?>': '<?= $this->security->get_csrf_hash() ?>'
             }, function(response) {
-                const res = JSON.parse(response);
-                if (res.success) {
-                    alert('Thành công: ' + res.message);
-                    location.reload();
-                } else {
-                    alert('Lỗi: ' + res.message);
-                    isVerifying = false;
-                    // Resume scanning
-                    if (document.getElementById('scan-tab').classList.contains('active')) {
-                         html5QrcodeScanner = new Html5QrcodeScanner(
-                            "qr-reader", { fps: 10, qrbox: {width: 250, height: 250}, aspectRatio: 1.0 }, false);
-                         html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+                try {
+                    const res = JSON.parse(response);
+                    if (res.success) {
+                        alert('Thành công: ' + res.message);
+                        location.reload();
+                    } else {
+                        alert('Lỗi: ' + res.message);
+                        isVerifying = false;
+                        // Resume scanning
+                        if (document.getElementById('scan-tab').classList.contains('active')) {
+                             html5QrcodeScanner = new Html5QrcodeScanner(
+                                "qr-reader", { fps: 10, qrbox: {width: 250, height: 250}, aspectRatio: 1.0 }, false);
+                             html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+                        }
                     }
+                } catch(e) {
+                    alert('Lỗi phản hồi từ máy chủ: Vui lòng thử lại.');
+                    console.error("JSON Parse Error:", e, response);
+                    isVerifying = false;
                 }
             }).fail(function() {
                 alert('Lỗi kết nối máy chủ.');
