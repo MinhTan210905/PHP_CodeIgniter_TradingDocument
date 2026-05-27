@@ -50,6 +50,28 @@ header('Content-Type: text/html; charset=UTF-8');
             color: #ffffff !important;
             border-color: rgba(255,255,255,0.4) !important;
         }
+        
+        /* Cực hình: Căn giữa tuyệt đối số thông báo đỏ trên header - Chống cache trình duyệt */
+        .navbar-hcmue .nav-badge {
+            position: absolute !important;
+            top: -6px !important;
+            right: -6px !important;
+            background: #EF4444 !important;
+            color: #ffffff !important;
+            font-size: 9px !important;
+            font-weight: 800 !important;
+            border-radius: 50% !important;
+            width: 18px !important;
+            height: 18px !important;
+            display: flex;
+            align-items: center !important;
+            justify-content: center !important;
+            border: 1.5px solid #ffffff !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            line-height: 1 !important;
+            box-sizing: border-box !important;
+        }
     </style>
     <link rel="stylesheet" href="<?= base_url('assets/css/style.css?v=4.3') ?>">
 </head>

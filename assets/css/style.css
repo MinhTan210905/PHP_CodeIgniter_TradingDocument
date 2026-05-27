@@ -170,19 +170,19 @@ body {
 /* Notification badge */
 .nav-badge {
     position       : absolute;
-    top: -4px; right: -4px;
+    top: -5px; right: -5px;
     background     : var(--accent);
     color          : #fff;
-    font-size      : 0.58rem;
+    font-size      : 9px;
     font-weight    : 800;
     border-radius  : 50%;
     width          : 17px;
     height         : 17px;
-    display        : flex;
-    align-items    : center;
-    justify-content: center;
-    line-height    : 1;
+    display        : block;
+    line-height    : 13px; /* Chiều cao lọt lòng cực chuẩn = 17px - 4px border */
+    text-align     : center;
     border         : 2px solid #fff;
+    box-sizing     : border-box;
 }
 
 /* User chip */

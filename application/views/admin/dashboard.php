@@ -221,9 +221,6 @@
                         <i class="fas fa-lock me-1" style="font-size:10px;"></i>Đã Pass
                     </button>
                 </div>
-                <a href="<?= site_url('admin/users') ?>" class="btn btn-sm btn-outline-hcmue rounded-3" style="font-size:0.8rem;">
-                    <i class="fas fa-users me-1"></i> Người dùng
-                </a>
             </div>
         </div>
         <div class="table-responsive">

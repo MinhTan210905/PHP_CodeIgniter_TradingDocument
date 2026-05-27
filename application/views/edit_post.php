@@ -120,7 +120,7 @@
                 </div>
 
                 <div class="d-flex gap-2 justify-content-end">
-                    <a href="<?= site_url('profile') ?>" class="btn btn-light px-4 rounded-3 text-secondary fw-bold">Hủy</a>
+<a href="<?= site_url('') ?>" class="btn btn-light px-4 rounded-3 text-secondary fw-bold">Hủy</a>
                     <button type="submit" class="btn btn-primary-hcmue px-4 rounded-3 fw-bold shadow-sm">
                         Lưu thay đổi
                     </button>
