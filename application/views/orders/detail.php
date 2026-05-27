@@ -1,21 +1,23 @@
 <?php
 $status_labels = [
-    'pending'   => ['label' => 'Chờ xác nhận',   'color' => '#92400E', 'bg' => '#FEF3C7', 'icon' => 'fa-hourglass-half'],
-    'confirmed' => ['label' => 'Đã xác nhận',     'color' => '#1E40AF', 'bg' => '#DBEAFE', 'icon' => 'fa-handshake'],
-    'completed' => ['label' => 'Hoàn thành',       'color' => '#065F46', 'bg' => '#D1FAE5', 'icon' => 'fa-check-circle'],
-    'disputed'  => ['label' => 'Tranh chấp',       'color' => '#991B1B', 'bg' => '#FEE2E2', 'icon' => 'fa-exclamation-triangle'],
-    'rejected'  => ['label' => 'Đã từ chối',       'color' => '#6B7280', 'bg' => '#F3F4F6', 'icon' => 'fa-times-circle'],
-    'cancelled' => ['label' => 'Đã hủy',           'color' => '#9CA3AF', 'bg' => '#F3F4F6', 'icon' => 'fa-ban'],
+    'pending'    => ['label' => 'Chờ xác nhận',     'color' => '#92400E', 'bg' => '#FEF3C7', 'icon' => 'fa-hourglass-half'],
+    'confirmed'  => ['label' => 'Đã xác nhận',       'color' => '#1E40AF', 'bg' => '#DBEAFE', 'icon' => 'fa-handshake'],
+    'processing' => ['label' => 'Đang xử lý',       'color' => '#B45309', 'bg' => '#FEF3C7', 'icon' => 'fa-truck'],
+    'completed'  => ['label' => 'Hoàn thành',        'color' => '#065F46', 'bg' => '#D1FAE5', 'icon' => 'fa-check-circle'],
+    'disputed'   => ['label' => 'Tranh chấp',        'color' => '#991B1B', 'bg' => '#FEE2E2', 'icon' => 'fa-exclamation-triangle'],
+    'rejected'   => ['label' => 'Đã từ chối',        'color' => '#6B7280', 'bg' => '#F3F4F6', 'icon' => 'fa-times-circle'],
+    'cancelled'  => ['label' => 'Đã hủy',            'color' => '#9CA3AF', 'bg' => '#F3F4F6', 'icon' => 'fa-ban'],
 ];
 $sl       = $status_labels[$order['status']] ?? $status_labels['cancelled'];
 $user_id  = $this->session->userdata('user_id');
 $timeline = [
-    'pending'   => 1,
-    'confirmed' => 2,
-    'completed' => 3,
-    'disputed'  => 3,
-    'rejected'  => 2,
-    'cancelled' => 2,
+    'pending'    => 1,
+    'confirmed'  => 2,
+    'processing' => 3,
+    'completed'  => 3,
+    'disputed'   => 3,
+    'rejected'   => 2,
+    'cancelled'  => 2,
 ];
 $cur_step = $timeline[$order['status']] ?? 1;
 ?>
@@ -260,6 +262,7 @@ $cur_step = $timeline[$order['status']] ?? 1;
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <form action="<?= site_url('orders/reject/' . $order['id']) ?>" method="POST">
+                  <input type="hidden" name="<?= $this->security->get_csrf_token_name() ?>" value="<?= $this->security->get_csrf_hash() ?>">
                 <div class="modal-body p-4">
                     <p class="text-muted" style="font-size:0.88rem;">Vui lòng nhập lý do từ chối bán tài liệu này (người mua sẽ nhận được thông báo hiển thị lý do này):</p>
                     <textarea class="form-control" name="reject_reason" rows="3" style="border-radius:12px; font-size:0.88rem;"
@@ -283,6 +286,7 @@ $cur_step = $timeline[$order['status']] ?? 1;
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <form action="<?= site_url('orders/dispute/' . $order['id']) ?>" method="POST">
+                  <input type="hidden" name="<?= $this->security->get_csrf_token_name() ?>" value="<?= $this->security->get_csrf_hash() ?>">
                 <div class="modal-body p-4">
                     <p class="text-muted" style="font-size:0.88rem;">Vui lòng mô tả chi tiết vấn đề gặp phải để Ban quản trị hỗ trợ giải quyết (Tiền của bạn vẫn đang được tạm giữ an toàn):</p>
                     <textarea class="form-control" name="dispute_reason" rows="3" style="border-radius:12px; font-size:0.88rem;"
@@ -306,6 +310,7 @@ $cur_step = $timeline[$order['status']] ?? 1;
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <form action="<?= site_url('orders/report_seller/' . $order['id']) ?>" method="POST">
+                  <input type="hidden" name="<?= $this->security->get_csrf_token_name() ?>" value="<?= $this->security->get_csrf_hash() ?>">
                 <div class="modal-body p-4">
                     <p class="text-muted" style="font-size:0.88rem;">Vì giao dịch đã được xác nhận (quét QR) nên dòng tiền đã được chuyển giao và không thể hoàn lại tự động.</p>
                     <p class="text-muted" style="font-size:0.88rem;">Tuy nhiên, nếu bạn phát hiện hành vi lừa đảo tinh vi sau đó (VD: sách giả, rách trang bên trong mà lúc gặp không để ý), bạn có thể báo cáo tài khoản này để Admin xem xét xử lý (Ban tài khoản).</p>
@@ -422,7 +427,10 @@ $cur_step = $timeline[$order['status']] ?? 1;
                 html5QrcodeScanner.clear();
             }
 
-            $.post('<?= site_url("orders/verify_handover") ?>', { code: code }, function(response) {
+            $.post('<?= site_url("orders/verify_handover") ?>', { 
+                code: code,
+                '<?= $this->security->get_csrf_token_name() ?>': '<?= $this->security->get_csrf_hash() ?>'
+            }, function(response) {
                 const res = JSON.parse(response);
                 if (res.success) {
                     alert('Thành công: ' + res.message);
