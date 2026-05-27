@@ -128,6 +128,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    line-height: 1;
     border: 2px solid #fff;
     box-shadow: 0 2px 6px rgba(0,0,0,0.15);
 }
