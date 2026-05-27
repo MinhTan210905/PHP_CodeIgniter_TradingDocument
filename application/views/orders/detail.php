@@ -385,15 +385,17 @@ $cur_step = $timeline[$order['status']] ?? 1;
 <script src="https://unpkg.com/html5-qrcode"></script>
 <script>
     // Hàm lấy CSRF token tươi từ cookie (tránh token cũ bị vô hiệu do csrf_regenerate=TRUE)
+    // CI3 lưu CSRF vào cookie với tên = $config['csrf_cookie_name']
     function getCsrfToken() {
-        const name = '<?= $this->security->get_csrf_cookie_name() ?>=';
+        const cookieName = '<?= $this->config->item('csrf_cookie_name') ?>='
         const cookies = document.cookie.split(';');
         for (let c of cookies) {
             c = c.trim();
-            if (c.startsWith(name)) return decodeURIComponent(c.substring(name.length));
+            if (c.startsWith(cookieName)) return decodeURIComponent(c.substring(cookieName.length));
         }
         return '<?= $this->security->get_csrf_hash() ?>'; // fallback
     }
+
 
     document.addEventListener("DOMContentLoaded", function() {
         <?php if ($is_buyer && $order['status'] === 'processing' && !empty($order['qr_token'])): ?>
