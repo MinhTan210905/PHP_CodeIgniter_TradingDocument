@@ -50,7 +50,12 @@ class Auth extends CI_Controller {
             if (!empty($user['is_banned'])) {
                 $message = 'Tài khoản của bạn đã bị chặn! Vui lòng liên hệ Admin để biết thêm.';
                 if ($is_ajax) {
-                    echo json_encode(['status' => 'error', 'message' => $message]);
+                    echo json_encode([
+                        'status' => 'error', 
+                        'message' => $message,
+                        'csrf_name' => $this->security->get_csrf_token_name(),
+                        'csrf_hash' => $this->security->get_csrf_hash()
+                    ]);
                     return;
                 }
                 $this->session->set_flashdata('error', $message);
@@ -75,7 +80,12 @@ class Auth extends CI_Controller {
         } else {
             $message = 'Tài khoản hoặc mật khẩu không đúng!';
             if ($is_ajax) {
-                echo json_encode(['status' => 'error', 'message' => $message]);
+                echo json_encode([
+                    'status' => 'error', 
+                    'message' => $message,
+                    'csrf_name' => $this->security->get_csrf_token_name(),
+                    'csrf_hash' => $this->security->get_csrf_hash()
+                ]);
                 return;
             }
             $this->session->set_flashdata('error', $message);
@@ -183,7 +193,7 @@ class Auth extends CI_Controller {
 
         // Gửi email chứa OTP dạng HTML đẹp
         $this->load->library('email');
-        $this->email->initialize(['mailtype' => 'html']);
+        $this->email->clear();
 
         $this->email->from($this->config->item('smtp_user') ?? 'no-reply@hcmue.edu.vn', 'HCMUE BookSwap');
         $this->email->to($email);
@@ -318,7 +328,7 @@ class Auth extends CI_Controller {
 
         // Gửi email OTP HTML đẹp
         $this->load->library('email');
-        $this->email->initialize(['mailtype' => 'html']);
+        $this->email->clear();
         $this->email->from($this->config->item('smtp_user') ?? 'no-reply@hcmue.edu.vn', 'HCMUE BookSwap');
         $this->email->to($email);
         $this->email->subject('[HCMUE BookSwap] Mã OTP mới của bạn');
@@ -409,7 +419,7 @@ class Auth extends CI_Controller {
 
         // Gửi email
         $this->load->library('email');
-        $this->email->initialize(['mailtype' => 'html']);
+        $this->email->clear();
         $this->email->from($this->config->item('smtp_user') ?? 'no-reply@hcmue.edu.vn', 'HCMUE BookSwap');
         $this->email->to($email);
         $this->email->subject('[HCMUE BookSwap] Mã khôi phục mật khẩu');

@@ -170,6 +170,8 @@ $config['csrf_exclude_uris'] = [
     'message/send_ajax',
     'message/poll',
     'message/total_unread',
+    'message/send_meetup_ajax',
+    'message/respond_meetup_ajax',
 ];
 
 /*

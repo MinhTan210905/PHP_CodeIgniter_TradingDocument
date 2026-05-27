@@ -129,14 +129,6 @@ class Cron extends CI_Controller {
                     $price_formatted = number_format($post['price'], 0, ',', '.') . 'đ';
                     $detail_url = site_url('trade/detail/' . $post['id']);
 
-                    // 1. Gửi tin nhắn nội bộ
-                    $this->Message_model->send_message([
-                        'sender_id'   => (int)$post['user_id'],
-                        'receiver_id' => (int)$wish['user_id'],
-                        'post_id'     => (int)$post['id'],
-                        'content'     => "📚 [Gợi ý] Có bài đăng mới phù hợp với mong muốn \"{$wish['book_title']}\": \"{$post['title']}\" — Giá: {$price_formatted}. Xem chi tiết: {$detail_url}",
-                    ]);
-
                     // 2. Gửi email thông báo
                     $this->_send_wishlist_email(
                         $wish['email'],
@@ -163,7 +155,7 @@ class Cron extends CI_Controller {
      */
     private function _send_wishlist_email($to_email, $to_name, $wish_title, $post_title, $price, $seller_name, $detail_url) {
         $this->load->library('email');
-        $this->email->initialize(['mailtype' => 'html']);
+        $this->email->clear();
         $this->email->from($this->config->item('smtp_user') ?? 'no-reply@hcmue.edu.vn', 'HCMUE BookSwap');
         $this->email->to($to_email);
         $this->email->subject('[HCMUE BookSwap] Sách bạn đang tìm đã có người đăng bán!');

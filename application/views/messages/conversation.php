@@ -69,52 +69,98 @@
                     $content = trim($content);
                 }
                 ?>
-                <div class="message-item" data-id="<?= $msg['id'] ?>" style="display:flex;flex-direction:column;align-items:<?= $is_mine ? 'flex-end' : 'flex-start' ?>;">
-                     <div style="
-                        max-width:72%;
-                        background:<?= $is_mine ? 'var(--hcmue-blue)' : '#fff' ?>;
-                        color:<?= $is_mine ? '#fff' : '#1A1A2E' ?>;
-                        border-radius:<?= $is_mine ? '18px 18px 6px 18px' : '18px 18px 18px 6px' ?>;
-                        padding:10px 14px;
-                        font-size:0.87rem;
-                        line-height:1.5;
-                        box-shadow:0 2px 8px rgba(0,0,0,0.06);
-                        word-break:break-word;
-                    ">
-                        <?= nl2br(htmlspecialchars($content)) ?>
-                        
-                        <!-- Nếu có mã Đơn hàng đi kèm, vẽ Nút hành động cực đẹp -->
-                        <?php if ($order_id): ?>
-                            <div class="mt-2 pt-2 border-top" style="border-color:rgba(255,255,255,0.2) !important;">
-                                <?php if ($order_action_type === 'rate'): ?>
-                                    <a href="<?= site_url('orders/rate/' . $order_id) ?>" 
-                                       class="btn btn-sm w-100 rounded-3 fw-bold py-1.5 text-white"
-                                       style="background: linear-gradient(135deg, #F59E0B, #D97706); 
-                                              font-size:0.78rem; 
-                                              border: none;
-                                              box-shadow: var(--shadow-sm);">
-                                        <i class="fas fa-star me-1"></i> Đánh giá người bán ngay
-                                    </a>
-                                <?php else: ?>
-                                    <a href="<?= site_url('orders/detail/' . $order_id) ?>" 
-                                       class="btn btn-sm w-100 rounded-3 fw-bold py-1"
-                                       style="background:<?= $is_mine ? '#fff' : 'var(--hcmue-blue)' ?>; 
-                                              color:<?= $is_mine ? 'var(--hcmue-blue)' : '#fff' ?>; 
-                                              font-size:0.78rem; 
-                                              border:1px solid rgba(0,0,0,0.05);">
-                                        <i class="fas fa-shopping-bag me-1"></i> Xem chi tiết Đơn hàng
-                                    </a>
+                <?php if ($msg['message_type'] == 'meetup'): ?>
+                    <?php
+                        $status_bg = '#f8f9fa'; $status_color = '#6c757d'; $status_icon = 'fa-clock'; $status_text = 'Đang chờ xác nhận';
+                        if ($msg['meetup_status'] == 'accepted') { $status_bg = '#d1e7dd'; $status_color = '#0f5132'; $status_icon = 'fa-check-circle'; $status_text = 'Đã chấp nhận'; }
+                        elseif ($msg['meetup_status'] == 'rejected') { $status_bg = '#f8d7da'; $status_color = '#842029'; $status_icon = 'fa-times-circle'; $status_text = 'Đã từ chối'; }
+                    ?>
+                    <div class="message-item" data-id="<?= $msg['id'] ?>" style="display:flex;flex-direction:column;align-items:<?= $is_mine ? 'flex-end' : 'flex-start' ?>;">
+                        <div class="meetup-card" style="width:270px; background:#fff; border:1px solid #e0e0e0; border-radius:14px; overflow:hidden; box-shadow:0 4px 12px rgba(0,0,0,0.05); margin-bottom:4px;">
+                            <div style="background:linear-gradient(135deg, var(--hcmue-blue), #1e5ba3); color:#fff; padding:12px 15px; font-weight:bold; font-size:0.9rem; display:flex; align-items:center; gap:8px;">
+                                <i class="fas fa-calendar-alt"></i> Hẹn Gặp Giao Sách
+                            </div>
+                            <div style="padding:15px; font-size:0.85rem; color:#333;">
+                                <div class="mb-2 d-flex align-items-start">
+                                    <i class="fas fa-map-marker-alt text-danger me-2 mt-1" style="width:16px;"></i> 
+                                    <div><strong>Địa điểm:</strong><br><?= htmlspecialchars($msg['meetup_location']) ?></div>
+                                </div>
+                                <div class="mb-3 d-flex align-items-center">
+                                    <i class="fas fa-clock text-primary me-2" style="width:16px;"></i> 
+                                    <div><strong>Thời gian:</strong> <?= date('H:i d/m/Y', strtotime($msg['meetup_time'])) ?></div>
+                                </div>
+                                
+                                <div style="background:<?= $status_bg ?>; color:<?= $status_color ?>; padding:6px 10px; border-radius:8px; text-align:center; font-weight:bold; font-size:0.8rem; margin-bottom: <?= (!$is_mine && $msg['meetup_status'] == 'pending') ? '12px' : '0' ?>;">
+                                    <i class="fas <?= $status_icon ?> me-1"></i> <?= $status_text ?>
+                                </div>
+
+                                <?php if (!$is_mine && $msg['meetup_status'] == 'pending'): ?>
+                                    <div class="d-flex gap-2 mt-2">
+                                        <button class="btn btn-sm w-50 btn-success fw-bold rounded-3 py-2" onclick="respondMeetup(<?= $msg['id'] ?>, 'accepted')" style="font-size:0.8rem; box-shadow:0 2px 4px rgba(25,135,84,0.3);">
+                                            <i class="fas fa-check me-1"></i> Chấp nhận
+                                        </button>
+                                        <button class="btn btn-sm w-50 btn-danger fw-bold rounded-3 py-2" onclick="respondMeetup(<?= $msg['id'] ?>, 'rejected')" style="font-size:0.8rem; box-shadow:0 2px 4px rgba(220,53,69,0.3);">
+                                            <i class="fas fa-times me-1"></i> Từ chối
+                                        </button>
+                                    </div>
                                 <?php endif; ?>
                             </div>
-                        <?php endif; ?>
+                        </div>
+                        <span style="font-size:0.68rem;color:#9CA3AF;margin-top:3px;">
+                            <?= date('H:i d/m', strtotime($msg['created_at'])) ?>
+                            <?php if ($is_mine): ?>
+                                <i class="fas fa-<?= $msg['is_read'] ? 'check-double' : 'check' ?> ms-1" style="<?= $msg['is_read'] ? 'color:var(--hcmue-blue)' : '' ?>"></i>
+                            <?php endif; ?>
+                        </span>
                     </div>
-                    <span style="font-size:0.68rem;color:#9CA3AF;margin-top:3px;">
-                        <?= date('H:i d/m', strtotime($msg['created_at'])) ?>
-                        <?php if ($is_mine): ?>
-                            <i class="fas fa-<?= $msg['is_read'] ? 'check-double' : 'check' ?> ms-1" style="<?= $msg['is_read'] ? 'color:var(--hcmue-blue)' : '' ?>"></i>
-                        <?php endif; ?>
-                    </span>
-                </div>
+                <?php else: ?>
+                    <div class="message-item" data-id="<?= $msg['id'] ?>" style="display:flex;flex-direction:column;align-items:<?= $is_mine ? 'flex-end' : 'flex-start' ?>;">
+                         <div style="
+                            max-width:72%;
+                            background:<?= $is_mine ? 'var(--hcmue-blue)' : '#fff' ?>;
+                            color:<?= $is_mine ? '#fff' : '#1A1A2E' ?>;
+                            border-radius:<?= $is_mine ? '18px 18px 6px 18px' : '18px 18px 18px 6px' ?>;
+                            padding:10px 14px;
+                            font-size:0.87rem;
+                            line-height:1.5;
+                            box-shadow:0 2px 8px rgba(0,0,0,0.06);
+                            word-break:break-word;
+                        ">
+                            <?= nl2br(htmlspecialchars($content)) ?>
+                            
+                            <!-- Nếu có mã Đơn hàng đi kèm, vẽ Nút hành động cực đẹp -->
+                            <?php if ($order_id): ?>
+                                <div class="mt-2 pt-2 border-top" style="border-color:rgba(255,255,255,0.2) !important;">
+                                    <?php if ($order_action_type === 'rate'): ?>
+                                        <a href="<?= site_url('orders/rate/' . $order_id) ?>" 
+                                           class="btn btn-sm w-100 rounded-3 fw-bold py-1.5 text-white"
+                                           style="background: linear-gradient(135deg, #F59E0B, #D97706); 
+                                                  font-size:0.78rem; 
+                                                  border: none;
+                                                  box-shadow: var(--shadow-sm);">
+                                            <i class="fas fa-star me-1"></i> Đánh giá người bán ngay
+                                        </a>
+                                    <?php else: ?>
+                                        <a href="<?= site_url('orders/detail/' . $order_id) ?>" 
+                                           class="btn btn-sm w-100 rounded-3 fw-bold py-1"
+                                           style="background:<?= $is_mine ? '#fff' : 'var(--hcmue-blue)' ?>; 
+                                                  color:<?= $is_mine ? 'var(--hcmue-blue)' : '#fff' ?>; 
+                                                  font-size:0.78rem; 
+                                                  border:1px solid rgba(0,0,0,0.05);">
+                                            <i class="fas fa-shopping-bag me-1"></i> Xem chi tiết Đơn hàng
+                                        </a>
+                                    <?php endif; ?>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+                        <span style="font-size:0.68rem;color:#9CA3AF;margin-top:3px;">
+                            <?= date('H:i d/m', strtotime($msg['created_at'])) ?>
+                            <?php if ($is_mine): ?>
+                                <i class="fas fa-<?= $msg['is_read'] ? 'check-double' : 'check' ?> ms-1" style="<?= $msg['is_read'] ? 'color:var(--hcmue-blue)' : '' ?>"></i>
+                            <?php endif; ?>
+                        </span>
+                    </div>
+                <?php endif; ?>
             <?php endforeach; ?>
         <?php endif; ?>
     </div>
@@ -123,6 +169,11 @@
     <form action="<?= site_url('message/send') ?>" method="POST" id="chatForm" class="d-flex gap-2 align-items-end">
         <input type="hidden" name="receiver_id" value="<?= $other_user['id'] ?>">
         <input type="hidden" name="post_id" value="<?= $this->input->get('post_id') ?>">
+        
+        <button type="button" class="btn btn-light px-3 py-3" style="border-radius:16px; border:1.5px solid #E5E9F2; color:var(--hcmue-blue); flex-shrink:0;" data-bs-toggle="modal" data-bs-target="#meetupModal" title="Lên lịch hẹn gặp">
+            <i class="fas fa-calendar-alt"></i>
+        </button>
+
         <div class="flex-grow-1">
             <textarea class="form-control" name="content" rows="2" id="msgInput"
                       placeholder="Nhập tin nhắn..." required
@@ -132,6 +183,71 @@
             <i class="fas fa-paper-plane"></i>
         </button>
     </form>
+</div>
+
+<!-- Modal Hẹn Gặp -->
+<div class="modal fade" id="meetupModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-0 rounded-top-4" style="background:linear-gradient(135deg, var(--hcmue-blue), #1e5ba3); color:#fff;">
+                <h5 class="modal-title fw-bold"><i class="fas fa-calendar-alt me-2"></i> Lên lịch Hẹn Gặp</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="meetupForm">
+                <div class="modal-body p-4">
+                    <input type="hidden" name="<?= $this->security->get_csrf_token_name(); ?>" value="<?= $this->security->get_csrf_hash(); ?>">
+                    <input type="hidden" name="receiver_id" value="<?= $other_user['id'] ?>">
+                    <input type="hidden" name="post_id" value="<?= $this->input->get('post_id') ?>">
+                    
+                    <div class="alert alert-info rounded-3" style="font-size:0.85rem; background:#E8F0FD; border:none; color:var(--hcmue-blue);">
+                        <i class="fas fa-info-circle me-1"></i> Tính năng này giúp hai bên thống nhất thời gian và địa điểm giao nhận sách trong khuôn viên trường.
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold" style="font-size:0.9rem; color:#333;">Cơ sở / Khu vực giao nhận</label>
+                        <select name="location" class="form-select rounded-3 border-2" style="padding:10px 14px;" required>
+                            <option value="">-- Chọn địa điểm --</option>
+                            <optgroup label="Cơ sở chính (280 An Dương Vương)">
+                                <option value="Cơ sở chính - Thư viện">Thư viện</option>
+                                <option value="Cơ sở chính - Căn tin">Căn tin</option>
+                                <option value="Cơ sở chính - Khu tự học">Khu tự học</option>
+                                <option value="Cơ sở chính - Sảnh nhà A">Sảnh nhà A</option>
+                                <option value="Cơ sở chính - Bãi xe">Bãi xe</option>
+                            </optgroup>
+                            <optgroup label="Cơ sở 2 (Lê Văn Sỹ)">
+                                <option value="Cơ sở 2 - Sảnh chính">Sảnh chính</option>
+                                <option value="Cơ sở 2 - Căn tin">Căn tin</option>
+                            </optgroup>
+                            <option value="custom">-- Địa điểm khác (Tự nhập thủ công) --</option>
+                        </select>
+                    </div>
+
+                    <!-- Trường nhập địa điểm tự do -->
+                    <div class="mb-3 animate-fade-in" id="customLocationContainer" style="display:none; transition: all 0.3s ease-in-out;">
+                        <label class="form-label fw-bold" style="font-size:0.9rem; color:#1e5ba3;"><i class="fas fa-edit me-1"></i> Nhập địa điểm cụ thể khác *</label>
+                        <input type="text" id="customLocationInput" class="form-control rounded-3 border-2" style="padding:10px 14px;" placeholder="VD: Trước cổng trường, Ghế đá dãy B, Căn tin lầu 2...">
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-6 mb-3">
+                            <label class="form-label fw-bold" style="font-size:0.9rem; color:#333;">Ngày hẹn</label>
+                            <input type="date" name="date" class="form-control rounded-3 border-2" style="padding:10px 14px;" required min="<?= date('Y-m-d') ?>">
+                        </div>
+                        <div class="col-6 mb-3">
+                            <label class="form-label fw-bold" style="font-size:0.9rem; color:#333;">Giờ hẹn</label>
+                            <input type="time" name="time" class="form-control rounded-3 border-2" style="padding:10px 14px;" required>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 p-4 pt-0">
+                    <button type="button" class="btn btn-light rounded-3 px-4 fw-bold" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary-hcmue rounded-3 px-4 fw-bold">
+                        <i class="fas fa-paper-plane me-2"></i> Gửi Lịch Hẹn
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -201,6 +317,85 @@ function formatMessageContent(content) {
 
 // Render HTML cho tin nhắn mới nhận được
 function renderMessageHTML(msg, isMine) {
+    // Xử lý tạo ngày giờ tin nhắn (HH:MM DD/MM)
+    let formattedTime = '';
+    try {
+        const dateObj = new Date(msg.created_at.replace(/-/g, '/')); 
+        let hours = dateObj.getHours().toString().padStart(2, '0');
+        let minutes = dateObj.getMinutes().toString().padStart(2, '0');
+        let day = dateObj.getDate().toString().padStart(2, '0');
+        let month = (dateObj.getMonth() + 1).toString().padStart(2, '0');
+        formattedTime = `${hours}:${minutes} ${day}/${month}`;
+    } catch (e) {
+        formattedTime = 'Vừa xong';
+    }
+    
+    const checkIcon = isMine 
+        ? `<i class="fas fa-${msg.is_read == 1 ? 'check-double' : 'check'} ms-1" style="${msg.is_read == 1 ? 'color:var(--hcmue-blue)' : ''}"></i>`
+        : '';
+    const align = isMine ? 'flex-end' : 'flex-start';
+
+    // RENDER: Lịch hẹn
+    if (msg.message_type === 'meetup') {
+        let statusBg = '#f8f9fa', statusColor = '#6c757d', statusIcon = 'fa-clock', statusText = 'Đang chờ xác nhận';
+        if (msg.meetup_status === 'accepted') { statusBg = '#d1e7dd'; statusColor = '#0f5132'; statusIcon = 'fa-check-circle'; statusText = 'Đã chấp nhận'; }
+        else if (msg.meetup_status === 'rejected') { statusBg = '#f8d7da'; statusColor = '#842029'; statusIcon = 'fa-times-circle'; statusText = 'Đã từ chối'; }
+
+        let meetupTimeStr = msg.meetup_time; 
+        try {
+            const mDateObj = new Date(msg.meetup_time.replace(/-/g, '/'));
+            let h = mDateObj.getHours().toString().padStart(2, '0');
+            let m = mDateObj.getMinutes().toString().padStart(2, '0');
+            let d = mDateObj.getDate().toString().padStart(2, '0');
+            let mo = (mDateObj.getMonth() + 1).toString().padStart(2, '0');
+            let y = mDateObj.getFullYear();
+            meetupTimeStr = `${h}:${m} ${d}/${mo}/${y}`;
+        } catch(e) {}
+
+        let buttonsHtml = '';
+        if (!isMine && msg.meetup_status === 'pending') {
+            buttonsHtml = `
+                <div class="d-flex gap-2 mt-2">
+                    <button class="btn btn-sm w-50 btn-success fw-bold rounded-3 py-2" onclick="respondMeetup(${msg.id}, 'accepted')" style="font-size:0.8rem; box-shadow:0 2px 4px rgba(25,135,84,0.3);">
+                        <i class="fas fa-check me-1"></i> Chấp nhận
+                    </button>
+                    <button class="btn btn-sm w-50 btn-danger fw-bold rounded-3 py-2" onclick="respondMeetup(${msg.id}, 'rejected')" style="font-size:0.8rem; box-shadow:0 2px 4px rgba(220,53,69,0.3);">
+                        <i class="fas fa-times me-1"></i> Từ chối
+                    </button>
+                </div>
+            `;
+        }
+        const bottomMargin = (!isMine && msg.meetup_status === 'pending') ? '12px' : '0';
+
+        return `
+        <div class="message-item" data-id="${msg.id}" style="display:flex;flex-direction:column;align-items:${align};">
+            <div class="meetup-card" style="width:270px; background:#fff; border:1px solid #e0e0e0; border-radius:14px; overflow:hidden; box-shadow:0 4px 12px rgba(0,0,0,0.05); margin-bottom:4px;">
+                <div style="background:linear-gradient(135deg, var(--hcmue-blue), #1e5ba3); color:#fff; padding:12px 15px; font-weight:bold; font-size:0.9rem; display:flex; align-items:center; gap:8px;">
+                    <i class="fas fa-calendar-alt"></i> Hẹn Gặp Giao Sách
+                </div>
+                <div style="padding:15px; font-size:0.85rem; color:#333;">
+                    <div class="mb-2 d-flex align-items-start">
+                        <i class="fas fa-map-marker-alt text-danger me-2 mt-1" style="width:16px;"></i> 
+                        <div><strong>Địa điểm:</strong><br>${escapeHtml(msg.meetup_location)}</div>
+                    </div>
+                    <div class="mb-3 d-flex align-items-center">
+                        <i class="fas fa-clock text-primary me-2" style="width:16px;"></i> 
+                        <div><strong>Thời gian:</strong> ${meetupTimeStr}</div>
+                    </div>
+                    
+                    <div style="background:${statusBg}; color:${statusColor}; padding:6px 10px; border-radius:8px; text-align:center; font-weight:bold; font-size:0.8rem; margin-bottom:${bottomMargin};">
+                        <i class="fas ${statusIcon} me-1"></i> ${statusText}
+                    </div>
+                    ${buttonsHtml}
+                </div>
+            </div>
+            <span style="font-size:0.68rem;color:#9CA3AF;margin-top:3px;">
+                ${formattedTime} ${checkIcon}
+            </span>
+        </div>`;
+    }
+
+    // RENDER: Text message
     const parsed = formatMessageContent(msg.content);
     const escapedContent = escapeHtml(parsed.text).replace(/\n/g, '<br>');
     
@@ -233,28 +428,10 @@ function renderMessageHTML(msg, isMine) {
         }
     }
     
-    const align = isMine ? 'flex-end' : 'flex-start';
     const bg = isMine ? 'var(--hcmue-blue)' : '#fff';
     const color = isMine ? '#fff' : '#1A1A2E';
     const radius = isMine ? '18px 18px 6px 18px' : '18px 18px 18px 6px';
     
-    // Tạo định dạng ngày giờ: HH:MM DD/MM
-    let formattedTime = '';
-    try {
-        const dateObj = new Date(msg.created_at.replace(/-/g, '/')); // thay - bằng / để tương thích Safari
-        let hours = dateObj.getHours().toString().padStart(2, '0');
-        let minutes = dateObj.getMinutes().toString().padStart(2, '0');
-        let day = dateObj.getDate().toString().padStart(2, '0');
-        let month = (dateObj.getMonth() + 1).toString().padStart(2, '0');
-        formattedTime = `${hours}:${minutes} ${day}/${month}`;
-    } catch (e) {
-        formattedTime = 'Vừa xong';
-    }
-    
-    const checkIcon = isMine 
-        ? `<i class="fas fa-${msg.is_read == 1 ? 'check-double' : 'check'} ms-1" style="${msg.is_read == 1 ? 'color:var(--hcmue-blue)' : ''}"></i>`
-        : '';
-        
     return `
         <div class="message-item" data-id="${msg.id}" style="display:flex;flex-direction:column;align-items:${align};">
              <div style="
@@ -314,7 +491,7 @@ chatForm.addEventListener('submit', function(e) {
     });
 });
 
-// Lấy tin nhắn mới qua AJAX Polling
+// Lấy tin nhắn mới qua AJAX Polling (sử dụng khi gửi tin nhắn hoặc làm fallback)
 function pollMessages() {
     fetch(`${siteUrl}message/poll/${otherUserId}?after_id=${maxMsgId}`, {
         headers: {
@@ -344,8 +521,167 @@ function pollMessages() {
     .catch(err => console.warn('Lỗi polling tin nhắn:', err));
 }
 
-// Bật tự động nhận tin nhắn mới mỗi 3 giây
+// KHỞI TẠO PUSHER CHANNELS (REAL-TIME CHAT)
+try {
+    const pusherAppKey = '430b3850d19e9367913c';
+    const pusherCluster = 'ap1';
+
+    const pusher = new Pusher(pusherAppKey, {
+        cluster: pusherCluster,
+        forceTLS: true
+    });
+
+    // Đăng ký lắng nghe kênh chat riêng của User hiện tại
+    const channel = pusher.subscribe('chat-channel-' + currentUserId);
+
+    channel.bind('new-message', function(data) {
+        if (data && data.message) {
+            const msg = data.message;
+            // Nếu tin nhắn gửi từ đối phương đang trò chuyện cùng
+            if (parseInt(msg.sender_id) === parseInt(otherUserId)) {
+                // Xóa placeholder trống nếu có
+                const placeholder = document.getElementById('noMessagesPlaceholder');
+                if (placeholder) placeholder.remove();
+
+                // Kiểm tra xem tin nhắn đã hiển thị chưa để tránh trùng lặp
+                if (!document.querySelector(`.message-item[data-id="${msg.id}"]`)) {
+                    const html = renderMessageHTML(msg, false);
+                    chatBox.insertAdjacentHTML('beforeend', html);
+                    updateMaxMsgId();
+                    scrollToBottom();
+                }
+
+                // Tự động đánh dấu đã đọc ngầm bằng AJAX
+                fetch(`${siteUrl}message/mark_read_ajax/${otherUserId}`, {
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                }).catch(err => console.warn('Lỗi đánh dấu đã đọc:', err));
+            }
+        }
+    });
+
+    channel.bind('update-message', function(data) {
+        if (data && data.message) {
+            const msg = data.message;
+            const msgItem = document.querySelector(`.message-item[data-id="${msg.id}"]`);
+            if (msgItem) {
+                const isMine = parseInt(msg.sender_id) === parseInt(currentUserId);
+                const html = renderMessageHTML(msg, isMine);
+                msgItem.outerHTML = html;
+            }
+        }
+    });
+    console.log('Pusher Channels đã kết nối và sẵn sàng nhận tin nhắn thời gian thực!');
+} catch (e) {
+    console.warn('Lỗi kết nối Pusher WebSocket:', e);
+}
+
+// Bật chế độ Polling đồng bộ tự động mỗi 3 giây song song để đảm bảo tin nhắn luôn realtime 100% trên localhost
 setInterval(pollMessages, 3000);
+
+// Xử lý ẩn hiện ô nhập địa điểm tự do
+const selectLoc = document.querySelector('#meetupForm select[name="location"]');
+const customLocContainer = document.getElementById('customLocationContainer');
+const customLocInput = document.getElementById('customLocationInput');
+
+if (selectLoc && customLocContainer && customLocInput) {
+    selectLoc.addEventListener('change', function() {
+        if (this.value === 'custom') {
+            customLocContainer.style.display = 'block';
+            customLocInput.required = true;
+            customLocInput.focus();
+        } else {
+            customLocContainer.style.display = 'none';
+            customLocInput.required = false;
+        }
+    });
+}
+
+// Xử lý gửi Form Hẹn Gặp
+const meetupForm = document.getElementById('meetupForm');
+if (meetupForm) {
+    meetupForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const formData = new FormData(meetupForm);
+        
+        // Nếu chọn địa điểm khác, ghi đè giá trị của custom input vào formData location
+        const selectLocation = meetupForm.querySelector('select[name="location"]').value;
+        if (selectLocation === 'custom') {
+            const customVal = customLocInput.value.trim();
+            if (!customVal) {
+                alert('Vui lòng nhập địa điểm cụ thể!');
+                return;
+            }
+            formData.set('location', customVal);
+        }
+
+        const submitBtn = meetupForm.querySelector('button[type="submit"]');
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang gửi...';
+
+        fetch(`${siteUrl}message/send_meetup_ajax`, {
+            method: 'POST',
+            body: formData,
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'ok') {
+                const modal = bootstrap.Modal.getInstance(document.getElementById('meetupModal'));
+                if (modal) modal.hide();
+                meetupForm.reset();
+                if (customLocContainer) {
+                    customLocContainer.style.display = 'none';
+                    customLocInput.required = false;
+                }
+                pollMessages(); // Lấy ngay tin nhắn vừa tạo
+            } else {
+                alert(data.message || 'Lỗi gửi lịch hẹn.');
+            }
+        })
+        .catch(err => alert('Lỗi kết nối mạng.'))
+        .finally(() => {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fas fa-paper-plane me-2"></i> Gửi Lịch Hẹn';
+        });
+    });
+}
+
+// Xử lý nút Chấp nhận/Từ chối Hẹn Gặp
+window.respondMeetup = function(msgId, action) {
+    // Ẩn nút đi ngay để tránh spam click
+    const card = document.querySelector(`.message-item[data-id="${msgId}"]`);
+    if (card) {
+        const buttonsContainer = card.querySelector('.d-flex.gap-2.mt-2');
+        if (buttonsContainer) buttonsContainer.style.opacity = '0.5';
+    }
+
+    const csrfName = '<?= $this->security->get_csrf_token_name(); ?>';
+    const csrfHash = '<?= $this->security->get_csrf_hash(); ?>';
+    
+    fetch(`${siteUrl}message/respond_meetup_ajax`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest' },
+        body: `message_id=${msgId}&action=${action}&${csrfName}=${csrfHash}`
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.status !== 'ok') {
+            alert(data.message || 'Có lỗi xảy ra.');
+            if (card) {
+                const buttonsContainer = card.querySelector('.d-flex.gap-2.mt-2');
+                if (buttonsContainer) buttonsContainer.style.opacity = '1';
+            }
+        } else {
+            // Không cần làm gì thêm vì Pusher 'update-message' sẽ trigger và cập nhật UI,
+            // cộng với 'new-message' báo notification!
+            // Nhỡ mạng lag, gọi poll để chắc ăn:
+            pollMessages();
+        }
+    })
+    .catch(err => {
+        alert('Lỗi mạng khi phản hồi.');
+    });
+}
 
 // Nhấn Enter để gửi (trừ khi giữ Shift thì xuống dòng)
 msgInput.addEventListener('keydown', function(e) {

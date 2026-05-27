@@ -18,6 +18,8 @@ header('Content-Type: text/html; charset=UTF-8');
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <!-- Thư viện quét mã vạch ISBN qua Camera -->
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <!-- Thư viện Pusher JS (Real-time Chat) -->
+    <script src="https://js.pusher.com/8.0.1/pusher.min.js"></script>
     <link rel="icon" type="image/png" href="<?= base_url('assets/images/logo_hcmue.png') ?>">
     <style>
         :root {
@@ -74,6 +76,20 @@ header('Content-Type: text/html; charset=UTF-8');
                     <i class="fas fa-shopping-bag"></i>
                     <?php if (isset($pending_count) && $pending_count > 0): ?>
                         <span class="nav-badge"><?= $pending_count ?></span>
+                    <?php endif; ?>
+                </a>
+                <!-- Tin nhắn -->
+                <?php 
+                $CI_h =& get_instance();
+                $CI_h->load->model('Message_model');
+                $header_unread_count = $CI_h->Message_model->count_unread($this->session->userdata('user_id'));
+                ?>
+                <a href="<?= site_url('message/inbox') ?>" class="nav-icon-btn" title="Tin nhắn / Trò chuyện">
+                    <i class="fas fa-comment-dots"></i>
+                    <?php if ($header_unread_count > 0): ?>
+                        <span class="nav-badge bg-danger" id="inboxUnreadBadge"><?= $header_unread_count ?></span>
+                    <?php else: ?>
+                        <span class="nav-badge bg-danger" id="inboxUnreadBadge" style="display:none;"></span>
                     <?php endif; ?>
                 </a>
                 <!-- Mong muốn sách -->
