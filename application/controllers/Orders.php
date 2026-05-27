@@ -485,6 +485,7 @@ class Orders extends CI_Controller {
             return;
         }
 
+        // ① Cập nhật DB trước (tác vụ quan trọng, nhanh)
         $update_data = ['status' => 'completed'];
         if ($order['payment_method'] === 'cod') {
             $update_data['payment_status'] = 'paid';
@@ -496,6 +497,31 @@ class Orders extends CI_Controller {
             $this->Wallet_model->release_escrow($order['seller_id'], $order['id'], $order['price'] * $order['quantity']);
         }
 
+        // ② Trả kết quả về browser NGAY LẬP TỨC (trước khi gọi Pusher / ghi tin nhắn)
+        $response_json = json_encode(['success' => true, 'message' => 'Xác nhận giao hàng thành công! Giao dịch hoàn tất.']);
+
+        header('Content-Type: application/json');
+        header('Content-Length: ' . strlen($response_json));
+        header('Connection: close'); // Báo browser: kết nối đã xong
+
+        // Xóa output buffer để gửi ngay
+        if (ob_get_level() > 0) {
+            ob_end_clean();
+        }
+        ob_start();
+        echo $response_json;
+        $size = ob_get_length();
+        ob_end_flush();
+        flush();
+
+        // Nếu chạy PHP-FPM thì dùng cách này để release connection ngay
+        if (function_exists('fastcgi_finish_request')) {
+            fastcgi_finish_request();
+        }
+
+        // ③ Tác vụ chậm (gọi Pusher HTTP ra internet, ghi tin nhắn) — chạy sau khi browser đã nhận xong
+        ignore_user_abort(true); // Tiếp tục chạy kể cả khi browser đã đóng kết nối
+
         $seller_name = $this->session->userdata('full_name');
         $this->Message_model->send_message([
             'sender_id'   => $seller_id,
@@ -503,12 +529,11 @@ class Orders extends CI_Controller {
             'post_id'     => $order['post_id'],
             'content'     => "🎉 [$seller_name] đã giao sách và hoàn tất giao dịch. Cảm ơn bạn đã tin dùng HCMUE BookSwap! Hãy để lại đánh giá cho người bán tại đây: " . site_url('orders/rate/' . $order['id']),
         ]);
-        
+
         $this->trigger_pusher_order($order['buyer_id'], 'Đơn hàng đã giao thành công. Vui lòng đánh giá người bán!', $order['id']);
         $this->trigger_pusher_order($seller_id, 'Xác thực thành công. Giao dịch hoàn tất!', $order['id']);
-
-        echo json_encode(['success' => true, 'message' => 'Xác nhận giao hàng thành công! Giao dịch hoàn tất.']);
     }
+
 
     public function report_seller($order_id) {
         $this->require_login();
