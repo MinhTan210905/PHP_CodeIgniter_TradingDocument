@@ -234,6 +234,9 @@
                     <button type="button" class="btn btn-sm btn-outline-secondary rounded-end-3 fw-bold" data-filter="sold" style="font-size:0.78rem;padding:4px 14px;">
                         <i class="fas fa-lock me-1" style="font-size:10px;"></i>Đã Pass
                     </button>
+                    <a href="<?= site_url('admin/users') ?>" class="btn btn-sm btn-outline-hcmue rounded-3" style="font-size:0.8rem;">
+                        <i class="fas fa-users me-1"></i> Người dùng
+                    </a>
                 </div>
             </div>
         </div>
