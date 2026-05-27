@@ -265,10 +265,14 @@ class Orders extends CI_Controller {
             $result = $this->Wallet_model->pay_order($buyer_id, $order['seller_id'], $order_id, $amount);
 
             if ($result === TRUE) {
+                $qr_token = md5(uniqid($order_id, true));
+                $otp_code = str_pad(rand(0, 999999), 6, '0', STR_PAD_LEFT);
                 $this->db->where('id', $order_id)->update('orders', [
                     'payment_method' => 'wallet',
                     'payment_status' => 'paid',
-                    'status' => 'processing'
+                    'status' => 'processing',
+                    'qr_token' => $qr_token,
+                    'otp_code' => $otp_code
                 ]);
 
                 $this->Message_model->send_message([
@@ -286,10 +290,14 @@ class Orders extends CI_Controller {
             }
         } else {
             // COD
+            $qr_token = md5(uniqid($order_id, true));
+            $otp_code = str_pad(rand(0, 999999), 6, '0', STR_PAD_LEFT);
             $this->db->where('id', $order_id)->update('orders', [
                 'payment_method' => 'cod',
                 'payment_status' => 'unpaid',
-                'status' => 'processing'
+                'status' => 'processing',
+                'qr_token' => $qr_token,
+                'otp_code' => $otp_code
             ]);
 
             $this->Message_model->send_message([
