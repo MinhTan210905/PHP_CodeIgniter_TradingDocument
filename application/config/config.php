@@ -172,6 +172,9 @@ $config['csrf_exclude_uris'] = [
     'message/total_unread',
     'message/send_meetup_ajax',
     'message/respond_meetup_ajax',
+    // AJAX endpoints đơn hàng (bảo vệ bởi session login, không cần CSRF)
+    'orders/verify_handover',
+    'orders/ajax_action_count',
 ];
 
 /*

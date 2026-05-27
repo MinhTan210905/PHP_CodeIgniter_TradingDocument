@@ -464,6 +464,8 @@ class Orders extends CI_Controller {
 
     public function verify_handover() {
         $this->require_login();
+        header('Content-Type: application/json');
+
         $seller_id = $this->session->userdata('user_id');
         $code = $this->input->post('code', TRUE);
 
@@ -472,6 +474,7 @@ class Orders extends CI_Controller {
             return;
         }
 
+        // Tìm đơn hàng processing khớp mã
         $this->db->where('seller_id', $seller_id);
         $this->db->where('status', 'processing');
         $this->db->group_start();
@@ -485,54 +488,32 @@ class Orders extends CI_Controller {
             return;
         }
 
-        // ① Cập nhật DB trước (tác vụ quan trọng, nhanh)
+        // Cập nhật trạng thái → completed
         $update_data = ['status' => 'completed'];
         if ($order['payment_method'] === 'cod') {
             $update_data['payment_status'] = 'paid';
         }
         $this->db->where('id', $order['id'])->update('orders', $update_data);
 
+        // Giải ngân ví nếu thanh toán bằng wallet
         if ($order['payment_method'] === 'wallet' && $order['payment_status'] === 'paid') {
             $this->load->model('Wallet_model');
             $this->Wallet_model->release_escrow($order['seller_id'], $order['id'], $order['price'] * $order['quantity']);
         }
 
-        // ② Trả kết quả về browser NGAY LẬP TỨC (trước khi gọi Pusher / ghi tin nhắn)
-        $response_json = json_encode(['success' => true, 'message' => 'Xác nhận giao hàng thành công! Giao dịch hoàn tất.']);
-
-        header('Content-Type: application/json');
-        header('Content-Length: ' . strlen($response_json));
-        header('Connection: close'); // Báo browser: kết nối đã xong
-
-        // Xóa output buffer để gửi ngay
-        if (ob_get_level() > 0) {
-            ob_end_clean();
-        }
-        ob_start();
-        echo $response_json;
-        $size = ob_get_length();
-        ob_end_flush();
-        flush();
-
-        // Nếu chạy PHP-FPM thì dùng cách này để release connection ngay
-        if (function_exists('fastcgi_finish_request')) {
-            fastcgi_finish_request();
-        }
-
-        // ③ Tác vụ chậm (gọi Pusher HTTP ra internet, ghi tin nhắn) — chạy sau khi browser đã nhận xong
-        ignore_user_abort(true); // Tiếp tục chạy kể cả khi browser đã đóng kết nối
-
+        // Gửi tin nhắn thông báo (chỉ INSERT DB, nhanh)
         $seller_name = $this->session->userdata('full_name');
         $this->Message_model->send_message([
             'sender_id'   => $seller_id,
             'receiver_id' => $order['buyer_id'],
             'post_id'     => $order['post_id'],
-            'content'     => "🎉 [$seller_name] đã giao sách và hoàn tất giao dịch. Cảm ơn bạn đã tin dùng HCMUE BookSwap! Hãy để lại đánh giá cho người bán tại đây: " . site_url('orders/rate/' . $order['id']),
+            'content'     => "🎉 [$seller_name] đã giao sách thành công. Hãy đánh giá tại: " . site_url('orders/rate/' . $order['id']),
         ]);
 
-        $this->trigger_pusher_order($order['buyer_id'], 'Đơn hàng đã giao thành công. Vui lòng đánh giá người bán!', $order['id']);
-        $this->trigger_pusher_order($seller_id, 'Xác thực thành công. Giao dịch hoàn tất!', $order['id']);
+        // Trả kết quả ngay (không gọi Pusher ở đây — page reload sẽ sync trạng thái)
+        echo json_encode(['success' => true, 'message' => 'Xác nhận giao hàng thành công! Giao dịch hoàn tất.']);
     }
+
 
 
     public function report_seller($order_id) {
