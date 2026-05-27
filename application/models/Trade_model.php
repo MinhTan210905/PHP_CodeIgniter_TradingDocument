@@ -74,7 +74,26 @@ class Trade_model extends CI_Model
         $this->db->where('posts.status', 'available');
 
         // Group by vì có hàm tổng hợp
-        $this->db->group_by(['posts.id', 'posts.user_id', 'posts.category_id', 'posts.title', 'posts.description', 'posts.price', 'posts.quantity', 'posts.image_url', 'posts.pdf_url', 'posts.item_condition', 'posts.status', 'posts.created_at', 'users.username', 'users.full_name', 'users.phone', 'users.phone_visible', 'categories.category_name', 'categories.icon']);
+        $this->db->group_by([
+            'posts.id', 
+            'posts.user_id', 
+            'posts.category_id', 
+            'posts.title', 
+            'posts.description', 
+            'posts.price', 
+            'posts.quantity', 
+            'posts.image_url', 
+            'posts.pdf_url', 
+            'posts.item_condition', 
+            'posts.status', 
+            'posts.created_at', 
+            'users.username', 
+            'users.full_name', 
+            'users.phone', 
+            'users.phone_visible', 
+            'categories.category_name', 
+            'categories.icon'
+        ]);
         
         // HAVING để lọc theo Rating/Shop yêu thích sau khi GROUP BY
         $having_clauses = [];

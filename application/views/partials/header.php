@@ -47,7 +47,7 @@ header('Content-Type: text/html; charset=UTF-8');
             border-color: rgba(255,255,255,0.4) !important;
         }
     </style>
-    <link rel="stylesheet" href="<?= base_url('assets/css/style.css?v=4.1') ?>">
+    <link rel="stylesheet" href="<?= base_url('assets/css/style.css?v=4.2') ?>">
 </head>
 <body>
 

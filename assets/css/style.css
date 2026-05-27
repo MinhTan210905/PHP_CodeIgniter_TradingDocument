@@ -679,10 +679,19 @@ body {
     transition: var(--transition);
 }
 
-.sort-bar .sort-btn.active {
-    background-color: var(--primary-hcmue) !important;
+.sort-bar .sort-btn:hover {
+    background-color: #E2E8F0 !important;
+    color: var(--text-dark) !important;
+}
+
+.sort-bar .sort-btn.active,
+.sort-bar .sort-btn.active:hover,
+.sort-bar .sort-btn.active:focus,
+.sort-bar .sort-btn.active:active {
+    background-color: var(--primary-mid) !important;
     color: white !important;
-    border-color: var(--primary-hcmue) !important;
+    border-color: var(--primary-mid) !important;
+    box-shadow: none !important;
 }
 
 .sort-select {

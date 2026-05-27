@@ -23,7 +23,7 @@
 
                 <div class="info-text d-flex align-items-center gap-2 mb-2" style="color: rgba(255,255,255,0.75);">
                     <i class="fas fa-map-marker-alt" style="width: 16px; color: rgba(255,255,255,0.5);"></i>
-                    <span>280 An Dương Vương, Phường 4, Quận 5, TP. Hồ Chí Minh</span>
+                    <span>280 An Dương Vương, Phường Chợ Quán, TP.HCM</span>
                 </div>
                 <div class="info-text d-flex align-items-center gap-2" style="color: rgba(255,255,255,0.75);">
                     <i class="fas fa-envelope" style="width: 16px; color: rgba(255,255,255,0.5);"></i>

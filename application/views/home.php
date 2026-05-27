@@ -337,7 +337,7 @@
     const loadingState = document.getElementById('loading-state');
     const resultCount  = document.getElementById('resultCount');
     const clearBtn     = document.getElementById('clearFilterBtn');
-    const catButtons   = document.querySelectorAll('#catFilterBar .cat-filter-btn');
+    const catButtons   = document.querySelectorAll('.cat-filter-btn');
 
     // Các hằng số phân quyền & định danh người dùng dùng trong Javascript
     const IS_ADMIN = <?= json_encode($this->session->userdata('role') === 'admin') ?>;
