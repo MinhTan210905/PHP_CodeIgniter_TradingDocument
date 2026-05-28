@@ -55,7 +55,24 @@ class Trade_model extends CI_Model
             $this->db->where('posts.category_id', $filters['category_id']);
         }
         if (!empty($filters['keyword'])) {
-            $this->db->like('posts.title', $filters['keyword']);
+            $keyword = trim($filters['keyword']);
+            $this->db->group_start();
+            $this->db->like('posts.title', $keyword);
+            
+            // Tách từ để tìm kiếm tương đối (Match bất kỳ từ nào)
+            $words = explode(' ', $keyword);
+            if (count($words) > 1) {
+                foreach ($words as $word) {
+                    $word = trim($word);
+                    if ($word !== '') {
+                        $this->db->or_like('posts.title', $word);
+                        $this->db->or_like('posts.description', $word);
+                    }
+                }
+            } else {
+                $this->db->or_like('posts.description', $keyword);
+            }
+            $this->db->group_end();
         }
         
         // Lọc theo tình trạng
@@ -168,7 +185,24 @@ class Trade_model extends CI_Model
         $this->db->join('categories', 'categories.id  = posts.category_id','left');
         $this->db->join('ratings',    'ratings.seller_id = posts.user_id', 'left');
         if ($keyword) {
+            $keyword = trim($keyword);
+            $this->db->group_start();
             $this->db->like('posts.title', $keyword);
+            
+            // Tách từ để tìm kiếm tương đối (Match bất kỳ từ nào)
+            $words = explode(' ', $keyword);
+            if (count($words) > 1) {
+                foreach ($words as $word) {
+                    $word = trim($word);
+                    if ($word !== '') {
+                        $this->db->or_like('posts.title', $word);
+                        $this->db->or_like('posts.description', $word);
+                    }
+                }
+            } else {
+                $this->db->or_like('posts.description', $keyword);
+            }
+            $this->db->group_end();
         }
         if ($category_id) {
             $this->db->where('posts.category_id', $category_id);
