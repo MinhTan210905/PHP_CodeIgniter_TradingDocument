@@ -186,15 +186,10 @@ class Trade extends CI_Controller {
             $full_text = $this->input->post('title', TRUE) . "\n" . $this->input->post('description', TRUE);
             $ai_analysis = $this->Ai_moderation_model->analyze_text($full_text);
             
-            // Nếu nội dung bị chặn, đăng xuất ngay lập tức và chuyển hướng tới trang đăng nhập
+            // Nếu nội dung bị chặn, từ chối đăng bài và hiển thị thông báo
             if ($ai_analysis['action'] === 'block') {
-                // Xóa tài khoản người dùng
-                $this->db->where('id', $user_id);
-                $this->db->delete('users');
-                // Đăng xuất người dùng
-                $this->session->sess_destroy();
-                $this->session->set_flashdata('error', 'Nội dung của bạn vi phạm quy tắc và đã bị chặn. Tài khoản của bạn đã bị xóa.');
-                redirect('auth');
+                $this->session->set_flashdata('error', 'Nội dung bài viết chứa ngôn từ vi phạm quy tắc cộng đồng và đã bị từ chối đăng tải.');
+                redirect('trade');
                 return;
             }
             $final_status = 'pending';
@@ -410,15 +405,10 @@ class Trade extends CI_Controller {
                 $full_text = $title . "\n" . $update_data['description'];
                 $ai_analysis = $this->Ai_moderation_model->analyze_text($full_text);
                 
-                // Nhãn 3 (block) -> Cấm -> Đưa về chờ duyệt thủ công
+                // Nhãn 3 (block) -> Cấm -> Không cho phép cập nhật, hiển thị lỗi
                 if ($ai_analysis && $ai_analysis['action'] === 'block') {
-                    // Xóa tài khoản người dùng
-                    $this->db->where('id', $user_id);
-                    $this->db->delete('users');
-                    // Đăng xuất người dùng khi nội dung bị chặn trong quá trình cập nhật
-                    $this->session->sess_destroy();
-                    $this->session->set_flashdata('error', 'Nội dung cập nhật vi phạm quy tắc và đã bị chặn. Tài khoản của bạn đã bị xóa.');
-                    redirect('auth');
+                    $this->session->set_flashdata('error', 'Nội dung cập nhật chứa ngôn từ vi phạm quy tắc cộng đồng và đã bị từ chối.');
+                    redirect('trade/edit/' . $id);
                     return;
                 }
                 // Nếu AI moderation quyết định chặn, đưa trạng thái về pending
