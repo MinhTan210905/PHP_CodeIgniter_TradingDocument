@@ -1,7 +1,7 @@
 <?php
 defined('BASEPATH') OR exit('No direct script access allowed');
 
-class Chatbot extends CI_Controller {
+class Chatbot extends MY_Controller {
 
     public function __construct() {
         parent::__construct();

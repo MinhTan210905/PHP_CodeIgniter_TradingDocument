@@ -9,7 +9,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
  * @property Rating_model $Rating_model
  * @property Message_model $Message_model
  */
-class Profile extends CI_Controller {
+class Profile extends MY_Controller {
 
     public function __construct() {
         parent::__construct();
@@ -21,6 +21,7 @@ class Profile extends CI_Controller {
     private function require_login() {
         if (!$this->session->userdata('logged_in')) {
             redirect('auth');
+            exit;
         }
     }
 

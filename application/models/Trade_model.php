@@ -40,7 +40,7 @@ class Trade_model extends CI_Model
     // Read: Lấy toàn bộ bài đăng còn hàng (trang chủ — không hiện sold)
     public function get_all_posts($filters = [])
     {
-        $this->db->select('posts.*, users.username, users.full_name, users.phone, users.phone_visible,
+        $this->db->select('posts.*, users.username, users.full_name, users.phone, users.phone_visible, users.avatar,
             categories.category_name, categories.icon as cat_icon,
             COALESCE(AVG(ratings.stars), 0) as avg_rating,
             COUNT(DISTINCT ratings.id) as total_ratings,
@@ -108,6 +108,7 @@ class Trade_model extends CI_Model
             'users.full_name', 
             'users.phone', 
             'users.phone_visible', 
+            'users.avatar',
             'categories.category_name', 
             'categories.icon'
         ]);
@@ -176,7 +177,7 @@ class Trade_model extends CI_Model
 
     // Tìm kiếm bao gồm cả sách đã hết hàng (sold)
     public function search_posts($keyword = NULL, $category_id = NULL) {
-        $this->db->select('posts.*, users.username, users.full_name,
+        $this->db->select('posts.*, users.username, users.full_name, users.avatar,
             categories.category_name, categories.icon as cat_icon,
             COALESCE(AVG(ratings.stars), 0) as avg_rating,
             COUNT(DISTINCT ratings.id) as total_ratings');
@@ -209,7 +210,7 @@ class Trade_model extends CI_Model
         }
         // Chỉ hiện bài đã duyệt (available + sold)
         $this->db->where_in('posts.status', ['available', 'sold']);
-        $this->db->group_by(['posts.id', 'posts.user_id', 'posts.category_id', 'posts.title', 'posts.description', 'posts.price', 'posts.quantity', 'posts.image_url', 'posts.status', 'posts.created_at', 'users.username', 'users.full_name', 'categories.category_name', 'categories.icon']);
+        $this->db->group_by(['posts.id', 'posts.user_id', 'posts.category_id', 'posts.title', 'posts.description', 'posts.price', 'posts.quantity', 'posts.image_url', 'posts.status', 'posts.created_at', 'users.username', 'users.full_name', 'users.avatar', 'categories.category_name', 'categories.icon']);
         $this->db->order_by('posts.status', 'ASC'); // available trước, sold sau
         $this->db->order_by('posts.created_at', 'DESC');
         return $this->db->get()->result_array();

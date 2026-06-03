@@ -125,6 +125,10 @@ $route['wishlist/delete/(:num)']         = 'wishlist/delete/$1';
 // Cron Job (Tác vụ tự động)
 $route['cron/run']                       = 'cron/run';
 
+// Chatbot AI (Trợ lý ảo)
+$route['chatbot/ask']                    = 'chatbot/ask';
+
+
 // Message AJAX (Chat nâng cao)
 $route['message/toggle_pin/(:num)']      = 'message/toggle_pin_ajax/$1';
 $route['message/toggle_mute/(:num)']     = 'message/toggle_mute_ajax/$1';

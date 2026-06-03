@@ -160,8 +160,13 @@ $cur_step = $timeline[$order['status']] ?? 1;
 
         <!-- === CÁC NÚT HÀNH ĐỘNG DÀNH CHO NGƯỜI MUA === -->
         <?php if ($is_buyer): ?>
-            <!-- Nút Nhắn tin -->
-            <a href="<?= site_url('message/conversation/' . $order['seller_id']) ?>"
+            <?php 
+            $seller_avatar = '';
+            if (!empty($order['seller_avatar']) && file_exists(FCPATH . $order['seller_avatar'])) {
+                $seller_avatar = base_url($order['seller_avatar']);
+            }
+            ?>
+            <a href="javascript:void(0)" onclick="window.openDirectChat(<?= $order['seller_id'] ?>, '<?= htmlspecialchars($order['seller_name'], ENT_QUOTES) ?>', '<?= $seller_avatar ?>')"
                class="btn btn-outline-primary rounded-3">
                 <i class="fas fa-comment-dots me-1"></i>Nhắn tin người bán
             </a>
@@ -205,8 +210,13 @@ $cur_step = $timeline[$order['status']] ?? 1;
 
         <!-- === CÁC NÚT HÀNH ĐỘNG DÀNH CHO NGƯỜI BÁN === -->
         <?php else: ?>
-            <!-- Nút Nhắn tin -->
-            <a href="<?= site_url('message/conversation/' . $order['buyer_id']) ?>"
+            <?php 
+            $buyer_avatar = '';
+            if (!empty($order['buyer_avatar']) && file_exists(FCPATH . $order['buyer_avatar'])) {
+                $buyer_avatar = base_url($order['buyer_avatar']);
+            }
+            ?>
+            <a href="javascript:void(0)" onclick="window.openDirectChat(<?= $order['buyer_id'] ?>, '<?= htmlspecialchars($order['buyer_name'], ENT_QUOTES) ?>', '<?= $buyer_avatar ?>')"
                class="btn btn-outline-primary rounded-3">
                 <i class="fas fa-comment-dots me-1"></i>Nhắn tin người mua
             </a>

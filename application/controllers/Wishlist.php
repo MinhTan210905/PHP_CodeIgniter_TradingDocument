@@ -8,7 +8,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
  * @property Message_model $Message_model
  * @property Order_model $Order_model
  */
-class Wishlist extends CI_Controller {
+class Wishlist extends MY_Controller {
 
     public function __construct() {
         parent::__construct();

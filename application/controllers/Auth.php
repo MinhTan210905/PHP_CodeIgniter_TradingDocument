@@ -8,7 +8,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
  * @property CI_Email $email
  * @property Auth_model $Auth_model
  */
-class Auth extends CI_Controller {
+class Auth extends MY_Controller {
 
     public function __construct() {
         parent::__construct();
@@ -253,6 +253,7 @@ class Auth extends CI_Controller {
     public function verify_otp() {
         if (!$this->session->userdata('pending_reg')) {
             redirect('auth/register');
+            exit;
         }
         $this->load->view('auth/verify_otp');
     }
@@ -468,7 +469,7 @@ class Auth extends CI_Controller {
     public function verify_forgot_password() {
         if (!$this->session->userdata('forgot_pass')) {
             redirect('auth/forgot_password');
-            return;
+            exit;
         }
         $this->load->view('auth/verify_forgot_password');
     }

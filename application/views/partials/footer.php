@@ -77,6 +77,9 @@
             form.appendChild(input);
         }
     });
+    window.openDirectChat = function(otherId, fullName, avatarUrl) {
+        window.location.href = '<?= site_url("auth") ?>';
+    };
 })();
 </script>
 
@@ -422,6 +425,12 @@
 </div>
 
 <script>
+window.openDirectChat = function(otherId, fullName, avatarUrl) {
+    if (!floatingChatOpen) {
+        toggleFloatingChat();
+    }
+    openFloatingConversation(otherId, fullName, avatarUrl);
+};
 let floatingChatOpen = false;
 let currentChatUserId = null;
 let lastMessageId = 0;
@@ -453,6 +462,62 @@ function formatChatTime(dateTimeStr) {
     } catch(e) {
         return '';
     }
+}
+
+// Hàm phân tích định dạng tin nhắn cho Floating Chat
+function formatFloatingMessageContent(content, isMine) {
+    if (!content) return '';
+    
+    const orderLinkRegex = /https?:\/\/[^\s]+orders\/(detail|rate)\/(\d+)/i;
+    const matches = content.match(orderLinkRegex);
+    let orderActionType = null;
+    let orderId = null;
+    
+    if (matches) {
+        orderActionType = matches[1].toLowerCase();
+        orderId = matches[2];
+        
+        content = content.replace(/https?:\/\/[^\s]+/gi, '');
+        content = content.replace('Vào trang Đơn hàng để xác nhận:', '');
+        content = content.replace('Vui lòng liên hệ để thỏa thuận thời gian và địa điểm giao nhận sách. Xem chi tiết:', '');
+        content = content.replace('Xem chi tiết:', '');
+        content = content.replace('Hãy để lại đánh giá cho người bán tại đây:', '');
+        content = content.trim();
+    }
+    
+    let textHtml = escapeHtml(content).replace(/\n/g, '<br>');
+    
+    // Tự động nhận diện URL khác và tạo thẻ A
+    const urlRegex = /(https?:\/\/[^\s<]+)/g;
+    textHtml = textHtml.replace(urlRegex, function(url) {
+        return `<a href="${url}" target="_blank" style="color: ${isMine ? '#fff' : '#2563EB'}; text-decoration: underline; font-weight: 600;">${url}</a>`;
+    });
+
+    let buttonHtml = '';
+    if (orderId) {
+        const siteUrl = '<?= site_url() ?>';
+        if (orderActionType === 'rate') {
+            buttonHtml = `
+                <div class="mt-2 pt-2 border-top" style="border-color: rgba(255,255,255,0.2) !important;">
+                    <a href="${siteUrl}orders/rate/${orderId}" 
+                       class="btn btn-sm w-100 rounded-3 fw-bold py-1.5 text-white"
+                       style="background: linear-gradient(135deg, #F59E0B, #D97706); font-size:0.75rem; border: none; box-shadow: 0 1px 2px rgba(0,0,0,0.05); text-align: center; display: block; text-decoration: none;">
+                        <i class="fas fa-star me-1"></i> Đánh giá người bán ngay
+                    </a>
+                </div>`;
+        } else {
+            buttonHtml = `
+                <div class="mt-2 pt-2 border-top" style="border-color: rgba(255,255,255,0.2) !important;">
+                    <a href="${siteUrl}orders/detail/${orderId}" 
+                       class="btn btn-sm w-100 rounded-3 fw-bold py-1.5"
+                       style="background:${isMine ? '#fff' : '#2563EB'}; color:${isMine ? '#2563EB' : '#fff'}; font-size:0.75rem; border:1px solid rgba(0,0,0,0.05); display: block; text-align: center; text-decoration: none;">
+                        <i class="fas fa-shopping-bag me-1"></i> Xem chi tiết Đơn hàng
+                    </a>
+                </div>`;
+        }
+    }
+    
+    return textHtml + buttonHtml;
 }
 
 // Bật/tắt mở khung chat
@@ -710,7 +775,7 @@ function renderFloatingMessages(messages) {
         html += `
             <div class="floating-chat-msg-wrapper ${sideClass}" style="display:flex; flex-direction:column; align-self:${isMine ? 'flex-end' : 'flex-start'}; align-items:${isMine ? 'flex-end' : 'flex-start'}; max-width:80%;">
                 <div class="floating-chat-msg-bubble ${sideClass}" data-msg-id="${m.id}" style="margin-bottom:2px;">
-                    ${m.content_escaped || escapeHtml(m.content)}
+                    ${formatFloatingMessageContent(m.content, isMine)}
                 </div>
                 <span style="font-size:0.65rem; color:#94A3B8; margin-bottom:4px; padding: 0 4px;">
                     ${formattedTime} ${checkIcon}
@@ -1029,26 +1094,16 @@ document.addEventListener('DOMContentLoaded', function() {
                       }
                   }
               });
+
+              // Nhận tin nhắn mới: cập nhật số tin nhắn chưa đọc và danh sách hội thoại
+              channel.bind('new-message', function(data) {
+                  syncUnreadCount();
+                  if (floatingChatOpen && !currentChatUserId) {
+                      loadFloatingInbox();
+                  }
+              });
           }
       }
-
-    // Sửa nút Hộp thư trên Header để khi click sẽ mở chat widget
-    const headerTrigger = document.getElementById('headerInboxTrigger');
-    if (headerTrigger) {
-        headerTrigger.addEventListener('click', function(e) {
-            e.preventDefault();
-            // Mở khung chat
-            if (!floatingChatOpen) {
-                toggleFloatingChat();
-            } else if (currentChatUserId) {
-                // Nếu đang mở mà ở trong phòng chat, bấm lần nữa để về inbox list
-                backToInbox();
-            } else {
-                // Đóng khung chat
-                toggleFloatingChat();
-            }
-        });
-    }
 
     // Tự động kiểm tra unread badge định kỳ mỗi 15 giây
     
@@ -1272,6 +1327,13 @@ document.addEventListener('DOMContentLoaded', function() {
 <script>
 let isAiTyping = false;
 
+// Hàm escape HTML cục bộ cho AI chatbot (không phụ thuộc block logged_in)
+function escapeAiHtml(text) {
+    if (!text) return '';
+    const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+    return text.toString().replace(/[&<>"']/g, function(m) { return map[m]; });
+}
+
 function toggleAiChat() {
     const w = document.getElementById('aiChatWindow');
     if (w.classList.contains('open')) {
@@ -1326,36 +1388,69 @@ function sendAiMessage() {
     const msg = input.value.trim();
     if (!msg) return;
 
-    appendAiMessage(escapeHtml(msg), 'user');
+    appendAiMessage(escapeAiHtml(msg), 'user');
     input.value = '';
     isAiTyping = true;
     showAiTyping();
 
-    const formData = new FormData();
-    formData.append('message', msg);
-    var csrfName = '<?= $this->security->get_csrf_token_name() ?>';
-    var csrfHash = '<?= $this->security->get_csrf_hash() ?>';
-    formData.append(csrfName, csrfHash);
+    // Gọi Gemini API trực tiếp từ JS (bypass InfinityFree WAF)
+    const GEMINI_API_KEY = '<?= getenv("GEMINI_API_KEY") ?: (isset($_ENV["GEMINI_API_KEY"]) ? $_ENV["GEMINI_API_KEY"] : "") ?>';
 
-    fetch('<?= site_url("chatbot/ask") ?>', {
+    if (!GEMINI_API_KEY || GEMINI_API_KEY === '') {
+        hideAiTyping();
+        isAiTyping = false;
+        appendAiMessage('<span style="color:orange;">⚠️ Chatbot chưa được cấu hình API Key. Vui lòng liên hệ quản trị viên.</span>', 'bot');
+        return;
+    }
+
+    const systemInstruction = `Bạn là HCMUE AI Assistant, nhân viên hỗ trợ ảo của nền tảng HCMUE BookSwap (Hệ thống trao đổi sách sinh viên Đại học Sư Phạm TP.HCM). Nhiệm vụ của bạn là hỗ trợ, hướng dẫn người dùng sử dụng trang web này một cách thân thiện, tự nhiên, ngắn gọn và nhiệt tình.
+Các tính năng chính của website:
+- Đăng bài: Đăng tin bán/trao đổi sách cũ.
+- Tìm kiếm & Lọc sách: Tìm sách theo từ khóa, lọc theo danh mục, giá cả, tình trạng.
+- Wishlist: Thêm sách vào danh sách mong muốn để nhận email thông báo tự động.
+- Nhắn tin (Chat): Nhắn tin trực tiếp giữa người mua và người bán.
+- Quản lý cá nhân: Quản lý bài đăng, thay đổi thông tin.
+Nếu câu hỏi không liên quan đến trang web, giáo dục, hoặc sách, hãy từ chối khéo léo.`;
+
+    const fullPrompt = systemInstruction + '\n\nNgười dùng hỏi: "' + msg + '"\n\nHãy trả lời thật tự nhiên và hữu ích.';
+
+    fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=' + GEMINI_API_KEY, {
         method: 'POST',
-        headers: { 'X-Requested-With': 'XMLHttpRequest' },
-        body: formData
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            contents: [{ parts: [{ text: fullPrompt }] }],
+            generationConfig: { temperature: 0.6, maxOutputTokens: 1000 }
+        })
     })
     .then(res => res.json())
     .then(data => {
         hideAiTyping();
         isAiTyping = false;
-        if (data.status === 'success') {
-            appendAiMessage(data.reply, 'bot');
-        } else {
-            appendAiMessage('<span style="color:red;">Lỗi: ' + escapeHtml(data.message) + '</span>', 'bot');
+        if (data.error) {
+            appendAiMessage('<span style="color:red;">Lỗi AI: ' + escapeAiHtml(data.error.message) + '</span>', 'bot');
+            return;
         }
+        let reply = '';
+        if (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts) {
+            reply = data.candidates[0].content.parts.map(p => p.text || '').join('');
+        }
+        if (!reply) {
+            appendAiMessage('<span style="color:orange;">AI không có phản hồi. Vui lòng thử lại.</span>', 'bot');
+            return;
+        }
+        // Chuyển markdown đơn giản sang HTML
+        reply = reply
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            .replace(/\*(.*?)\*/g, '<em>$1</em>')
+            .replace(/\n/g, '<br>');
+        appendAiMessage(reply, 'bot');
     })
     .catch(err => {
         hideAiTyping();
         isAiTyping = false;
-        appendAiMessage('<span style="color:red;">Lỗi kết nối mạng!</span>', 'bot');
+        console.error('[AI Chatbot Error]', err);
+        appendAiMessage('<span style="color:red;">Lỗi kết nối đến AI. Vui lòng thử lại sau.</span>', 'bot');
     });
 }
 </script>

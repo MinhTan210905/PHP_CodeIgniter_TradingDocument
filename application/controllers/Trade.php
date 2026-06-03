@@ -13,7 +13,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
  * @property Order_model $Order_model
  * @property Setting_model $Setting_model
  */
-class Trade extends CI_Controller {
+class Trade extends MY_Controller {
 
     public function __construct() {
         parent::__construct();
@@ -27,6 +27,7 @@ class Trade extends CI_Controller {
         if (!$this->session->userdata('logged_in')) {
             $this->session->set_flashdata('error', 'Bạn cần đăng nhập để thực hiện thao tác này.');
             redirect('auth');
+            exit;
         }
     }
 
@@ -178,26 +179,30 @@ class Trade extends CI_Controller {
             }
         }
 
+        // Mặc định: admin -> available, user thường -> pending
         $final_status = ($this->session->userdata('role') === 'admin' || $auto_approve) ? 'available' : 'pending';
 
         $ai_analysis = null;
-        if ($auto_approve && $this->session->userdata('role') !== 'admin') {
+        $full_text = null;
+
+        // Chạy AI kiểm duyệt với MỌI bài đăng của user thường (không phải admin)
+        if ($this->session->userdata('role') !== 'admin') {
             $this->load->model('Ai_moderation_model');
             $full_text = $this->input->post('title', TRUE) . "\n" . $this->input->post('description', TRUE);
             $ai_analysis = $this->Ai_moderation_model->analyze_text($full_text);
-            
-            // Nếu nội dung bị chặn, đăng xuất ngay lập tức và chuyển hướng tới trang đăng nhập
+
+            // Nếu AI phát hiện nội dung không phù hợp -> từ chối đăng bài
             if ($ai_analysis['action'] === 'block') {
-                // Xóa tài khoản người dùng
-                $this->db->where('id', $user_id);
-                $this->db->delete('users');
-                // Đăng xuất người dùng
-                $this->session->sess_destroy();
-                $this->session->set_flashdata('error', 'Nội dung của bạn vi phạm quy tắc và đã bị chặn. Tài khoản của bạn đã bị xóa.');
-                redirect('auth');
+                $this->session->set_flashdata('error', '⚠️ Bài đăng của bạn không được duyệt do tiêu đề hoặc mô tả chứa từ ngữ không phù hợp (thô tục, xúc phạm). Vui lòng chỉnh sửa nội dung và thử lại.');
+                redirect('trade');
                 return;
             }
-            $final_status = 'pending';
+
+            // Nếu AI pass nhưng không auto_approve -> về pending để admin duyệt thủ công
+            if (!$auto_approve) {
+                $final_status = 'pending';
+            }
+            // Nếu AI pass và có auto_approve -> giữ nguyên 'available'
         }
 
         $post_data = [
@@ -398,35 +403,28 @@ class Trade extends CI_Controller {
         }
 
         $was_pending = false;
-
         $ai_analysis = null;
+        $full_text    = null;
+
         if ($role !== 'admin' && $sensitive_changed) {
+            // Luôn chạy AI kiểm duyệt khi nội dung nhạy cảm thay đổi
+            $this->load->model('Ai_moderation_model');
+            $full_text   = $title . "\n" . $update_data['description'];
+            $ai_analysis = $this->Ai_moderation_model->analyze_text($full_text);
+
+            // Nếu AI phát hiện từ ngữ không phù hợp -> từ chối cập nhật
+            if ($ai_analysis && $ai_analysis['action'] === 'block') {
+                $this->session->set_flashdata('error', '⚠️ Bài đăng của bạn không được duyệt do tiêu đề hoặc mô tả chứa từ ngữ không phù hợp (thô tục, xúc phạm). Vui lòng chỉnh sửa nội dung và thử lại.');
+                redirect('trade/edit/' . $id);
+                return;
+            }
+
+            // AI pass: nếu không auto_approve_edit -> về pending chờ admin duyệt
             if (!$auto_approve_edit) {
                 $update_data['status'] = 'pending';
                 $was_pending = true;
-            } else {
-                // Admin bật tự động duyệt, chạy AI kiểm duyệt thay thế
-                $this->load->model('Ai_moderation_model');
-                $full_text = $title . "\n" . $update_data['description'];
-                $ai_analysis = $this->Ai_moderation_model->analyze_text($full_text);
-                
-                // Nhãn 3 (block) -> Cấm -> Đưa về chờ duyệt thủ công
-                if ($ai_analysis && $ai_analysis['action'] === 'block') {
-                    // Xóa tài khoản người dùng
-                    $this->db->where('id', $user_id);
-                    $this->db->delete('users');
-                    // Đăng xuất người dùng khi nội dung bị chặn trong quá trình cập nhật
-                    $this->session->sess_destroy();
-                    $this->session->set_flashdata('error', 'Nội dung cập nhật vi phạm quy tắc và đã bị chặn. Tài khoản của bạn đã bị xóa.');
-                    redirect('auth');
-                    return;
-                }
-                // Nếu AI moderation quyết định chặn, đưa trạng thái về pending
-                if ($ai_analysis && $ai_analysis['action'] === 'block') {
-                    $update_data['status'] = 'pending';
-                    $was_pending = true;
-                }
             }
+            // Nếu auto_approve_edit -> giữ status hiện tại (available)
         }
 
         // Khởi tạo thư mục & cấu hình upload chung
@@ -503,7 +501,7 @@ class Trade extends CI_Controller {
         $this->db->reconnect();
         $this->Trade_model->update_post($id, $update_data);
 
-        if ($ai_analysis) {
+        if ($ai_analysis && $full_text !== null) {
             $this->Ai_moderation_model->log_moderation('post', $id, $user_id, $full_text, $ai_analysis);
         }
 

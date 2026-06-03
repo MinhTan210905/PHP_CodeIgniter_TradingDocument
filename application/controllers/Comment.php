@@ -6,7 +6,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
  * @property CI_Input $input
  * @property Comment_model $Comment_model
  */
-class Comment extends CI_Controller {
+class Comment extends MY_Controller {
 
     public function __construct() {
         parent::__construct();
@@ -25,6 +25,13 @@ class Comment extends CI_Controller {
 
         $content = trim($this->input->post('content', TRUE));
         $user_id = $this->session->userdata('user_id');
+
+        // Kiểm tra nội dung rỗng
+        if (empty($content)) {
+            $this->session->set_flashdata('error', 'Nội dung bình luận không được để trống!');
+            redirect('trade/detail/' . $post_id);
+            return;
+        }
 
         // Gọi AI kiểm duyệt nội dung bình luận
         $this->load->model('Ai_moderation_model');
@@ -49,6 +56,11 @@ class Comment extends CI_Controller {
 
         // Ghi log kiểm duyệt
         $this->Ai_moderation_model->log_moderation('comment', $comment_id, $user_id, $content, $ai_analysis);
+
+        // Chỉ hiển thị thông báo thành công nếu bình luận được duyệt
+        if ($moderation_status === 'approved') {
+            $this->session->set_flashdata('success', 'Đã đăng bình luận!');
+        }
 
         redirect('trade/detail/' . $post_id . '#comments');
     }

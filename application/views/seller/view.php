@@ -38,8 +38,14 @@ $user_id   = $this->session->userdata('user_id');
                 </div>
                 <!-- Actions -->
                 <div class="pt-3 d-flex gap-2">
-                    <?php if ($this->session->userdata('logged_in') && $user_id != $seller['id']): ?>
-                        <a href="<?= site_url('message/conversation/' . $seller['id']) ?>"
+                    <?php if (!$this->session->userdata('logged_in') || $this->session->userdata('user_id') != $seller['id']): ?>
+                        <?php 
+                        $seller_avatar = '';
+                        if (!empty($seller['avatar']) && file_exists(FCPATH . $seller['avatar'])) {
+                            $seller_avatar = base_url($seller['avatar']);
+                        }
+                        ?>
+                        <a href="javascript:void(0)" onclick="window.openDirectChat(<?= $seller['id'] ?>, '<?= htmlspecialchars($seller['full_name'], ENT_QUOTES) ?>', '<?= $seller_avatar ?>')"
                            class="btn btn-primary-hcmue rounded-3 px-3 py-2" style="font-size:0.85rem;">
                             <i class="fas fa-comment-dots me-1"></i>Nhắn tin
                         </a>

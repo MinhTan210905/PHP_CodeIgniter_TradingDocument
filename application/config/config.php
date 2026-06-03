@@ -7,12 +7,18 @@ defined('BASEPATH') or exit('No direct script access allowed');
 |--------------------------------------------------------------------------
 */
 if (isset($_SERVER['HTTP_HOST'])) {
-    $base_url = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") . "://" . $_SERVER['HTTP_HOST'];
+    // Detect HTTPS - hỗ trợ cả reverse proxy (CloudFlare, InfinityFree, v.v.)
+    $is_https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+             || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')
+             || (isset($_SERVER['HTTP_X_FORWARDED_SSL']) && $_SERVER['HTTP_X_FORWARDED_SSL'] === 'on')
+             || (isset($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] == 443);
+    $base_url = ($is_https ? "https" : "http") . "://" . $_SERVER['HTTP_HOST'];
     $base_url .= str_replace(basename($_SERVER['SCRIPT_NAME']), "", $_SERVER['SCRIPT_NAME']);
     $config['base_url'] = str_replace(' ', '%20', $base_url);
 } else {
     $config['base_url'] = 'http://localhost/PHP_CodeIgniter_TradingDocument/';
 }
+
 
 /*
 |--------------------------------------------------------------------------
@@ -172,6 +178,7 @@ $config['csrf_exclude_uris'] = [
     'message/total_unread',
     'message/send_meetup_ajax',
     'message/respond_meetup_ajax',
+    'chatbot/ask',
     // AJAX endpoints đơn hàng (bảo vệ bởi session login, không cần CSRF)
     'orders/verify_handover',
     'orders/ajax_action_count',

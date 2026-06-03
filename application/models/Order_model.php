@@ -18,8 +18,8 @@ class Order_model extends CI_Model {
     public function get_order_by_id($id) {
         $this->db->select('orders.*, 
             posts.title as post_title, posts.image_url, posts.price, posts.quantity as post_quantity,
-            seller.full_name as seller_name, seller.username as seller_username, seller.phone as seller_phone,
-            buyer.full_name  as buyer_name,  buyer.username  as buyer_username');
+            seller.full_name as seller_name, seller.username as seller_username, seller.phone as seller_phone, seller.avatar as seller_avatar,
+            buyer.full_name  as buyer_name,  buyer.username  as buyer_username, buyer.avatar as buyer_avatar');
         $this->db->from('orders');
         $this->db->join('posts',       'posts.id    = orders.post_id',    'left');
         $this->db->join('users seller','seller.id   = orders.seller_id',  'left');
@@ -32,7 +32,7 @@ class Order_model extends CI_Model {
     public function get_orders_as_buyer($buyer_id) {
         $this->db->select('orders.*, 
             posts.title as post_title, posts.image_url, posts.price,
-            seller.full_name as seller_name, seller.username as seller_username');
+            seller.full_name as seller_name, seller.username as seller_username, seller.avatar as seller_avatar');
         $this->db->from('orders');
         $this->db->join('posts',       'posts.id  = orders.post_id',   'left');
         $this->db->join('users seller','seller.id = orders.seller_id', 'left');
@@ -45,7 +45,7 @@ class Order_model extends CI_Model {
     public function get_orders_as_seller($seller_id) {
         $this->db->select('orders.*, 
             posts.title as post_title, posts.image_url, posts.price,
-            buyer.full_name  as buyer_name,  buyer.username as buyer_username');
+            buyer.full_name  as buyer_name,  buyer.username as buyer_username, buyer.avatar as buyer_avatar');
         $this->db->from('orders');
         $this->db->join('posts',       'posts.id = orders.post_id',   'left');
         $this->db->join('users buyer', 'buyer.id = orders.buyer_id',  'left');
