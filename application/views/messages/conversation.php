@@ -397,12 +397,7 @@ function renderMessageHTML(msg, isMine) {
 
     // RENDER: Text message
     const parsed = formatMessageContent(msg.content);
-    let escapedContent = escapeHtml(parsed.text).replace(/\n/g, '<br>');
-    // Tự động nhận diện URL khác và tạo thẻ A
-    const urlRegex = /(https?:\/\/[^\s<]+)/g;
-    escapedContent = escapedContent.replace(urlRegex, function(url) {
-        return `<a href="${url}" target="_blank" style="color: ${isMine ? '#fff' : '#2563EB'}; text-decoration: underline; font-weight: 600;">${url}</a>`;
-    });
+    const escapedContent = escapeHtml(parsed.text).replace(/\n/g, '<br>');
     
     let orderButtonHtml = '';
     if (parsed.orderId) {
