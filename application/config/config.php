@@ -182,6 +182,7 @@ $config['csrf_exclude_uris'] = [
     // AJAX endpoints đơn hàng (bảo vệ bởi session login, không cần CSRF)
     'orders/verify_handover',
     'orders/ajax_action_count',
+    'chatbot/ask',
 ];
 
 /*
