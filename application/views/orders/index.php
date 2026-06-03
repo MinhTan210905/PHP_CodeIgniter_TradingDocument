@@ -156,7 +156,13 @@ $active_tab = $active_tab ?? 'buy';
                                     <i class="fas fa-times me-1"></i>Hủy yêu cầu
                                 </a>
                             <?php endif; ?>
-                            <a href="<?= site_url('message/conversation/' . $o['seller_id']) ?>"
+                            <?php 
+                            $seller_avatar = '';
+                            if (!empty($o['seller_avatar']) && file_exists(FCPATH . $o['seller_avatar'])) {
+                                $seller_avatar = base_url($o['seller_avatar']);
+                            }
+                            ?>
+                            <a href="javascript:void(0)" onclick="window.openDirectChat(<?= $o['seller_id'] ?>, '<?= htmlspecialchars($o['seller_name'], ENT_QUOTES) ?>', '<?= $seller_avatar ?>')"
                                class="btn btn-sm btn-primary-hcmue rounded-3" style="font-size:0.78rem;">
                                 <i class="fas fa-comment me-1"></i>Nhắn tin
                             </a>
@@ -284,7 +290,13 @@ $active_tab = $active_tab ?? 'buy';
                                     <i class="fas fa-box me-1"></i>Chờ người mua nhận hàng
                                 </span>
                             <?php endif; ?>
-                            <a href="<?= site_url('message/conversation/' . $o['buyer_id']) ?>"
+                            <?php 
+                            $buyer_avatar = '';
+                            if (!empty($o['buyer_avatar']) && file_exists(FCPATH . $o['buyer_avatar'])) {
+                                $buyer_avatar = base_url($o['buyer_avatar']);
+                            }
+                            ?>
+                            <a href="javascript:void(0)" onclick="window.openDirectChat(<?= $o['buyer_id'] ?>, '<?= htmlspecialchars($o['buyer_name'], ENT_QUOTES) ?>', '<?= $buyer_avatar ?>')"
                                class="btn btn-sm btn-primary-hcmue rounded-3" style="font-size:0.78rem;">
                                 <i class="fas fa-comment me-1"></i>Nhắn tin
                             </a>

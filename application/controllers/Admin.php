@@ -8,7 +8,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
  * @property Auth_model $Auth_model
  * @property Message_model $Message_model
  */
-class Admin extends CI_Controller {
+class Admin extends MY_Controller {
 
     public function __construct() {
         parent::__construct();
@@ -20,6 +20,7 @@ class Admin extends CI_Controller {
     private function require_admin() {
         if (!$this->session->userdata('logged_in') || $this->session->userdata('role') !== 'admin') {
             show_error('Bạn không có quyền truy cập trang này.', 403);
+            exit;
         }
     }
 
@@ -115,11 +116,11 @@ class Admin extends CI_Controller {
         redirect('admin');
     }
 
-    // Admin từ chối bài đăng
+    // Admin từ chối bài đăng (chuyển sang trạng thái rejected thay vì xóa ngay)
     public function reject_post($id) {
         $this->require_admin();
-        $this->Trade_model->delete_post($id);
-        $this->session->set_flashdata('success', 'Đã từ chối và xóa bài!');
+        $this->Trade_model->update_status($id, 'rejected');
+        $this->session->set_flashdata('success', 'Đã từ chối bài đăng!');
         redirect('admin');
     }
 
@@ -606,10 +607,17 @@ class Admin extends CI_Controller {
 
     public function moderation_action() {
         $this->require_admin();
-        $type = $this->input->post('type'); // 'comment'
-        $id = $this->input->post('id');
+        $type   = $this->input->post('type');   // 'comment'
+        $id     = (int)$this->input->post('id');
         $action = $this->input->post('action'); // 'approve' or 'delete'
-        
+
+        // Validate input
+        if (empty($type) || empty($id) || !in_array($action, ['approve', 'delete'])) {
+            $this->session->set_flashdata('error', 'Thao tác không hợp lệ!');
+            redirect('admin/moderation');
+            return;
+        }
+
         if ($type == 'comment') {
             if ($action == 'approve') {
                 $this->db->where('id', $id)->update('comments', ['moderation_status' => 'approved']);

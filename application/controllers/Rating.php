@@ -7,7 +7,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
  * @property Rating_model $Rating_model
  * @property Trade_model $Trade_model
  */
-class Rating extends CI_Controller {
+class Rating extends MY_Controller {
 
     public function __construct() {
         parent::__construct();

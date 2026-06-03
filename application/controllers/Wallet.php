@@ -11,7 +11,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
  * @property Message_model  $Message_model
  * @property Order_model    $Order_model
  */
-class Wallet extends CI_Controller {
+class Wallet extends MY_Controller {
 
     public function __construct() {
         parent::__construct();
@@ -22,7 +22,9 @@ class Wallet extends CI_Controller {
 
     private function require_login() {
         if (!$this->session->userdata('logged_in')) {
+            $this->session->set_flashdata('error', 'Bạn cần đăng nhập để thực hiện thao tác này.');
             redirect('auth');
+            exit;
         }
     }
 

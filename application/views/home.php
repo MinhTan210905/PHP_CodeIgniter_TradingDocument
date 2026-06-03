@@ -555,7 +555,7 @@
                                           '<i class="fas fa-pen"></i>' +
                                       '</a>'
                                     : '') +
-                                '<a href="' + MSG_URL + post.user_id + '" class="btn btn-sm btn-primary-hcmue rounded-3" style="font-size:0.75rem;" title="Nhắn tin">' +
+                                '<a href="javascript:void(0)" onclick="window.openDirectChat(' + post.user_id + ', \'' + (post.full_name || post.username || '').replace(/'/g, "\\'") + '\', \'' + (post.avatar ? (post.avatar.startsWith('http') ? post.avatar : BASE_URL + post.avatar) : '') + '\')" class="btn btn-sm btn-primary-hcmue rounded-3" style="font-size:0.75rem;" title="Nhắn tin">' +
                                     '<i class="fas fa-comment"></i>' +
                                 '</a>' +
                             '</div>' +

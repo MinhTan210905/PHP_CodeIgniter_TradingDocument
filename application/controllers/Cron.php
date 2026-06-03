@@ -10,7 +10,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
  * @property Rating_model $Rating_model
  * @property Wishlist_model $Wishlist_model
  */
-class Cron extends CI_Controller {
+class Cron extends MY_Controller {
 
     public function __construct() {
         parent::__construct();

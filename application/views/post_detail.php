@@ -239,7 +239,13 @@
                                     onclick="return confirm('Gửi yêu cầu mua sách này?');">
                                 <i class="fas fa-shopping-cart me-1"></i>Gửi yêu cầu mua
                             </button>
-                            <a href="<?= site_url('message/conversation/' . $post['seller_id'] . '?post_id=' . $post['id']) ?>"
+                            <?php 
+                            $seller_avatar = '';
+                            if (!empty($post['avatar']) && file_exists(FCPATH . $post['avatar'])) {
+                                $seller_avatar = base_url($post['avatar']);
+                            }
+                            ?>
+                            <a href="javascript:void(0)" onclick="window.openDirectChat(<?= $post['seller_id'] ?>, '<?= htmlspecialchars($post['full_name'] ?: $post['username'], ENT_QUOTES) ?>', '<?= $seller_avatar ?>')"
                                class="btn btn-outline-secondary py-2" title="Nhắn tin hỏi thêm">
                                 <i class="fas fa-comment-dots"></i>
                             </a>

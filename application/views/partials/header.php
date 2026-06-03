@@ -172,20 +172,7 @@ header('Content-Type: text/html; charset=UTF-8');
                     <i class="fas fa-shopping-bag"></i>
                     <span class="nav-badge action-required-badge <?= $pending_count > 0 ? '' : 'd-none' ?>"><?= $pending_count ?></span>
                 </a>
-                <!-- Tin nhắn -->
-                <?php 
-                $CI_h =& get_instance();
-                $CI_h->load->model('Message_model');
-                $header_unread_count = $CI_h->Message_model->count_unread($this->session->userdata('user_id'));
-                ?>
-                <a href="<?= site_url('message/inbox') ?>" class="nav-icon-btn" title="Tin nhắn / Trò chuyện">
-                    <i class="fas fa-comment-dots"></i>
-                    <?php if ($header_unread_count > 0): ?>
-                        <span class="nav-badge bg-danger" id="inboxUnreadBadge"><?= $header_unread_count ?></span>
-                    <?php else: ?>
-                        <span class="nav-badge bg-danger d-none" id="inboxUnreadBadge"></span>
-                    <?php endif; ?>
-                </a>
+
                 <!-- Mong muốn sách -->
                 <a href="<?= site_url('wishlist') ?>" class="nav-icon-btn" title="Danh sách mong muốn">
                     <i class="fas fa-heart"></i>

@@ -32,7 +32,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
  *   GET    /api/seller/:id/posts     → Sách của người bán
  *   GET    /api/seller/:id/ratings   → Đánh giá người bán
  */
-class Api extends CI_Controller {
+class Api extends MY_Controller {
 
     public function __construct() {
         parent::__construct();

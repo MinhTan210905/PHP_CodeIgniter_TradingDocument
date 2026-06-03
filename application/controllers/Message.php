@@ -7,7 +7,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
  * @property Message_model $Message_model
  * @property Auth_model $Auth_model
  */
-class Message extends CI_Controller {
+class Message extends MY_Controller {
 
     public function __construct() {
         parent::__construct();
@@ -33,23 +33,28 @@ class Message extends CI_Controller {
         $cluster = getenv('PUSHER_CLUSTER') ?: (isset($_ENV['PUSHER_CLUSTER']) ? $_ENV['PUSHER_CLUSTER'] : 'ap1');
 
         if ($app_id && $key && $secret) {
-            try {
-                require_once FCPATH . 'vendor/autoload.php';
-                $options = array(
-                    'cluster' => $cluster,
-                    'useTLS' => true
-                );
-                $pusher = new Pusher\Pusher($key, $secret, $app_id, $options);
-                
-                // Gửi sự kiện cho người nhận
-                $pusher->trigger('chat-channel-' . $msg['receiver_id'], $event, ['message' => $msg]);
-                
-                // Nếu cần thông báo lại cho cả người gửi (thường dùng khi cập nhật trạng thái)
-                if ($notify_sender) {
-                    $pusher->trigger('chat-channel-' . $msg['sender_id'], $event, ['message' => $msg]);
+            if (file_exists(FCPATH . 'vendor/autoload.php')) {
+                try {
+                    require_once FCPATH . 'vendor/autoload.php';
+                    $options = array(
+                        'cluster' => $cluster,
+                        'useTLS' => true,
+                        'timeout' => 2 // Hạn chế tối đa việc treo request trên hosting miễn phí (như InfinityFree)
+                    );
+                    $pusher = new Pusher\Pusher($key, $secret, $app_id, $options);
+                    
+                    // Gửi sự kiện cho người nhận
+                    $pusher->trigger('chat-channel-' . $msg['receiver_id'], $event, ['message' => $msg]);
+                    
+                    // Nếu cần thông báo lại cho cả người gửi (thường dùng khi cập nhật trạng thái)
+                    if ($notify_sender) {
+                        $pusher->trigger('chat-channel-' . $msg['sender_id'], $event, ['message' => $msg]);
+                    }
+                } catch (\Throwable $e) {
+                    log_message('error', 'Pusher error: ' . $e->getMessage());
                 }
-            } catch (Exception $e) {
-                log_message('error', 'Pusher error: ' . $e->getMessage());
+            } else {
+                log_message('error', 'Pusher error: vendor/autoload.php not found');
             }
         }
     }

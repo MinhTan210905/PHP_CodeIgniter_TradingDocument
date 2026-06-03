@@ -9,7 +9,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
  * @property Rating_model $Rating_model
  * @property Message_model $Message_model
  */
-class Orders extends CI_Controller {
+class Orders extends MY_Controller {
 
     public function __construct() {
         parent::__construct();
@@ -35,6 +35,7 @@ class Orders extends CI_Controller {
         if (!$this->session->userdata('logged_in')) {
             $this->session->set_flashdata('error', 'Bạn cần đăng nhập để thực hiện thao tác này.');
             redirect('auth');
+            exit;
         }
     }
 
@@ -422,10 +423,11 @@ class Orders extends CI_Controller {
             return;
         }
 
-        $was_confirmed = in_array($order['status'], ['confirmed', 'processing', 'delivering']);
+        // Trạng thái confirmed/processing/delivering đã bị trừ kho -> cần hoàn lại khi hủy
+        $was_stock_deducted = in_array($order['status'], ['confirmed', 'processing', 'delivering']);
         $this->Order_model->update_status($order_id, 'cancelled');
 
-        if ($was_confirmed) {
+        if ($was_stock_deducted) {
             $this->Trade_model->increment_quantity($order['post_id'], $order['quantity']);
         }
 
@@ -459,14 +461,23 @@ class Orders extends CI_Controller {
         $app_sec = getenv('PUSHER_APP_SECRET') ?: (isset($_ENV['PUSHER_APP_SECRET']) ? $_ENV['PUSHER_APP_SECRET'] : '7cb493c0bc5894b4625b');
         $app_clu = getenv('PUSHER_APP_CLUSTER') ?: (isset($_ENV['PUSHER_APP_CLUSTER']) ? $_ENV['PUSHER_APP_CLUSTER'] : 'ap1');
 
-        if (class_exists('Pusher\Pusher')) {
+        if (file_exists(FCPATH . 'vendor/autoload.php')) {
             try {
-                $pusher = new Pusher\Pusher($app_key, $app_sec, $app_id, ['cluster' => $app_clu, 'useTLS' => true]);
-                $pusher->trigger('user-'.$user_id, 'order-event', [
-                    'message' => $message,
-                    'order_id' => $order_id
-                ]);
-            } catch (Exception $e) { }
+                require_once FCPATH . 'vendor/autoload.php';
+                if (class_exists('Pusher\\Pusher')) {
+                    $pusher = new Pusher\Pusher($app_key, $app_sec, $app_id, [
+                        'cluster' => $app_clu,
+                        'useTLS' => true,
+                        'timeout' => 2 // Hạn chế treo request trên InfinityFree
+                    ]);
+                    $pusher->trigger('user-'.$user_id, 'order-event', [
+                        'message' => $message,
+                        'order_id' => $order_id
+                    ]);
+                }
+            } catch (\Throwable $e) {
+                // Bỏ qua lỗi Pusher
+            }
         }
     }
 
