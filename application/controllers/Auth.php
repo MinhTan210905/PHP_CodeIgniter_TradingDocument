@@ -173,7 +173,7 @@ class Auth extends MY_Controller {
         }
 
         // Tạo mã OTP 6 số
-        $otp = rand(100000, 999999);
+        $otp = random_int(100000, 999999);
 
         // Chuẩn bị data đăng ký
         $data = [
@@ -319,7 +319,7 @@ class Auth extends MY_Controller {
 
         // Kiểm tra phải đợi 5 phút kể từ lần gửi trước (gửi_lại chỉ khi OTP đã hết hạn hoặc sắp hết)
         // Lấy mã OTP mới và reset thời gian
-        $otp = rand(100000, 999999);
+        $otp = random_int(100000, 999999);
         $pending_reg['otp']         = $otp;
         $pending_reg['otp_expires'] = time() + 300;
         $this->session->set_userdata('pending_reg', $pending_reg);
@@ -410,7 +410,7 @@ class Auth extends MY_Controller {
         }
 
         // Tạo OTP
-        $otp = rand(100000, 999999);
+        $otp = random_int(100000, 999999);
         $forgot_data = [
             'email' => $email,
             'otp'   => $otp,

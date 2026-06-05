@@ -521,30 +521,30 @@
             return '<div class="col-12 col-sm-6 col-lg-4 col-xl-3">' +
                 '<div class="card trade-card d-flex flex-column ' + (isSold ? 'card-sold' : '') + '">' +
                     '<a href="' + DETAIL_URL + post.id + '" class="d-block card-img-link">' +
-                        '<img src="' + imgSrc + '" class="post-img" alt="' + post.title + '" loading="lazy"' +
+                        '<img src="' + imgSrc + '" class="post-img" alt="' + escapeHtml(post.title) + '" loading="lazy"' +
                              ' onerror="this.onerror=null;this.src=\'' + DEFAULT_IMG + '\'">' +
                     '</a>' +
                     '<div class="p-3 d-flex flex-column flex-grow-1">' +
                         '<div class="d-flex align-items-center justify-content-between mb-2 gap-1 flex-wrap">' +
-                            '<span class="badge-cat"><i class="' + (post.cat_icon || 'fas fa-book') + '"></i> ' + (post.category_name || '') + '</span>' +
+                            '<span class="badge-cat"><i class="' + (post.cat_icon || 'fas fa-book') + '"></i> ' + escapeHtml(post.category_name || '') + '</span>' +
                             (isSold
                                 ? '<span class="status-badge-sold"><i class="fas fa-lock" style="font-size:10px"></i> Đã Pass</span>'
                                 : '<span class="status-badge-avail"><i class="fas fa-circle" style="font-size:6px"></i> Còn ' + post.quantity + ' cuốn</span>') +
                         '</div>' +
                         '<a href="' + DETAIL_URL + post.id + '" class="text-decoration-none text-dark fw-bold mb-1"' +
                            ' style="font-size:0.92rem;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.4;">' +
-                            post.title +
+                            escapeHtml(post.title) +
                         '</a>' +
                         '<div class="d-flex align-items-center gap-1 mb-2" style="font-size:0.78rem;color:#6B7280;">' +
                             '<a href="' + SELLER_URL + post.user_id + '" class="d-inline-flex align-items-center gap-1 text-decoration-none" style="color:#475569 !important; transition: opacity 0.2s;" onmouseover="this.style.opacity=0.75" onmouseout="this.style.opacity=1">' +
                                 '<i class="fas fa-user-circle" style="color:#2563EB;"></i>' +
-                                '<span>' + (post.full_name || post.username) + '</span>' +
+                                '<span>' + escapeHtml(post.full_name || post.username) + '</span>' +
                             '</a>' +
                             '<span class="mx-1">·</span>' +
                             '<span class="star-display">' + rating + '</span>' +
                         '</div>' +
                         '<p class="text-muted mb-2 flex-grow-1" style="font-size:0.8rem;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">' +
-                            (post.description || 'Không có mô tả') +
+                            escapeHtml(post.description || 'Không có mô tả') +
                         '</p>' +
                         '<hr class="my-2" style="border-color:#F1F5F9;">' +
                         '<div class="d-flex align-items-center justify-content-between gap-1 flex-wrap">' +
@@ -555,7 +555,7 @@
                                           '<i class="fas fa-pen"></i>' +
                                       '</a>'
                                     : '') +
-                                '<a href="javascript:void(0)" onclick="window.openDirectChat(' + post.user_id + ', \'' + (post.full_name || post.username || '').replace(/'/g, "\\'") + '\', \'' + (post.avatar ? (post.avatar.startsWith('http') ? post.avatar : BASE_URL + post.avatar) : '') + '\')" class="btn btn-sm btn-primary-hcmue rounded-3" style="font-size:0.75rem;" title="Nhắn tin">' +
+                                '<a href="javascript:void(0)" onclick="window.openDirectChat(' + post.user_id + ', \'' + escapeHtml(post.full_name || post.username || '').replace(/'/g, "\\'") + '\', \'' + escapeHtml(post.avatar ? (post.avatar.startsWith('http') ? post.avatar : BASE_URL + post.avatar) : '') + '\')" class="btn btn-sm btn-primary-hcmue rounded-3" style="font-size:0.75rem;" title="Nhắn tin">' +
                                     '<i class="fas fa-comment"></i>' +
                                 '</a>' +
                             '</div>' +

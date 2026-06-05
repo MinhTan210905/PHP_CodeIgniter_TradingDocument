@@ -155,7 +155,9 @@ class Ai_moderation_model extends CI_Model {
         ];
 
         foreach ($bad_words as $word) {
-            $pattern = '/\b' . preg_quote($word, '/') . '\b/u';
+            // Sử dụng lookbehind và lookahead định nghĩa ranh giới từ theo chữ cái Unicode (?<!\p{L}) và (?!\p{L})
+            // để khắc phục lỗi không khớp đúng từ của \b đối với chữ tiếng Việt có dấu.
+            $pattern = '/(?<!\p{L})' . preg_quote($word, '/') . '(?!\p{L})/iu';
             if (preg_match($pattern, $text)) {
                 return true;
             }

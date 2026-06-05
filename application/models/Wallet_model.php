@@ -84,15 +84,22 @@ class Wallet_model extends CI_Model {
      * @return bool|string  TRUE nếu thành công, string lỗi nếu thất bại
      */
     public function pay_order($buyer_id, $seller_id, $order_id, $amount) {
-        $buyer_wallet  = $this->get_or_create_wallet($buyer_id);
-        $seller_wallet = $this->get_or_create_wallet($seller_id);
+        // Gọi get_or_create_wallet trước để đảm bảo ví tồn tại trước khi khóa
+        $this->get_or_create_wallet($buyer_id);
+        $this->get_or_create_wallet($seller_id);
         
-        // Kiểm tra số dư
+        // Bắt đầu transaction để khóa row
+        $this->db->trans_start();
+        
+        // Khóa ví của buyer và seller bằng FOR UPDATE (Pessimistic Locking) để chống Race Condition
+        $buyer_wallet = $this->db->query("SELECT * FROM hcmuepay_wallets WHERE user_id = ? FOR UPDATE", array($buyer_id))->row_array();
+        $seller_wallet = $this->db->query("SELECT * FROM hcmuepay_wallets WHERE user_id = ? FOR UPDATE", array($seller_id))->row_array();
+        
+        // Kiểm tra số dư trên dòng đã được khóa an toàn
         if ((float)$buyer_wallet['balance'] < (float)$amount) {
+            $this->db->trans_rollback(); // Huỷ transaction
             return 'Số dư ví không đủ! Bạn cần nạp thêm ' . number_format($amount - $buyer_wallet['balance'], 0, ',', '.') . 'đ.';
         }
-        
-        $this->db->trans_start();
         
         // 1. Trừ balance người mua
         $this->db->set('balance', 'balance - ' . (float)$amount, FALSE);

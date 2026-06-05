@@ -96,11 +96,39 @@ Hãy trả lời câu hỏi của người dùng một cách chính xác dựa t
             return ['error' => 'AI không có phản hồi.'];
         }
 
-        // Chuyển Markdown cơ bản sang HTML (chỉ in đậm, in nghiêng, xuống dòng)
-        $reply_html = htmlspecialchars($reply);
+        // Phân tích Markdown sang HTML hỗ trợ đa dạng định dạng cho AI
+        $reply_html = htmlspecialchars($reply, ENT_QUOTES, 'UTF-8');
+        
+        // Headers (H1-H6)
+        $reply_html = preg_replace('/^######\s*(.*?)$/m', '<h6>$1</h6>', $reply_html);
+        $reply_html = preg_replace('/^#####\s*(.*?)$/m', '<h5>$1</h5>', $reply_html);
+        $reply_html = preg_replace('/^####\s*(.*?)$/m', '<h4>$1</h4>', $reply_html);
+        $reply_html = preg_replace('/^###\s*(.*?)$/m', '<h3>$1</h3>', $reply_html);
+        $reply_html = preg_replace('/^##\s*(.*?)$/m', '<h2>$1</h2>', $reply_html);
+        $reply_html = preg_replace('/^#\s*(.*?)$/m', '<h1>$1</h1>', $reply_html);
+
+        // Code blocks: ```code```
+        $reply_html = preg_replace('/```(.*?)```/s', '<pre><code>$1</code></pre>', $reply_html);
+
+        // Inline code: `code`
+        $reply_html = preg_replace('/`(.*?)`/', '<code>$1</code>', $reply_html);
+
+        // Đậm và Nghiêng
         $reply_html = preg_replace('/\*\*(.*?)\*\*/s', '<strong>$1</strong>', $reply_html);
-        $reply_html = preg_replace('/\*(.*?)\*/s', '<em>$1</em>', $reply_html);
-        $reply_html = nl2br($reply_html);
+        $reply_html = preg_replace('/(?<!\*)\*(?!\*)(.*?)(?<!\*)\*(?!\*)/s', '<em>$1</em>', $reply_html);
+        
+        // Danh sách (Unordered Lists)
+        $reply_html = preg_replace('/^[ \t]*[\*\-]\s+(.*)$/m', '<ul><li>$1</li></ul>', $reply_html);
+        $reply_html = preg_replace('/<\/ul>(\s*)<ul>/', '$1', $reply_html); // Gộp các danh sách liền kề
+
+        // Liên kết (Links)
+        $reply_html = preg_replace('/\[(.*?)\]\((.*?)\)/', '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>', $reply_html);
+
+        // Xuống dòng
+        $reply_html = nl2br(trim($reply_html));
+
+        // Loại bỏ <br> dư thừa sau các thẻ block
+        $reply_html = preg_replace('/(<\/(h[1-6]|ul|pre)>)(<br\s*\/?>\s*)+/i', '$1', $reply_html);
 
         return ['reply' => $reply_html];
     }
