@@ -34,6 +34,9 @@ $route['trade/delete/(:num)']            = 'trade/delete/$1';
 // FIX #11: Thêm các route cho chức năng sửa và cập nhật bài đăng
 $route['trade/edit/(:num)']              = 'trade/edit/$1';
 $route['trade/update/(:num)']            = 'trade/update/$1';
+// AJAX: Tìm kiếm sách (JSON) — thay thế /api/posts/search để tránh WAF InfinityFree chặn URL /api/
+$route['trade/search.json']              = 'trade/search_json';
+$route['trade/search_json']              = 'trade/search_json';
 
 // Comment (Bình luận)
 $route['comment/add/(:num)']             = 'comment/add/$1';

@@ -6,6 +6,23 @@ class Order_model extends CI_Model {
     public function __construct() {
         parent::__construct();
         $this->load->database();
+        
+        // Tự động kiểm tra và thêm cột otp_created_at vào bảng orders nếu chưa tồn tại
+        try {
+            if (!$this->db->field_exists('otp_created_at', 'orders')) {
+                $this->load->dbforge();
+                $fields = [
+                    'otp_created_at' => [
+                        'type' => 'TIMESTAMP',
+                        'null' => TRUE,
+                        'default' => NULL
+                    ]
+                ];
+                $this->dbforge->add_column('orders', $fields);
+            }
+        } catch (\Throwable $e) {
+            log_message('error', 'Order_model: không thể thêm cột otp_created_at: ' . $e->getMessage());
+        }
     }
 
     // Tạo đơn hàng mới (người mua gửi yêu cầu)

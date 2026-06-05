@@ -94,6 +94,7 @@ CREATE TABLE IF NOT EXISTS `orders` (
     `payment_status` ENUM('unpaid','paid','refunded') DEFAULT 'unpaid' COMMENT 'Trạng thái thanh toán',
     `qr_token`       VARCHAR(255) DEFAULT NULL COMMENT 'Mã QR Token giao nhận sách',
     `otp_code`       VARCHAR(10) DEFAULT NULL COMMENT 'Mã OTP giao nhận sách',
+    `otp_created_at` TIMESTAMP NULL DEFAULT NULL COMMENT 'Thời gian tạo mã OTP',
     `created_at`     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     `updated_at`     TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (`post_id`)   REFERENCES `posts`(`id`)  ON DELETE CASCADE,

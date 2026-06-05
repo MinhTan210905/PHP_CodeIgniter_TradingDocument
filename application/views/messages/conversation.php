@@ -493,6 +493,7 @@ chatForm.addEventListener('submit', function(e) {
 
 // Lấy tin nhắn mới qua AJAX Polling (sử dụng khi gửi tin nhắn hoặc làm fallback)
 function pollMessages() {
+    if (document.hidden) return;
     fetch(`${siteUrl}message/poll/${otherUserId}?after_id=${maxMsgId}`, {
         headers: {
             'X-Requested-With': 'XMLHttpRequest'
@@ -570,8 +571,8 @@ try {
     console.warn('Lỗi kết nối Pusher WebSocket:', e);
 }
 
-// Bật chế độ Polling đồng bộ tự động mỗi 3 giây song song để đảm bảo tin nhắn luôn realtime 100% trên localhost
-setInterval(pollMessages, 3000);
+// Bật chế độ Polling đồng bộ tự động mỗi 10 giây song song làm fallback dự phòng cho Pusher
+setInterval(pollMessages, 10000);
 
 // Xử lý ẩn hiện ô nhập địa điểm tự do
 const selectLoc = document.querySelector('#meetupForm select[name="location"]');

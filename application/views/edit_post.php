@@ -87,7 +87,7 @@
                 <!-- Tài liệu đọc thử PDF -->
                 <div class="mb-3">
                     <label class="form-label fw-600 text-secondary small">Tài liệu đọc thử PDF (Tùy chọn, tối đa 20MB)</label>
-                    <input type="file" class="form-control form-control-sm rounded-3 border-light shadow-none" name="pdf_file" accept="application/pdf" style="background:#f8fafc;">
+                    <input type="file" class="form-control form-control-sm rounded-3 border-light shadow-none" name="pdf_file" id="editPdfFile" accept="application/pdf" style="background:#f8fafc;">
                     <?php if(!empty($post['pdf_url'])): ?>
                         <div class="mt-2 d-flex align-items-center gap-2">
                             <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1 rounded-2" style="font-size:0.75rem;">

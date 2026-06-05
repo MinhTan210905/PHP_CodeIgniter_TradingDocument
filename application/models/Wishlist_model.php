@@ -6,15 +6,35 @@ class Wishlist_model extends CI_Model {
     public function __construct() {
         parent::__construct();
         $this->load->database();
+        
+        // Tự động kiểm tra và thêm cột last_notified_post_id vào bảng book_wishlists nếu chưa tồn tại
+        try {
+            if (!$this->db->field_exists('last_notified_post_id', 'book_wishlists')) {
+                $this->load->dbforge();
+                $fields = [
+                    'last_notified_post_id' => [
+                        'type' => 'INT',
+                        'null' => TRUE,
+                        'default' => NULL
+                    ]
+                ];
+                $this->dbforge->add_column('book_wishlists', $fields);
+            }
+        } catch (\Throwable $e) {
+            log_message('error', 'Wishlist_model: không thể thêm cột last_notified_post_id: ' . $e->getMessage());
+        }
     }
 
     /**
-     * Lấy danh sách mong muốn của 1 user
+     * Lấy danh sách mong muốn của 1 user (kèm theo bài đăng khớp gần nhất nếu còn bán)
      */
     public function get_by_user($user_id) {
-        $this->db->where('user_id', $user_id);
-        $this->db->order_by('created_at', 'DESC');
-        return $this->db->get('book_wishlists')->result_array();
+        $this->db->select('book_wishlists.*, posts.title as match_title, posts.price as match_price, posts.status as match_status, posts.id as match_post_id');
+        $this->db->from('book_wishlists');
+        $this->db->join('posts', 'posts.id = book_wishlists.last_notified_post_id', 'left');
+        $this->db->where('book_wishlists.user_id', $user_id);
+        $this->db->order_by('book_wishlists.created_at', 'DESC');
+        return $this->db->get()->result_array();
     }
 
     /**
@@ -125,6 +145,15 @@ class Wishlist_model extends CI_Model {
             if ($this->check_title_match($wish_title_lower, $post_title_lower)) {
                 $price_formatted = number_format($post['price'], 0, ',', '.') . 'đ';
                 $detail_url = site_url('trade/detail/' . $post['id']);
+
+                // A. Gửi tin nhắn nội bộ từ người bán đến người mua
+                $this->load->model('Message_model');
+                $this->Message_model->send_message([
+                    'sender_id'   => $post['user_id'], // Người bán
+                    'receiver_id' => $wish['user_id'], // Người mua (chủ wishlist)
+                    'post_id'     => $post['id'],
+                    'content'     => "🔔 [Mong muốn] Chào bạn, mình vừa đăng bán cuốn sách \"{$post['title']}\" trùng khớp với mong muốn tìm sách \"{$wish['book_title']}\" của bạn với giá {$price_formatted}. Bạn xem thử nhé!",
+                ]);
 
                 // B. Gửi email thông báo HTML
                 $this->_send_wishlist_email(

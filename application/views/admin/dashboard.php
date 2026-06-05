@@ -85,18 +85,7 @@
         <hr class="my-3" style="border-color:#F1F5F9;">
         <form action="<?= site_url('admin/update_settings') ?>" method="POST">
             <div class="row align-items-center">
-                <div class="col-md-3 mb-3 mb-md-0">
-                    <div class="form-check form-switch">
-                        <input class="form-check-input" type="checkbox" name="auto_approve_new" id="autoApproveNew" value="1"
-                               <?= (isset($app_settings['auto_approve_new']) && $app_settings['auto_approve_new'] == '1') ? 'checked' : '' ?>>
-                        <label class="form-check-label fw-600" for="autoApproveNew" style="font-size:0.88rem;">
-                            Tự động duyệt bài mới
-                        </label>
-                    </div>
-                    <small class="text-muted d-block" style="font-size:0.75rem;">Bật: Khỏi cần Admin bấm duyệt</small>
-                </div>
-                
-                <div class="col-md-3 mb-3 mb-md-0">
+                <div class="col-md-4 mb-3 mb-md-0">
                     <div class="form-check form-switch">
                         <input class="form-check-input" type="checkbox" name="auto_approve_edit" id="autoApproveEdit" value="1"
                                <?= (isset($app_settings['auto_approve_edit']) && $app_settings['auto_approve_edit'] == '1') ? 'checked' : '' ?>>
@@ -107,7 +96,7 @@
                     <small class="text-muted d-block" style="font-size:0.75rem;">Tắt: Đưa bài về chờ duyệt lại</small>
                 </div>
 
-                <div class="col-md-4 mb-3 mb-md-0">
+                <div class="col-md-5 mb-3 mb-md-0">
                     <div class="d-flex align-items-center gap-2">
                         <label class="fw-600 text-nowrap mb-0" for="autoApproveMinStars" style="font-size:0.88rem;">
                             <i class="fas fa-star text-warning me-1"></i>Duyệt theo Đánh giá (sao):
@@ -123,7 +112,7 @@
                     <small class="text-muted d-block" style="font-size:0.75rem; margin-top:2px;">Nhập từ 0 đến 5 (0 là tắt). Tự duyệt nếu người bán có số sao >= mức này.</small>
                 </div>
 
-                <div class="col-md-2 text-md-end">
+                <div class="col-md-3 text-md-end">
                     <button type="submit" class="btn btn-primary-hcmue px-3 fw-bold w-100" style="border-radius:10px;font-size:0.83rem; height:36px;">
                         Lưu Cấu Hình
                     </button>

@@ -345,12 +345,23 @@ $cur_step = $timeline[$order['status']] ?? 1;
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body p-4 text-center">
+                <?php 
+                $remaining = 300;
+                if (!empty($order['otp_created_at'])) {
+                    $elapsed = time() - strtotime($order['otp_created_at']);
+                    $remaining = max(0, 300 - $elapsed);
+                }
+                ?>
                 <p class="text-muted mb-3" style="font-size:0.9rem;">Khi gặp mặt người bán, hãy đưa mã QR này cho người bán quét để hoàn tất giao dịch.</p>
                 <div class="d-flex justify-content-center mb-4">
                     <div id="qrcodeDisplay" style="padding:15px; background:white; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.1);"></div>
                 </div>
                 <div class="mb-2 text-muted" style="font-size:0.85rem;">Hoặc đọc mã OTP 6 số này cho người bán:</div>
-                <div class="fw-bold fs-2" style="color:var(--hcmue-gold); letter-spacing:8px;"><?= isset($order['otp_code']) ? htmlspecialchars($order['otp_code']) : '------' ?></div>
+                <div class="fw-bold fs-2 mb-3" id="otpTextDisplay" style="color:var(--hcmue-gold); letter-spacing:8px;"><?= isset($order['otp_code']) ? htmlspecialchars($order['otp_code']) : '------' ?></div>
+                
+                <div class="alert py-2 rounded-3 border-0 mb-0 d-inline-block w-100" style="background:#FFF8E1; color:#B78103; font-size:0.82rem;">
+                    <i class="far fa-clock me-1"></i> Mã OTP/QR sẽ hết hạn sau: <strong id="otpCountdown">05:00</strong>
+                </div>
             </div>
         </div>
     </div>
@@ -376,7 +387,19 @@ $cur_step = $timeline[$order['status']] ?? 1;
                 <div class="tab-content" id="qrTabContent">
                     <div class="tab-pane fade show active" id="scan" role="tabpanel">
                         <div id="qr-reader" style="width:100%; border-radius:12px; overflow:hidden;" class="mb-3"></div>
-                        <div class="text-muted" style="font-size:0.85rem;">Đưa camera vào mã QR trên màn hình của người mua.</div>
+                        
+                        <!-- Chọn ảnh QR từ thiết bị -->
+                        <div class="mb-3 text-center">
+                            <label class="btn btn-outline-success btn-sm w-100 rounded-3 mb-0" style="cursor: pointer;">
+                                <i class="fas fa-image me-1"></i> Chọn ảnh QR từ thiết bị
+                                <input type="file" id="qrImageInput" accept="image/*" style="display: none;">
+                            </label>
+                        </div>
+
+                        <!-- Hidden placeholder for QR image scanner -->
+                        <div id="qr-file-scanner-temp" style="position: absolute; left: -9999px; top: -9999px; width: 1000px; height: 1000px;"></div>
+
+                        <div class="text-muted" style="font-size:0.85rem;">Đưa camera vào mã QR của người mua hoặc tải lên ảnh chụp QR.</div>
                     </div>
                     <div class="tab-pane fade" id="otp" role="tabpanel">
                         <div class="py-4">
@@ -402,10 +425,36 @@ $cur_step = $timeline[$order['status']] ?? 1;
             colorDark: "#000000", colorLight: "#ffffff",
             correctLevel: QRCode.CorrectLevel.H
         });
+
+        // Đếm ngược thời gian hết hạn OTP
+        (function() {
+            let timeLeft = <?= $remaining ?>;
+            const display = document.getElementById("otpCountdown");
+            const qrDisplay = document.getElementById("qrcodeDisplay");
+            const otpTextDisplay = document.getElementById("otpTextDisplay");
+            
+            function updateTimer() {
+                if (timeLeft <= 0) {
+                    display.innerHTML = "<span class='text-danger fw-bold'>MÃ ĐÃ HẾT HẠN! Vui lòng tải lại trang để lấy mã mới.</span>";
+                    if (qrDisplay) qrDisplay.style.opacity = "0.15";
+                    if (otpTextDisplay) otpTextDisplay.style.opacity = "0.15";
+                    clearInterval(timerInterval);
+                    return;
+                }
+                const minutes = Math.floor(timeLeft / 60);
+                const seconds = timeLeft % 60;
+                display.innerText = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                timeLeft--;
+            }
+            
+            updateTimer();
+            const timerInterval = setInterval(updateTimer, 1000);
+        })();
         <?php endif; ?>
 
         <?php if (!$is_buyer && $order['status'] === 'processing'): ?>
         let html5QrcodeScanner = null;
+        let qrObserver = null;
         const qrModal = document.getElementById('qrScanModal');
         const btnVerifyOtp = document.getElementById('btnVerifyOtp');
 
@@ -420,10 +469,52 @@ $cur_step = $timeline[$order['status']] ?? 1;
                         supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA]
                     }, false);
                 html5QrcodeScanner.render(onScanSuccess, function(){});
+
+                // Dịch giao diện quét mã QR sang Tiếng Việt
+                const translateScannerUI = () => {
+                    const translations = {
+                        "html5-qrcode-button-camera-permission": "Cấp quyền truy cập Camera",
+                        "html5-qrcode-button-camera-start": "Bắt đầu quét",
+                        "html5-qrcode-button-camera-stop": "Dừng quét"
+                    };
+                    for (const [id, text] of Object.entries(translations)) {
+                        const btn = document.getElementById(id);
+                        if (btn && btn.textContent !== text) {
+                            btn.textContent = text;
+                        }
+                    }
+                    // Dịch nhãn chọn camera
+                    const selectEl = document.querySelector("#qr-reader select");
+                    if (selectEl) {
+                        const parent = selectEl.parentNode;
+                        if (parent) {
+                            for (let node of parent.childNodes) {
+                                if (node.nodeType === Node.TEXT_NODE && node.nodeValue.includes("Select Camera")) {
+                                    node.nodeValue = node.nodeValue.replace("Select Camera", "Chọn Camera: ");
+                                }
+                            }
+                        }
+                    }
+                    // Dịch thông báo lỗi hoặc yêu cầu quyền
+                    const permissionText = document.querySelector("#qr-reader p");
+                    if (permissionText && permissionText.textContent.includes("Camera permission required")) {
+                        permissionText.textContent = "Hệ thống cần bạn cho phép truy cập camera để thực hiện quét mã QR.";
+                    }
+                };
+
+                qrObserver = new MutationObserver(translateScannerUI);
+                const readerEl = document.getElementById("qr-reader");
+                if (readerEl) {
+                    qrObserver.observe(readerEl, { childList: true, subtree: true });
+                }
             }
         });
 
         qrModal.addEventListener('hidden.bs.modal', function () {
+            if (qrObserver) {
+                qrObserver.disconnect();
+                qrObserver = null;
+            }
             if (html5QrcodeScanner) {
                 try { html5QrcodeScanner.clear(); } catch(e) {}
                 html5QrcodeScanner = null;
@@ -499,10 +590,93 @@ $cur_step = $timeline[$order['status']] ?? 1;
                 verifyHandover(otp);
             });
         }
+
+        // Xử lý quét mã QR từ file ảnh tải lên của thiết bị
+        const qrImageInput = document.getElementById('qrImageInput');
+        if (qrImageInput) {
+            qrImageInput.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                if (btnVerifyOtp) {
+                    btnVerifyOtp.disabled = true;
+                    btnVerifyOtp.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Đang quét ảnh QR...';
+                }
+
+                // Dừng camera nếu đang chạy để tránh xung đột tài nguyên
+                if (html5QrcodeScanner) {
+                    try { html5QrcodeScanner.clear(); } catch(err) {}
+                    html5QrcodeScanner = null;
+                }
+
+                const runHtml5QrcodeFallback = () => {
+                    const fileScanner = new Html5Qrcode("qr-file-scanner-temp");
+                    fileScanner.scanFile(file, true)
+                        .then(decodedText => {
+                            verifyHandover(decodedText);
+                            try { fileScanner.clear(); } catch(e) {}
+                        })
+                        .catch(err => {
+                            console.error("Lỗi quét file QR qua Html5Qrcode:", err);
+                            alert("❌ Không tìm thấy mã QR hợp lệ trong ảnh! Vui lòng chụp rõ nét và thử lại.");
+                            resetBtn();
+                            try { fileScanner.clear(); } catch(e) {}
+                        });
+                };
+
+                // Thử quét bằng API BarcodeDetector có sẵn của trình duyệt trước (độ chính xác rất cao cho ảnh chụp)
+                if ('BarcodeDetector' in window) {
+                    BarcodeDetector.getSupportedFormats().then(supported => {
+                        if (supported.includes('qr_code')) {
+                            const detector = new BarcodeDetector({ formats: ['qr_code'] });
+                            createImageBitmap(file).then(bitmap => {
+                                return detector.detect(bitmap);
+                            }).then(barcodes => {
+                                if (barcodes.length > 0) {
+                                    verifyHandover(barcodes[0].rawValue);
+                                } else {
+                                    console.log("Không tìm thấy mã QR bằng BarcodeDetector trình duyệt, chuyển sang dùng Html5Qrcode...");
+                                    runHtml5QrcodeFallback();
+                                }
+                            }).catch(err => {
+                                console.error("Lỗi BarcodeDetector QR trình duyệt:", err);
+                                runHtml5QrcodeFallback();
+                            });
+                        } else {
+                            runHtml5QrcodeFallback();
+                        }
+                    }).catch(err => {
+                        runHtml5QrcodeFallback();
+                    });
+                } else {
+                    runHtml5QrcodeFallback();
+                }
+            });
+        }
         <?php endif; ?>
     });
 </script>
 
 
+<!-- Realtime: tự reload khi đơn hàng này thay đổi trạng thái -->
+<script>
+(function() {
+    var ORDER_ID = <?= (int)$order['id'] ?>;
+    var ME       = <?= (int)$this->session->userdata('user_id') ?>;
 
+    if (typeof globalPusher === 'undefined' || !globalPusher || !ME) return;
+
+    var myChannel = globalPusher.subscribe('user-' + ME);
+
+    myChannel.bind('order-event', function(data) {
+        if (!data || parseInt(data.order_id) !== ORDER_ID) return;
+
+        var banner = document.createElement('div');
+        banner.style.cssText = 'position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#059669,#10B981);color:#fff;padding:12px 24px;border-radius:12px;box-shadow:0 8px 20px rgba(5,150,105,0.4);z-index:99999;font-size:0.9rem;font-weight:600;text-align:center;min-width:280px;';
+        banner.innerHTML = '<i class="fas fa-sync-alt fa-spin me-2"></i>Đơn hàng vừa được cập nhật, đang tải lại...';
+        document.body.appendChild(banner);
+        setTimeout(function() { window.location.reload(); }, 1500);
+    });
+})();
+</script>
 

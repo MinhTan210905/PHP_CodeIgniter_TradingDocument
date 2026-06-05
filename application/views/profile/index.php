@@ -213,6 +213,11 @@
                                             <span class="status-badge-avail">Còn sách</span>
                                         <?php elseif ($p['status']==='sold'): ?>
                                             <span class="status-badge-sold">Đã Pass</span>
+                                        <?php elseif ($p['status']==='rejected'): ?>
+                                            <span class="status-badge-rejected" style="background:#FEE2E2; color:#991B1B; padding:4px 10px; border-radius:20px; font-size:0.75rem; font-weight:700; display:inline-flex; align-items:center; gap:4px; border:1px solid #FCA5A5;">
+                                                <i class="fas fa-times-circle" style="font-size:0.75rem;"></i>
+                                                Bị từ chối
+                                            </span>
                                         <?php else: ?>
                                             <span class="status-badge-pending">
                                                 <i class="fas fa-hourglass-half" style="font-size:0.65rem;"></i>

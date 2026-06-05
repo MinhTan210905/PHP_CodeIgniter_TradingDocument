@@ -92,8 +92,7 @@
             <!-- Image Column (Multi-Image support) -->
             <div class="col-md-5 d-flex flex-column bg-light" style="border-right: 1px solid #F1F5F9;">
                 <?php
-                    $img_path = FCPATH . $post['image_url'];
-                    $img_src  = (!empty($post['image_url']) && file_exists($img_path))
+                    $img_src  = !empty($post['image_url'])
                                 ? base_url($post['image_url'])
                                 : base_url('assets/images/default_book.jpg');
                 ?>
@@ -127,12 +126,11 @@
                         
                         <!-- Thumbnails ảnh phụ -->
                         <?php foreach($additional_images as $img): 
-                            $sub_path = FCPATH . $img['image_url'];
-                            $sub_src = (file_exists($sub_path)) ? base_url($img['image_url']) : '';
+                            $sub_src = !empty($img['image_url']) ? base_url($img['image_url']) : '';
                             if(!$sub_src) continue;
                         ?>
                         <div class="post-thumb-item" onclick="changeMainImage('<?= $sub_src ?>', this)">
-                            <img src="<?= $sub_src ?>" class="w-100 h-100" style="object-fit:cover;">
+                            <img src="<?= $sub_src ?>" class="w-100 h-100" style="object-fit:cover;" onerror="this.onerror=null;this.src='<?= base_url('assets/images/default_book.jpg') ?>';">
                         </div>
                         <?php endforeach; ?>
                     </div>
@@ -492,12 +490,6 @@ function changeMainImage(newSrc, thumbElement) {
         }
     });
     thumbElement.classList.add('active');
-
-    // Reset lại chu kỳ 5 giây nếu người dùng tự click thủ công
-    if (autoSlideInterval) {
-        clearInterval(autoSlideInterval);
-        autoSlideInterval = setInterval(slideNextImage, 5000);
-    }
 }
 
 function changeMainImageNoReset(newSrc, thumbElement) {
@@ -557,10 +549,7 @@ function navigatePrev() {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-    const thumbs = document.querySelectorAll('.post-thumb-item');
-    if (thumbs.length > 1) {
-        autoSlideInterval = setInterval(slideNextImage, 5000);
-    }
+    // Không auto-slide — người dùng tự điều hướng bằng nút
 });
 </script>
 

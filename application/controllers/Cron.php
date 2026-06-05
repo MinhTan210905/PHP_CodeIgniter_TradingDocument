@@ -129,6 +129,14 @@ class Cron extends MY_Controller {
                     $price_formatted = number_format($post['price'], 0, ',', '.') . 'đ';
                     $detail_url = site_url('trade/detail/' . $post['id']);
 
+                    // 1. Gửi tin nhắn nội bộ từ người bán đến người mua
+                    $this->Message_model->send_message([
+                        'sender_id'   => $post['user_id'], // Người bán
+                        'receiver_id' => $wish['user_id'], // Người mua (chủ wishlist)
+                        'post_id'     => $post['id'],
+                        'content'     => "🔔 [Mong muốn] Chào bạn, mình vừa đăng bán cuốn sách \"{$post['title']}\" trùng khớp với mong muốn tìm sách \"{$wish['book_title']}\" của bạn với giá {$price_formatted}. Bạn xem thử nhé!",
+                    ]);
+
                     // 2. Gửi email thông báo
                     $this->_send_wishlist_email(
                         $wish['email'],

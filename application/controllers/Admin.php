@@ -74,12 +74,10 @@ class Admin extends MY_Controller {
     public function update_settings() {
         $this->require_admin();
         
-        $auto_approve_new = $this->input->post('auto_approve_new') ? '1' : '0';
         $auto_approve_edit = $this->input->post('auto_approve_edit') ? '1' : '0';
         $auto_approve_min_stars = $this->input->post('auto_approve_min_stars');
         $site_announcement = $this->input->post('site_announcement', TRUE);
         
-        $this->Setting_model->set('auto_approve_new', $auto_approve_new);
         $this->Setting_model->set('auto_approve_edit', $auto_approve_edit);
         $this->Setting_model->set('auto_approve_min_stars', $auto_approve_min_stars);
         $this->Setting_model->set('site_announcement', $site_announcement);
@@ -113,6 +111,11 @@ class Admin extends MY_Controller {
     public function approve_post($id) {
         $this->require_admin();
         $this->Trade_model->update_status($id, 'available');
+
+        // Gửi thông báo wishlist khi bài đăng được duyệt khả dụng
+        $this->load->model('Wishlist_model');
+        $this->Wishlist_model->notify_wishlist_for_post($id);
+
         $this->session->set_flashdata('success', '✅ Đã duyệt và đăng bài lên trang chủ!');
         redirect('admin');
     }

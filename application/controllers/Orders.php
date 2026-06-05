@@ -68,6 +68,36 @@ class Orders extends MY_Controller {
             show_error('Bạn không có quyền xem đơn hàng này.', 403);
         }
 
+        // Tự động đổi mã OTP nếu đã hết hạn (> 5 phút) và trạng thái đang là processing (chỉ thực hiện khi người mua xem đơn)
+        if ($order['status'] === 'processing' && $order['buyer_id'] == $user_id) {
+            $needs_regenerate = false;
+            if (empty($order['otp_created_at'])) {
+                $needs_regenerate = true;
+            } else {
+                $created_time = strtotime($order['otp_created_at']);
+                if ((time() - $created_time) > 300) {
+                    $needs_regenerate = true;
+                }
+            }
+
+            if ($needs_regenerate) {
+                $qr_token = md5(uniqid($id, true));
+                $otp_code = str_pad(rand(0, 999999), 6, '0', STR_PAD_LEFT);
+                $otp_created_at = date('Y-m-d H:i:s');
+                
+                $this->db->where('id', $id)->update('orders', [
+                    'qr_token' => $qr_token,
+                    'otp_code' => $otp_code,
+                    'otp_created_at' => $otp_created_at
+                ]);
+                
+                // Cập nhật lại thông tin để hiển thị ngoài view
+                $order['qr_token'] = $qr_token;
+                $order['otp_code'] = $otp_code;
+                $order['otp_created_at'] = $otp_created_at;
+            }
+        }
+
         $data['order']        = $order;
         $data['is_seller']    = ($order['seller_id'] == $user_id);
         $data['is_buyer']     = ($order['buyer_id']  == $user_id);
@@ -174,6 +204,9 @@ class Orders extends MY_Controller {
             'content'     => "✅ [{$seller_name}] đã xác nhận đơn hàng \"{$order['post_title']}\". Vui lòng liên hệ để thỏa thuận thời gian và địa điểm giao nhận sách. Xem chi tiết: " . site_url('orders/detail/' . $order_id),
         ]);
 
+        // Realtime: thông báo cho người mua biết đơn đã được xác nhận
+        $this->trigger_pusher_order($order['buyer_id'], "✅ {$seller_name} đã xác nhận đơn hàng \"{$order['post_title']}\"! Vào thanh toán ngay.", $order_id);
+
         $this->session->set_flashdata('success', 'Đã xác nhận đơn! Liên hệ với người mua để hẹn giao sách.');
         redirect('orders?tab=sell');
     }
@@ -273,7 +306,8 @@ class Orders extends MY_Controller {
                     'payment_status' => 'paid',
                     'status' => 'processing',
                     'qr_token' => $qr_token,
-                    'otp_code' => $otp_code
+                    'otp_code' => $otp_code,
+                    'otp_created_at' => date('Y-m-d H:i:s')
                 ]);
 
                 $this->Message_model->send_message([
@@ -282,6 +316,9 @@ class Orders extends MY_Controller {
                     'post_id'     => $order['post_id'],
                     'content'     => "💰 [{$buyer_name}] đã thanh toán thành công " . number_format($amount, 0, ',', '.') . "đ qua Ví HCMUEPay. Hệ thống đã tạm giữ số tiền này an toàn. Vui lòng tiến hành bàn giao sách cho người mua.",
                 ]);
+
+                // Realtime: thông báo cho người bán biết người mua đã thanh toán
+                $this->trigger_pusher_order($order['seller_id'], "💰 {$buyer_name} đã thanh toán qua Ví. Vui lòng chuẩn bị giao sách!", $order_id);
 
                 $this->session->set_flashdata('success', '✅ Đã thanh toán! Vui lòng chờ người bán giao hàng.');
                 redirect('orders?tab=buy');
@@ -298,7 +335,8 @@ class Orders extends MY_Controller {
                 'payment_status' => 'unpaid',
                 'status' => 'processing',
                 'qr_token' => $qr_token,
-                'otp_code' => $otp_code
+                'otp_code' => $otp_code,
+                'otp_created_at' => date('Y-m-d H:i:s')
             ]);
 
             $this->Message_model->send_message([
@@ -307,6 +345,9 @@ class Orders extends MY_Controller {
                 'post_id'     => $order['post_id'],
                 'content'     => "🤝 [{$buyer_name}] đã chọn Giao dịch trực tiếp (COD). Vui lòng chủ động liên hệ với người mua để hẹn thời gian và địa điểm giao nhận sách.",
             ]);
+
+            // Realtime: thông báo cho người bán biết người mua chọn COD
+            $this->trigger_pusher_order($order['seller_id'], "🤝 {$buyer_name} đã chọn thanh toán COD (trực tiếp). Vui lòng liên hệ hẹn lịch giao sách!", $order_id);
 
             $this->session->set_flashdata('success', '✅ Đã chốt đơn COD! Vui lòng chờ người bán giao hàng.');
             redirect('orders?tab=buy');
@@ -337,6 +378,9 @@ class Orders extends MY_Controller {
             'post_id'     => $order['post_id'],
             'content'     => "⚠️ [{$buyer_name}] báo vấn đề với đơn hàng \"{$order['post_title']}\". Lý do: {$reason}. Vui lòng liên hệ giải quyết.",
         ]);
+
+        // Realtime: thông báo người bán qua Pusher
+        $this->trigger_pusher_order($order['seller_id'], "⚠️ {$buyer_name} báo cáo tranh chấp cho đơn hàng \"{$order['post_title']}\"!", $order_id);
 
         $this->session->set_flashdata('error', '⚠️ Đã báo tranh chấp. Hãy liên hệ người bán để giải quyết.');
         redirect('orders/detail/' . $order_id);
@@ -449,6 +493,10 @@ class Orders extends MY_Controller {
             'content'     => "❌ [{$user_name}] đã hủy đơn hàng \"{$order['post_title']}\"." . ($was_wallet_paid ? " Hệ thống đã hoàn tiền lại vào ví." : ""),
         ]);
 
+        // Realtime: thông báo cho bên kia biết đơn bị hủy
+        $cancel_msg = "❌ {$user_name} đã hủy đơn hàng \"{$order['post_title']}\"." . ($was_wallet_paid ? ' Tiền đã được hoàn lại vào ví.' : '');
+        $this->trigger_pusher_order($other_id, $cancel_msg, $order_id);
+
         $this->session->set_flashdata('success', 'Đã hủy đơn hàng' . ($was_wallet_paid ? ' và hoàn tiền.' : '.'));
         redirect('orders');
     }
@@ -507,6 +555,15 @@ class Orders extends MY_Controller {
             return;
         }
 
+        // Kiểm tra mã OTP/QR hết hạn (5 phút = 300 giây)
+        if (!empty($order['otp_created_at'])) {
+            $created_time = strtotime($order['otp_created_at']);
+            if ((time() - $created_time) > 300) {
+                echo json_encode(['success' => false, 'message' => 'Mã xác nhận đã hết hạn (quá 5 phút)! Vui lòng yêu cầu người mua tải lại trang để lấy mã mới.']);
+                return;
+            }
+        }
+
         // Cập nhật trạng thái → completed
         $update_data = ['status' => 'completed'];
         if ($order['payment_method'] === 'cod') {
@@ -529,7 +586,9 @@ class Orders extends MY_Controller {
             'content'     => "🎉 [$seller_name] đã giao sách thành công. Hãy đánh giá tại: " . site_url('orders/rate/' . $order['id']),
         ]);
 
-        // Trả kết quả ngay (không gọi Pusher ở đây — page reload sẽ sync trạng thái)
+        // Realtime: thông báo cho người mua giao dịch đã hoàn tất
+        $this->trigger_pusher_order($order['buyer_id'], "🎉 {$seller_name} đã xác nhận bàn giao sách thành công! Hãy đánh giá người bán nhé.", $order['id']);
+
         echo json_encode(['success' => true, 'message' => 'Xác nhận giao hàng thành công! Giao dịch hoàn tất.']);
     }
 

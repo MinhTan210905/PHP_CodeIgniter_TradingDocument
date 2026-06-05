@@ -422,7 +422,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                     <div class="mb-4">
                         <label class="form-label-hcmue">Tài liệu đọc thử PDF (Tùy chọn, tối đa 20MB)</label>
-                        <input type="file" class="form-control form-control-hcmue" name="pdf_file" accept="application/pdf">
+                        <input type="file" class="form-control form-control-hcmue" name="pdf_file" id="createPdfFile" accept="application/pdf">
                         <div class="form-text text-muted" style="font-size:0.75rem;">Đăng kèm file PDF (tối đa 20MB) để người mua đọc thử một vài trang sách trước khi chọn mua.</div>
                     </div>
                     <button type="submit" class="btn btn-primary-hcmue w-100 py-3 fs-6 fw-bold">
@@ -458,6 +458,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div id="isbn-scan-status" class="text-center py-3 px-4">
                     <p class="text-muted small mb-0"><i class="fas fa-info-circle me-1"></i>Đưa mã vạch ISBN (mặt sau sách) vào khung hình</p>
                 </div>
+
+                <!-- Chọn ảnh từ máy -->
+                <div class="px-4 pb-3 text-center">
+                    <label class="btn btn-outline-secondary btn-sm w-100 rounded-3 mb-0" style="cursor: pointer;">
+                        <i class="fas fa-image me-1"></i> Chọn ảnh mã vạch từ thiết bị
+                        <input type="file" id="isbnImageInput" accept="image/*" style="display: none;">
+                    </label>
+                </div>
+
+                <!-- Hidden element for static image scanning -->
+                <div id="isbn-file-scanner-temp" style="position: absolute; left: -9999px; top: -9999px; width: 1000px; height: 1000px;"></div>
                 
                 <!-- Nhập ISBN thủ công -->
                 <div class="px-4 pb-4">
@@ -987,6 +998,164 @@ document.addEventListener('DOMContentLoaded', function() {
         scannerModal.addEventListener('hidden.bs.modal', function() {
             stopIsbnScanner();
         });
+    }
+
+    // Xử lý chọn ảnh mã vạch để quét ISBN từ thiết bị
+    const isbnImageInput = document.getElementById('isbnImageInput');
+    if (isbnImageInput) {
+        isbnImageInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            updateScanStatus('<i class="fas fa-spinner fa-spin me-1 text-primary"></i>Đang đọc mã vạch từ ảnh...', 'text-primary');
+
+            // Đảm bảo tắt camera trước (nếu đang chạy) để giải phóng tài nguyên
+            let stopPromise = Promise.resolve();
+            if (isbnHtml5QrCode && isbnScannerRunning) {
+                stopPromise = isbnHtml5QrCode.stop().then(() => {
+                    isbnScannerRunning = false;
+                    const laser = document.getElementById('isbn-scan-laser');
+                    if (laser) laser.style.display = 'none';
+                });
+            }
+
+            stopPromise.then(() => {
+                // Sử dụng canvas để scale ảnh về kích thước hợp lý (tối ưu hóa quét mã vạch EAN-13)
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    const img = new Image();
+                    img.onload = function() {
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+                        
+                        // Kích thước tối đa đề xuất để quét mã vạch (800px - 1000px)
+                        const MAX_DIM = 900;
+                        let width = img.width;
+                        let height = img.height;
+                        if (width > height) {
+                            if (width > MAX_DIM) {
+                                height *= MAX_DIM / width;
+                                width = MAX_DIM;
+                            }
+                        } else {
+                            if (height > MAX_DIM) {
+                                width *= MAX_DIM / height;
+                                height = MAX_DIM;
+                            }
+                        }
+                        canvas.width = width;
+                        canvas.height = height;
+                        ctx.drawImage(img, 0, 0, width, height);
+
+                        const tryBarcodeDetector = (bitmap) => {
+                            if ('BarcodeDetector' in window) {
+                                return BarcodeDetector.getSupportedFormats().then(supported => {
+                                    if (supported.includes('ean_13')) {
+                                        const detector = new BarcodeDetector({ 
+                                            formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39'] 
+                                        });
+                                        return detector.detect(bitmap).then(barcodes => {
+                                            if (barcodes.length > 0) {
+                                                return barcodes[0].rawValue;
+                                            }
+                                            throw new Error('BarcodeDetector returned empty');
+                                        });
+                                    }
+                                    throw new Error('ean_13 not supported in BarcodeDetector');
+                                });
+                            }
+                            throw new Error('BarcodeDetector not available');
+                        };
+
+                        const tryHtml5Qrcode = (targetFile) => {
+                            const fileScanner = new Html5Qrcode("isbn-file-scanner-temp", {
+                                verbose: false
+                            });
+                            return fileScanner.scanFile(targetFile, true)
+                                .then(decodedText => {
+                                    try { fileScanner.clear(); } catch(e) {}
+                                    return decodedText;
+                                })
+                                .catch(err => {
+                                    try { fileScanner.clear(); } catch(e) {}
+                                    throw err;
+                                });
+                        };
+
+                        // 1. Thử quét ảnh scale-down bằng BarcodeDetector trước (cực nhanh và chính xác)
+                        createImageBitmap(canvas).then(bitmap => {
+                            return tryBarcodeDetector(bitmap);
+                        }).then(decodedText => {
+                            onSuccess(decodedText);
+                        }).catch(err => {
+                            console.log("BarcodeDetector thất bại hoặc không được hỗ trợ, chuyển sang Html5Qrcode...");
+                            // 2. Chuyển canvas thành file và quét bằng Html5Qrcode
+                            canvas.toBlob(function(blob) {
+                                const resizedFile = new File([blob], "scan_resized.png", { type: "image/png" });
+                                tryHtml5Qrcode(resizedFile).then(decodedText => {
+                                    onSuccess(decodedText);
+                                }).catch(err => {
+                                    console.log("Quét ảnh resized bằng Html5Qrcode thất bại, thử xử lý màu sắc ảnh (Grayscale + High Contrast)...");
+                                    // 3. Tăng độ tương phản ảnh sang nhị phân trắng-đen để quét
+                                    try {
+                                        const imgData = ctx.getImageData(0, 0, width, height);
+                                        const data = imgData.data;
+                                        for (let i = 0; i < data.length; i += 4) {
+                                            const brightness = 0.34 * data[i] + 0.5 * data[i + 1] + 0.16 * data[i + 2];
+                                            const val = brightness > 120 ? 255 : 0; // Nhị phân hóa
+                                            data[i] = val;
+                                            data[i+1] = val;
+                                            data[i+2] = val;
+                                        }
+                                        ctx.putImageData(imgData, 0, 0);
+                                    } catch(e) {
+                                        console.error("Lỗi xử lý điểm ảnh:", e);
+                                    }
+                                    
+                                    canvas.toBlob(function(blob2) {
+                                        const processedFile = new File([blob2], "scan_processed.png", { type: "image/png" });
+                                        tryHtml5Qrcode(processedFile).then(decodedText => {
+                                            onSuccess(decodedText);
+                                        }).catch(err => {
+                                            console.log("Quét ảnh xử lý thất bại, thử quét ảnh gốc chưa qua resize...");
+                                            // 4. Thử quét file gốc ban đầu làm phương án cuối cùng
+                                            tryHtml5Qrcode(file).then(decodedText => {
+                                                onSuccess(decodedText);
+                                            }).catch(err => {
+                                                console.error("Tất cả các phương pháp quét đều thất bại:", err);
+                                                updateScanStatus('<i class="fas fa-exclamation-triangle me-1 text-danger"></i>Không tìm thấy mã vạch hợp lệ trong ảnh! Hãy chụp gần, rõ nét, căn giữa mã vạch và chụp theo chiều ngang.', 'text-danger');
+                                            });
+                                        });
+                                    }, 'image/png');
+                                });
+                            }, 'image/png');
+                        });
+                    };
+                    img.src = event.target.result;
+                };
+                reader.readAsDataURL(file);
+
+                function onSuccess(decodedText) {
+                    const cleanIsbn = decodedText.replace(/[^0-9X]/gi, '');
+                    updateScanStatus(`<i class="fas fa-check-circle me-1 text-success"></i>Đã quét thành công: <strong>${cleanIsbn}</strong> — Đang tra cứu...`, 'text-success fw-bold');
+                    fetchBookByIsbn(cleanIsbn);
+                }
+            }).catch(err => {
+                console.error("Lỗi khi dừng camera:", err);
+                updateScanStatus('<i class="fas fa-exclamation-triangle me-1 text-danger"></i>Lỗi dừng camera để quét file. Vui lòng thử lại.', 'text-danger');
+            });
+        });
+    }
+});
+
+// Kiểm tra dung lượng file PDF đọc thử trước khi submit (giới hạn 20MB)
+document.addEventListener("change", function(e) {
+    if (e.target && (e.target.id === 'createPdfFile' || e.target.id === 'editPdfFile')) {
+        const file = e.target.files[0];
+        if (file && file.size > 20 * 1024 * 1024) { // 20MB
+            alert("⚠️ File PDF đọc thử vượt quá dung lượng tối đa cho phép (20MB)! Vui lòng chọn file khác nhỏ hơn.");
+            e.target.value = ""; // Xoá file đã chọn để chặn submit
+        }
     }
 });
 </script>

@@ -734,9 +734,9 @@ function openFloatingConversation(otherId, fullName, avatarUrl) {
             renderFloatingMessages(data.messages);
             scrollToFloatingChatBottom();
             
-            // Thiết lập Polling tin nhắn mỗi 3s
+            // Thiết lập Polling tin nhắn mỗi 10s
             if (floatingPollInterval) clearInterval(floatingPollInterval);
-            floatingPollInterval = setInterval(pollFloatingNewMessages, 3000);
+            floatingPollInterval = setInterval(pollFloatingNewMessages, 10000);
             
             // Đồng bộ lại Badge unread
             syncUnreadCount();
@@ -790,6 +790,7 @@ function renderFloatingMessages(messages) {
 
 // Nhận tin nhắn mới ngầm (realtime polling)
 function pollFloatingNewMessages() {
+    if (document.hidden) return;
     if (!currentChatUserId || !floatingChatOpen) return;
 
     fetch(`<?= site_url("message/poll_messages/") ?>${currentChatUserId}?after_id=${lastMessageId}`, {
@@ -908,6 +909,7 @@ function scrollToFloatingChatBottom() {
 
 // Đồng bộ tổng số lượng tin nhắn chưa đọc
 function syncUnreadCount() {
+    if (document.hidden) return;
     fetch('<?= site_url("message/total_unread") ?>', {
         headers: { 'X-Requested-With': 'XMLHttpRequest' }
     })
@@ -939,6 +941,7 @@ function syncUnreadCount() {
 }
 
 function syncActionRequiredCount() {
+    if (document.hidden) return;
     fetch('<?= site_url("orders/ajax_get_action_required_count") ?>', {
         headers: { 'X-Requested-With': 'XMLHttpRequest' }
     })
@@ -1039,99 +1042,82 @@ function escapeHtml(text) {
 
 // Khởi chạy khi tài liệu sẵn sàng
 document.addEventListener('DOMContentLoaded', function() {
-      if (typeof globalPusher !== 'undefined' && globalPusher !== null) {
-          const userId = <?= $this->session->userdata('user_id') ?? 'null' ?>;
-          if (userId) {
-              const channel = globalPusher.subscribe('chat-channel-' + userId);
-              channel.bind('order-update', function(data) {
-                  if (data && data.message) {
-                      // Tạo Toast thông báo nhỏ
-                      const toast = document.createElement('div');
-                      toast.style.position = 'fixed';
-                      toast.style.top = '80px';
-                      toast.style.right = '20px';
-                      toast.style.background = '#3B82F6';
-                      toast.style.color = '#fff';
-                      toast.style.padding = '12px 20px';
-                      toast.style.borderRadius = '8px';
-                      toast.style.boxShadow = '0 4px 6px rgba(0,0,0,0.1)';
-                      toast.style.zIndex = '9999';
-                      toast.style.fontWeight = '500';
-                      toast.innerHTML = '<i class="fas fa-bell me-2"></i> ' + data.message;
-                      document.body.appendChild(toast);
-                      setTimeout(() => toast.remove(), 4000);
 
-                      // Cập nhật badge
-                      fetch('<?= site_url("orders/ajax_get_action_required_count") ?>', {
-                          headers: { 'X-Requested-With': 'XMLHttpRequest' }
-                      })
-                      .then(res => res.json())
-                      .then(resData => {
-                          if (resData.status === 'ok') {
-                              let badge = document.querySelector('a[href*="orders"] .nav-badge');
-                              if (badge) {
-                                  if (resData.count > 0) {
-                                      badge.innerText = resData.count;
-                                      badge.classList.remove('d-none');
-                                  } else {
-                                      badge.classList.add('d-none');
-                                  }
-                              } else if (resData.count > 0) {
-                                  const orderIcon = document.querySelector('a[href*="orders"]');
-                                  if (orderIcon) {
-                                      badge = document.createElement('span');
-                                      badge.className = 'nav-badge';
-                                      badge.innerText = resData.count;
-                                      orderIcon.appendChild(badge);
-                                  }
-                              }
-                          }
-                      });
-
-                      // Tự load lại trang detail nếu đang mở đúng đơn đó
-                      if (data.order_id && window.location.href.includes('orders/detail/' + data.order_id)) {
-                          setTimeout(() => window.location.reload(), 1500);
-                      }
-                  }
-              });
-
-              // Nhận tin nhắn mới: cập nhật số tin nhắn chưa đọc và danh sách hội thoại
-              channel.bind('new-message', function(data) {
-                  syncUnreadCount();
-                  if (floatingChatOpen && !currentChatUserId) {
-                      loadFloatingInbox();
-                  }
-              });
-          }
-      }
-
-    // Tự động kiểm tra unread badge định kỳ mỗi 15 giây
-    
+    // Tự động kiểm tra badge định kỳ mỗi 15 giây
     syncUnreadCount();
     syncActionRequiredCount();
     setInterval(syncUnreadCount, 15000);
     setInterval(syncActionRequiredCount, 15000);
 
-    // Bind Pusher if available
-    if (typeof globalPusher !== 'undefined' && globalPusher) {
-        var userChannel = globalPusher.subscribe('user-<?= $this->session->userdata("user_id") ?>');
-        
-        // When new message arrives
-        userChannel.bind('new-message', function(data) {
-            syncUnreadCount();
-            if (typeof syncInboxList === 'function') {
-                syncInboxList(); // If we are on inbox page
-            }
-        });
+    // ===== PUSHER REALTIME =====
+    if (typeof globalPusher !== 'undefined' && globalPusher !== null) {
+        const userId = <?= $this->session->userdata('user_id') ?? 'null' ?>;
+        if (userId) {
 
-        // When order event arrives (e.g. buyer checkout, seller verify QR)
-        userChannel.bind('order-event', function(data) {
-            syncActionRequiredCount();
-            if (data.message) {
-                // Show a toast or alert (optional, let's just use alert for simplicity or nothing if we don't want intrusive)
-                // We'll just sync the badge.
-            }
-        });
+            // --- Channel tin nhắn (chat-channel-{id}) ---
+            const chatChannel = globalPusher.subscribe('chat-channel-' + userId);
+
+            // Tin nhắn mới → cập nhật badge + inbox
+            chatChannel.bind('new-message', function(data) {
+                syncUnreadCount();
+                if (typeof floatingChatOpen !== 'undefined' && floatingChatOpen && !currentChatUserId) {
+                    loadFloatingInbox();
+                }
+            });
+
+            chatChannel.bind('update-message', function(data) {
+                syncUnreadCount();
+            });
+
+            // --- Channel đơn hàng (user-{id}) ---
+            const orderChannel = globalPusher.subscribe('user-' + userId);
+
+            // Sự kiện order-event: hiển thị toast + cập nhật badge + tự reload trang detail
+            orderChannel.bind('order-event', function(data) {
+                syncActionRequiredCount();
+                syncUnreadCount();
+
+                if (data && data.message) {
+                    // Tạo toast nổi
+                    const toast = document.createElement('div');
+                    toast.style.cssText = [
+                        'position:fixed', 'top:80px', 'right:20px',
+                        'background:linear-gradient(135deg,#1E40AF,#2563EB)',
+                        'color:#fff', 'padding:14px 20px', 'border-radius:12px',
+                        'box-shadow:0 8px 24px rgba(37,99,235,0.35)',
+                        'z-index:99999', 'font-size:0.9rem', 'font-weight:600',
+                        'max-width:340px', 'cursor:pointer',
+                        'transition:opacity 0.4s ease',
+                        'display:flex', 'align-items:flex-start', 'gap:10px'
+                    ].join(';');
+
+                    const orderId = data.order_id || '';
+                    const orderUrl = '<?= site_url("orders/detail/") ?>' + orderId;
+
+                    toast.innerHTML = `
+                        <i class="fas fa-bell" style="margin-top:3px;flex-shrink:0;"></i>
+                        <div>
+                            <div>${data.message}</div>
+                            ${orderId ? `<a href="${orderUrl}" style="color:#93C5FD;font-size:0.8rem;text-decoration:underline;">Xem đơn hàng #${orderId} →</a>` : ''}
+                        </div>
+                    `;
+
+                    if (orderId) toast.onclick = () => window.location.href = orderUrl;
+                    document.body.appendChild(toast);
+
+                    // Tự xóa sau 6 giây
+                    setTimeout(() => {
+                        toast.style.opacity = '0';
+                        setTimeout(() => toast.remove(), 400);
+                    }, 6000);
+
+                    // Nếu đang xem đúng trang detail của đơn đó → tự reload
+                    if (orderId && window.location.href.includes('/orders/detail/' + orderId)) {
+                        setTimeout(() => window.location.reload(), 2000);
+                    }
+                }
+            });
+        }
     }
 
 });

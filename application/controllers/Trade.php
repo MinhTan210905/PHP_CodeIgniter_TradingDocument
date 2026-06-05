@@ -70,6 +70,35 @@ class Trade extends MY_Controller {
         $this->load->view('partials/footer');
     }
 
+    // [AJAX/JSON] Tìm kiếm sách — endpoint thay thế /api/posts/search để tránh WAF InfinityFree
+    public function search_json() {
+        header('Content-Type: application/json; charset=utf-8');
+        $filters = [
+            'category_id' => $this->input->get('cat'),
+            'keyword'     => $this->input->get('q'),
+            'sort_by'     => $this->input->get('sort_by'),
+            'condition'   => $this->input->get('condition'),
+            'min_price'   => $this->input->get('min_price'),
+            'max_price'   => $this->input->get('max_price'),
+            'rating'      => $this->input->get('rating'),
+            'shop_type'   => $this->input->get('shop_type')
+        ];
+        try {
+            $posts = $this->Trade_model->get_all_posts($filters);
+            echo json_encode([
+                'status' => 200,
+                'total'  => count($posts),
+                'data'   => $posts
+            ], JSON_UNESCAPED_UNICODE);
+        } catch (\Throwable $e) {
+            echo json_encode([
+                'status'  => 500,
+                'message' => 'Lỗi máy chủ.',
+                'data'    => []
+            ], JSON_UNESCAPED_UNICODE);
+        }
+    }
+
     // Chi tiết bài đăng + bình luận
     public function detail($id) {
         $data['post']       = $this->Trade_model->get_post_detail($id);
@@ -145,6 +174,13 @@ class Trade extends MY_Controller {
         $pdf_url = NULL;
         // Kiểm tra và upload file PDF đọc thử nếu có
         if (!empty($_FILES['pdf_file']['name'])) {
+            // Kiểm tra dung lượng file PDF đọc thử (giới hạn 20MB)
+            if ($_FILES['pdf_file']['error'] === UPLOAD_ERR_INI_SIZE || $_FILES['pdf_file']['size'] > 20 * 1024 * 1024) {
+                $this->session->set_flashdata('error', '⚠️ File PDF đọc thử vượt quá dung lượng tối đa cho phép (20MB)!');
+                redirect('trade');
+                return;
+            }
+
             $pdf_dir = FCPATH . 'assets/uploads/pdfs/';
             if (!is_dir($pdf_dir)) {
                 mkdir($pdf_dir, 0777, TRUE);
@@ -167,15 +203,15 @@ class Trade extends MY_Controller {
             }
         }
 
-        $auto_approve = ($this->Setting_model->get('auto_approve_new') === '1');
+        $auto_approve = FALSE; // Tắt tự động duyệt mặc định cho bài mới (phải qua kiểm duyệt sao hoặc admin duyệt)
 
         // Duyệt tự động dựa trên số sao đánh giá của người bán
         $auto_approve_min_stars = floatval($this->Setting_model->get('auto_approve_min_stars', '0'));
         if ($auto_approve_min_stars > 0) {
             $this->load->model('Rating_model');
             $seller_rating = $this->Rating_model->get_avg_rating($user_id);
-            if ($seller_rating['total'] > 0 && $seller_rating['avg'] >= $auto_approve_min_stars) {
-                $auto_approve = TRUE;
+            if ($seller_rating['total'] > 0) {
+                $auto_approve = ($seller_rating['avg'] >= $auto_approve_min_stars);
             }
         }
 
@@ -397,8 +433,8 @@ class Trade extends MY_Controller {
         if ($auto_approve_min_stars > 0) {
             $this->load->model('Rating_model');
             $seller_rating = $this->Rating_model->get_avg_rating($user_id);
-            if ($seller_rating['total'] > 0 && $seller_rating['avg'] >= $auto_approve_min_stars) {
-                $auto_approve_edit = TRUE;
+            if ($seller_rating['total'] > 0) {
+                $auto_approve_edit = ($seller_rating['avg'] >= $auto_approve_min_stars);
             }
         }
 
@@ -442,11 +478,26 @@ class Trade extends MY_Controller {
             if ($this->upload->do_upload('image')) {
                 $up_data = $this->upload->data();
                 $update_data['image_url'] = 'assets/uploads/' . $up_data['file_name'];
+
+                // Xoá file ảnh bìa cũ nếu có (tránh xóa ảnh mặc định default.png)
+                if (!empty($post['image_url']) && $post['image_url'] !== 'assets/uploads/default.png') {
+                    $old_img_path = FCPATH . $post['image_url'];
+                    if (file_exists($old_img_path)) {
+                        @unlink($old_img_path);
+                    }
+                }
             }
         }
 
         // Xử lý upload file PDF đọc thử mới (nếu có)
         if (!empty($_FILES['pdf_file']['name'])) {
+            // Kiểm tra dung lượng file PDF đọc thử (giới hạn 20MB)
+            if ($_FILES['pdf_file']['error'] === UPLOAD_ERR_INI_SIZE || $_FILES['pdf_file']['size'] > 20 * 1024 * 1024) {
+                $this->session->set_flashdata('error', '⚠️ File PDF đọc thử vượt quá dung lượng tối đa cho phép (20MB)!');
+                redirect('trade/edit/' . $id);
+                return;
+            }
+
             $pdf_dir = FCPATH . 'assets/uploads/pdfs/';
             if (!is_dir($pdf_dir)) mkdir($pdf_dir, 0777, TRUE);
 

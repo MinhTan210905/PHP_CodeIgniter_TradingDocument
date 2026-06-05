@@ -410,6 +410,19 @@
 
 <script>
 (function () {
+    // Helper escape HTML bảo vệ XSS cục bộ
+    function escapeHtml(text) {
+        if (!text) return '';
+        const map = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#039;'
+        };
+        return String(text).replace(/[&<>"']/g, function(m) { return map[m]; });
+    }
+
     // =========================================================
     // Biến trạng thái — lưu bộ lọc đang chọn
     // =========================================================
@@ -451,13 +464,13 @@
     const IS_ADMIN = <?= json_encode($this->session->userdata('role') === 'admin') ?>;
     const CUR_UID = <?= json_encode((string)$this->session->userdata('user_id')) ?>;
 
-    // URL gốc của API (dùng PHP để đảm bảo đúng domain)
-    const API_URL = '<?= site_url("api/posts/search") ?>';
-    const BASE_URL = '<?= base_url() ?>';
-    const DETAIL_URL = '<?= site_url("trade/detail/") ?>';
-    const EDIT_URL = '<?= site_url("trade/edit/") ?>';
-    const MSG_URL = '<?= site_url("message/conversation/") ?>';
-    const SELLER_URL = '<?= site_url("seller/") ?>';
+    // URL gốc của API (tự động đồng bộ HTTP/HTTPS để tránh lỗi Mixed Content)
+    const API_URL = '<?= site_url("trade/search_json") ?>'.replace(/^http:/i, window.location.protocol);
+    const BASE_URL = '<?= base_url() ?>'.replace(/^http:/i, window.location.protocol);
+    const DETAIL_URL = '<?= site_url("trade/detail/") ?>'.replace(/^http:/i, window.location.protocol);
+    const EDIT_URL = '<?= site_url("trade/edit/") ?>'.replace(/^http:/i, window.location.protocol);
+    const MSG_URL = '<?= site_url("message/conversation/") ?>'.replace(/^http:/i, window.location.protocol);
+    const SELLER_URL = '<?= site_url("seller/") ?>'.replace(/^http:/i, window.location.protocol);
     const DEFAULT_IMG = BASE_URL + 'assets/images/default_book.jpg';
     let lastResultJson = '';
 
@@ -609,8 +622,13 @@
         return params;
     }
 
+    let isFetching = false;
+
     // Expose fetchBooks globally for HTML onclick handlers
     window.fetchBooks = function() {
+        if (isFetching) return;
+        isFetching = true;
+
         const keyword = searchInput.value.trim();
 
         // Bước 1: Hiện skeleton, ẩn nội dung cũ
@@ -648,19 +666,29 @@
             }
         }
 
-        // Bước 4: Gọi API bằng Fetch
+        // Bước 4: Gọi API bằng Fetch (parse JSON an toàn)
         fetch(API_URL + '?' + params.toString())
-            .then(function (response) { return response.json(); })
-            .then(function (result) {
-                // Ẩn skeleton sau khi nhận được dữ liệu
+            .then(function (response) { return response.text(); })
+            .then(function (text) {
+                isFetching = false;
                 loadingState.style.display = 'none';
-
+                let result;
+                try {
+                    result = JSON.parse(text);
+                } catch (e) {
+                    console.error('[API] Response không phải JSON:', text.substring(0, 200));
+                    bookList.innerHTML = '<div class="col-12 text-center text-danger py-4"><i class="fas fa-exclamation-circle me-2"></i>Máy chủ trả về lỗi. Vui lòng thử lại.</div>';
+                    bookList.style.display = '';
+                    return;
+                }
                 lastResultJson = JSON.stringify(result.data || []);
                 renderBooksList(result);
             })
-            .catch(function () {
+            .catch(function (err) {
+                isFetching = false;
                 loadingState.style.display = 'none';
-                bookList.innerHTML = '<div class="col-12 text-center text-danger py-4">Không thể kết nối API. Vui lòng thử lại.</div>';
+                console.error('[API Fetch Error]:', err);
+                bookList.innerHTML = '<div class="col-12 text-center text-danger py-4"><i class="fas fa-wifi me-2"></i>Không thể kết nối máy chủ (' + (err.message || 'Lỗi mạng') + '). Vui lòng kiểm tra lại.</div>';
                 bookList.style.display = '';
             });
     }
@@ -712,13 +740,24 @@
         fetchBooks();
     }
 
-    // Polling chạy ẩn để cập nhật bài đăng mới / đã duyệt realtime
+    // Polling chạy ẩn để cập nhật bài đăng mới / đã duyệt realtime (Tối ưu hóa tránh trùng lặp và dừng khi ẩn tab)
     function pollBooks() {
+        if (document.hidden) return;
+        if (isFetching) return;
+        isFetching = true;
+
         const params = getFilterParams();
 
         fetch(API_URL + '?' + params.toString())
-            .then(function (response) { return response.json(); })
-            .then(function (result) {
+            .then(function (response) { return response.text(); })
+            .then(function (text) {
+                isFetching = false;
+                let result;
+                try {
+                    result = JSON.parse(text);
+                } catch (e) {
+                    return;
+                }
                 const currentJson = JSON.stringify(result.data || []);
                 // Chỉ vẽ lại nếu danh sách bài đăng có sự thay đổi
                 if (currentJson !== lastResultJson) {
@@ -727,6 +766,7 @@
                 }
             })
             .catch(function (err) {
+                isFetching = false;
                 console.warn('Lỗi đồng bộ danh sách bài đăng:', err);
             });
     }
@@ -918,7 +958,7 @@
     // =========================================================
     fetchBooks();
 
-    // Tự động kiểm tra cập nhật bài đăng mỗi 6 giây
-    setInterval(pollBooks, 6000);
+    // Tự động kiểm tra cập nhật bài đăng mỗi 30 giây (tránh quá tải server)
+    setInterval(pollBooks, 30000);
 }());
 </script>

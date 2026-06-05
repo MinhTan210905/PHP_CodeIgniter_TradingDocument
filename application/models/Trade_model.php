@@ -10,30 +10,52 @@ class Trade_model extends CI_Model
         $this->load->database();
         
         // Tự động kiểm tra và thêm cột pdf_url vào bảng posts nếu chưa tồn tại
-        if (!$this->db->field_exists('pdf_url', 'posts')) {
-            $this->load->dbforge();
-            $fields = [
-                'pdf_url' => [
-                    'type' => 'VARCHAR',
-                    'constraint' => '255',
-                    'default' => NULL,
-                    'null' => TRUE
-                ]
-            ];
-            $this->dbforge->add_column('posts', $fields);
+        try {
+            if (!$this->db->field_exists('pdf_url', 'posts')) {
+                $this->load->dbforge();
+                $fields = [
+                    'pdf_url' => [
+                        'type' => 'VARCHAR',
+                        'constraint' => '255',
+                        'default' => NULL,
+                        'null' => TRUE
+                    ]
+                ];
+                $this->dbforge->add_column('posts', $fields);
+            }
+        } catch (\Throwable $e) {
+            log_message('error', 'Trade_model: không thể thêm cột pdf_url: ' . $e->getMessage());
         }
         
         // Tự động kiểm tra và thêm cột item_condition vào bảng posts nếu chưa tồn tại
-        if (!$this->db->field_exists('item_condition', 'posts')) {
-            $this->load->dbforge();
-            $fields = [
-                'item_condition' => [
-                    'type' => 'ENUM("new","used")',
-                    'default' => 'used',
-                    'null' => FALSE
-                ]
-            ];
-            $this->dbforge->add_column('posts', $fields);
+        try {
+            if (!$this->db->field_exists('item_condition', 'posts')) {
+                $this->load->dbforge();
+                $fields = [
+                    'item_condition' => [
+                        'type' => 'ENUM("new","used")',
+                        'default' => 'used',
+                        'null' => FALSE
+                    ]
+                ];
+                $this->dbforge->add_column('posts', $fields);
+            }
+        } catch (\Throwable $e) {
+            log_message('error', 'Trade_model: không thể thêm cột item_condition: ' . $e->getMessage());
+        }
+
+        // Tự động cập nhật cột status để hỗ trợ trạng thái rejected nếu chưa có
+        try {
+            $query = $this->db->query("SHOW COLUMNS FROM posts LIKE 'status'");
+            if ($query && $query->num_rows() > 0) {
+                $row = $query->row_array();
+                $type = $row['Type'];
+                if (strpos($type, 'rejected') === false) {
+                    $this->db->query("ALTER TABLE posts MODIFY COLUMN status ENUM('pending','available','sold','rejected') DEFAULT 'pending'");
+                }
+            }
+        } catch (\Throwable $e) {
+            log_message('error', 'Trade_model: không thể cập nhật cột status của posts: ' . $e->getMessage());
         }
     }
 
@@ -304,9 +326,45 @@ class Trade_model extends CI_Model
         return $this->db->update('posts', $data);
     }
 
-    // Delete: Xóa bài đăng
+    // Delete: Xóa bài đăng kèm dọn dẹp file vật lý
     public function delete_post($id)
     {
+        // 1. Lấy thông tin bài đăng
+        $post = $this->get_post_by_id($id);
+        if ($post) {
+            // 2. Lấy danh sách ảnh phụ
+            $additional_images = $this->get_post_images($id);
+
+            // 3. Xóa ảnh bìa chính (tránh xóa ảnh mặc định default.png)
+            if (!empty($post['image_url']) && $post['image_url'] !== 'assets/uploads/default.png') {
+                $main_img_path = FCPATH . $post['image_url'];
+                if (file_exists($main_img_path)) {
+                    @unlink($main_img_path);
+                }
+            }
+
+            // 4. Xóa file PDF đọc thử nếu có
+            if (!empty($post['pdf_url'])) {
+                $pdf_path = FCPATH . $post['pdf_url'];
+                if (file_exists($pdf_path)) {
+                    @unlink($pdf_path);
+                }
+            }
+
+            // 5. Xóa tất cả ảnh phụ từ uploads
+            if (!empty($additional_images)) {
+                foreach ($additional_images as $img) {
+                    if (!empty($img['image_url'])) {
+                        $sub_img_path = FCPATH . $img['image_url'];
+                        if (file_exists($sub_img_path)) {
+                            @unlink($sub_img_path);
+                        }
+                    }
+                }
+            }
+        }
+
+        // 6. Xóa từ DB (sẽ cascade tự động xóa hàng post_images, comments, v.v.)
         $this->db->where('id', $id);
         return $this->db->delete('posts');
     }

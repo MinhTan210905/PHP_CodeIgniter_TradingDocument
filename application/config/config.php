@@ -8,10 +8,13 @@ defined('BASEPATH') or exit('No direct script access allowed');
 */
 if (isset($_SERVER['HTTP_HOST'])) {
     // Detect HTTPS - hỗ trợ cả reverse proxy (CloudFlare, InfinityFree, v.v.)
+    // Tự động kích hoạt HTTPS nếu không phải localhost để tránh lỗi Mixed Content trên các hosting chạy proxy SSL
+    $is_localhost = ($_SERVER['HTTP_HOST'] === 'localhost' || $_SERVER['HTTP_HOST'] === '127.0.0.1' || strpos($_SERVER['HTTP_HOST'], '192.168.') === 0);
     $is_https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
              || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')
              || (isset($_SERVER['HTTP_X_FORWARDED_SSL']) && $_SERVER['HTTP_X_FORWARDED_SSL'] === 'on')
-             || (isset($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] == 443);
+             || (isset($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] == 443)
+             || !$is_localhost;
     $base_url = ($is_https ? "https" : "http") . "://" . $_SERVER['HTTP_HOST'];
     $base_url .= str_replace(basename($_SERVER['SCRIPT_NAME']), "", $_SERVER['SCRIPT_NAME']);
     $config['base_url'] = str_replace(' ', '%20', $base_url);

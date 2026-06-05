@@ -95,6 +95,16 @@
                                     <span class="ms-2 badge bg-secondary" style="font-size:0.65rem;">Đã tắt</span>
                                 <?php endif; ?>
                             </div>
+                            <?php if (!empty($item['match_post_id']) && $item['match_status'] === 'available'): ?>
+                                <div class="mt-2 p-2 rounded-3 d-flex align-items-center justify-content-between gap-2" style="background:#ECFDF5; border: 1px solid #A7F3D0; font-size:0.8rem;">
+                                    <span style="color:#065F46;" class="text-truncate">
+                                        <i class="fas fa-bullhorn me-1"></i> Có sách bán: <strong><?= htmlspecialchars($item['match_title']) ?></strong> (<?= number_format($item['match_price'], 0, ',', '.') ?>đ)
+                                    </span>
+                                    <a href="<?= site_url('trade/detail/' . $item['match_post_id']) ?>" class="btn btn-xs btn-success rounded-pill px-2 py-1 fw-bold text-white text-decoration-none flex-shrink-0" style="font-size:0.7rem; background:#059669; border:none;">
+                                        Xem ngay <i class="fas fa-chevron-right ms-1" style="font-size:0.6rem;"></i>
+                                    </a>
+                                </div>
+                            <?php endif; ?>
                         </div>
 
                         <!-- Toggle Switch -->
