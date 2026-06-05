@@ -33,6 +33,14 @@
                     </span>
                 <?php endif; ?>
             </a>
+            <a href="<?= site_url('admin/reports') ?>" class="btn rounded-3 fw-bold text-white position-relative" style="font-size:0.85rem;background:linear-gradient(135deg,#F59E0B,#D97706);">
+                <i class="fas fa-flag me-1"></i> Báo cáo
+                <?php if (isset($total_reports) && $total_reports > 0): ?>
+                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                        <?= $total_reports ?>
+                    </span>
+                <?php endif; ?>
+            </a>
             <a href="<?= site_url('admin/users') ?>" class="btn btn-primary-hcmue rounded-3 fw-bold" style="font-size:0.85rem;">
                 <i class="fas fa-users me-1"></i> Quản lý Người dùng
             </a>

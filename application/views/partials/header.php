@@ -206,7 +206,8 @@ header('Content-Type: text/html; charset=UTF-8');
                                 $admin_total_pending = $CI_h->Trade_model->count_pending() 
                                     + $CI_h->Wallet_model->count_pending_withdrawals()
                                     + $CI_h->db->where('status', 'disputed')->count_all_results('orders')
-                                    + $CI_h->db->where('moderation_status', 'flagged')->count_all_results('comments');
+                                    + $CI_h->db->where('moderation_status', 'flagged')->count_all_results('comments')
+                                    + $CI_h->db->where('status', 'pending')->count_all_results('user_reports');
                             }
                             ?>
                             <?php if ($admin_total_pending > 0): ?>
@@ -253,7 +254,8 @@ header('Content-Type: text/html; charset=UTF-8');
                             $admin_pending_withdraw = $CI->Wallet_model->count_pending_withdrawals();
                             $admin_pending_disputes = $CI->db->where('status', 'disputed')->count_all_results('orders');
                             $admin_pending_comments = $CI->db->where('moderation_status', 'flagged')->count_all_results('comments');
-                            $admin_total_pending = $admin_pending_posts + $admin_pending_withdraw + $admin_pending_disputes + $admin_pending_comments;
+                            $admin_pending_reports = $CI->db->where('status', 'pending')->count_all_results('user_reports');
+                            $admin_total_pending = $admin_pending_posts + $admin_pending_withdraw + $admin_pending_disputes + $admin_pending_comments + $admin_pending_reports;
                         ?>
                         <li>
                             <a class="dropdown-item py-2" href="<?= site_url('admin') ?>">
@@ -276,6 +278,14 @@ header('Content-Type: text/html; charset=UTF-8');
                             <a class="dropdown-item py-2" href="<?= site_url('admin/moderation') ?>">
                                 <i class="fas fa-shield-alt me-2 text-warning"></i>Nội dung vi phạm (AI)
                                 <span class="badge bg-warning text-dark ms-1" style="font-size:0.7rem;"><?= $admin_pending_comments ?></span>
+                            </a>
+                        </li>
+                        <?php endif; ?>
+                        <?php if($admin_pending_reports > 0): ?>
+                        <li>
+                            <a class="dropdown-item py-2" href="<?= site_url('admin/reports') ?>">
+                                <i class="fas fa-flag me-2 text-danger"></i>Báo cáo vi phạm
+                                <span class="badge bg-danger ms-1" style="font-size:0.7rem;"><?= $admin_pending_reports ?></span>
                             </a>
                         </li>
                         <?php endif; ?>

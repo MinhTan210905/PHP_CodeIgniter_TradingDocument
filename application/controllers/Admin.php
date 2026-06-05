@@ -39,6 +39,7 @@ class Admin extends MY_Controller {
         $this->load->model('Wallet_model');
         $data['total_withdrawals'] = $this->Wallet_model->count_pending_withdrawals();
         $data['total_disputes']    = $this->db->where('status', 'disputed')->count_all_results('orders');
+        $data['total_reports']     = $this->db->where('status', 'pending')->count_all_results('user_reports');
 
         $data['recent_posts']  = $this->Trade_model->get_all_approved_posts();
         $data['pending_posts'] = $this->Trade_model->get_pending_posts();
@@ -628,5 +629,46 @@ class Admin extends MY_Controller {
             }
         }
         redirect('admin/moderation');
+    }
+
+    // ============================================
+    // Quản lý báo cáo người dùng (User Reports)
+    // ============================================
+    
+    public function reports() {
+        $this->require_admin();
+        $user_id = $this->session->userdata('user_id');
+
+        // Lấy danh sách báo cáo cùng thông tin người báo cáo, người bị báo cáo và đơn hàng liên quan
+        $this->db->select('user_reports.*, 
+            reporter.full_name as reporter_name, reporter.username as reporter_username,
+            reported.full_name as reported_name, reported.username as reported_username,
+            posts.title as post_title, posts.price, orders.quantity');
+        $this->db->from('user_reports');
+        $this->db->join('users reporter', 'reporter.id = user_reports.reporter_id', 'left');
+        $this->db->join('users reported', 'reported.id = user_reports.reported_user_id', 'left');
+        $this->db->join('orders', 'orders.id = user_reports.order_id', 'left');
+        $this->db->join('posts', 'posts.id = orders.post_id', 'left');
+        $this->db->order_by('user_reports.created_at', 'DESC');
+        $data['reports'] = $this->db->get()->result_array();
+
+        $data['unread_count'] = $this->Message_model->count_unread($user_id);
+
+        $this->load->view('partials/header', $data);
+        $this->load->view('admin/reports', $data);
+        $this->load->view('partials/footer');
+    }
+
+    public function resolve_report($report_id, $action) {
+        $this->require_admin();
+        if (!in_array($action, ['resolved', 'dismissed'])) {
+            $this->session->set_flashdata('error', 'Thao tác không hợp lệ!');
+            redirect('admin/reports');
+            return;
+        }
+
+        $this->db->where('id', $report_id)->update('user_reports', ['status' => $action]);
+        $this->session->set_flashdata('success', 'Đã xử lý báo cáo thành công!');
+        redirect('admin/reports');
     }
 }

@@ -86,6 +86,8 @@ $route['admin/resolve_dispute_release/(:num)'] = 'admin/resolve_dispute_release/
 $route['admin/reverse_dispute_decision/(:num)'] = 'admin/reverse_dispute_decision/$1';
 $route['admin/moderation']                     = 'admin/moderation';
 $route['admin/moderation_action']              = 'admin/moderation_action';
+$route['admin/reports']                          = 'admin/reports';
+$route['admin/resolve_report/(:num)/(:any)']     = 'admin/resolve_report/$1/$2';
 
 // Orders (Đơn hàng)
 $route['orders']                              = 'orders/index';

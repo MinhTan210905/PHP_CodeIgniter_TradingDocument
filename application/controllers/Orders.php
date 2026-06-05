@@ -547,15 +547,14 @@ class Orders extends MY_Controller {
         }
 
         $reason = $this->input->post('report_reason', TRUE);
-        // We will just use the disputes table for reports as well, with a special status 'reported'
-        // Or if 'reports' doesn't exist, we fallback to disputes but without changing order status from completed.
-        // Actually let's just insert into disputes table.
-        $this->db->insert('disputes', [
-            'order_id' => $order_id,
-            'created_by' => $buyer_id,
-            'reason' => 'BÁO CÁO SAU GIAO DỊCH: ' . $reason,
-            'status' => 'pending',
-            'created_at' => date('Y-m-d H:i:s')
+        // Ghi nhận báo cáo vào bảng user_reports đã được định nghĩa trong database.sql
+        $this->db->insert('user_reports', [
+            'reporter_id'      => $buyer_id,
+            'reported_user_id' => $order['seller_id'],
+            'order_id'         => $order_id,
+            'reason'           => $reason,
+            'status'           => 'pending',
+            'created_at'       => date('Y-m-d H:i:s')
         ]);
 
         $this->session->set_flashdata('success', 'Đã gửi báo cáo thành công. Admin sẽ xem xét.');
