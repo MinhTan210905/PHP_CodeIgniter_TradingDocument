@@ -174,8 +174,21 @@ header('Content-Type: text/html; charset=UTF-8');
                 </a>
 
                 <!-- Mong muốn sách -->
-                <a href="<?= site_url('wishlist') ?>" class="nav-icon-btn" title="Danh sách mong muốn">
+                <?php
+                $wishlist_match_count = 0;
+                if ($this->session->userdata('logged_in')) {
+                    $CI_w =& get_instance();
+                    $CI_w->load->model('Wishlist_model');
+                    $wishlist_match_count = $CI_w->Wishlist_model->count_matched_available($this->session->userdata('user_id'));
+                }
+                ?>
+                <a href="<?= site_url('wishlist') ?>" class="nav-icon-btn position-relative" title="Danh sách mong muốn">
                     <i class="fas fa-heart"></i>
+                    <?php if ($wishlist_match_count > 0): ?>
+                        <span class="position-absolute translate-middle bg-danger border border-light rounded-circle" style="top: 8px; left: 80%; width: 8px; height: 8px;">
+                            <span class="visually-hidden">New Match</span>
+                        </span>
+                    <?php endif; ?>
                 </a>
                 <!-- Đăng bài -->
                 <button class="btn-dang-bai" data-bs-toggle="modal" data-bs-target="#createPostModal">

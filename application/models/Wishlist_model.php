@@ -45,6 +45,17 @@ class Wishlist_model extends CI_Model {
     }
 
     /**
+     * Đếm số lượng mong muốn của user hiện có sách khớp đang bán
+     */
+    public function count_matched_available($user_id) {
+        $this->db->from('book_wishlists');
+        $this->db->join('posts', 'posts.id = book_wishlists.last_notified_post_id');
+        $this->db->where('book_wishlists.user_id', $user_id);
+        $this->db->where('posts.status', 'available');
+        return $this->db->count_all_results();
+    }
+
+    /**
      * Thêm sách mong muốn (giới hạn 10/user)
      * @return bool|string true nếu thành công, chuỗi lỗi nếu thất bại
      */

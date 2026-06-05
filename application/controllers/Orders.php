@@ -504,10 +504,10 @@ class Orders extends MY_Controller {
 
     // Helper gửi sự kiện Pusher cho đơn hàng
     private function trigger_pusher_order($user_id, $message, $order_id) {
-        $app_id  = getenv('PUSHER_APP_ID') ?: (isset($_ENV['PUSHER_APP_ID']) ? $_ENV['PUSHER_APP_ID'] : '1906752');
-        $app_key = getenv('PUSHER_APP_KEY') ?: (isset($_ENV['PUSHER_APP_KEY']) ? $_ENV['PUSHER_APP_KEY'] : 'e030a21054a86bd511ce');
-        $app_sec = getenv('PUSHER_APP_SECRET') ?: (isset($_ENV['PUSHER_APP_SECRET']) ? $_ENV['PUSHER_APP_SECRET'] : '7cb493c0bc5894b4625b');
-        $app_clu = getenv('PUSHER_APP_CLUSTER') ?: (isset($_ENV['PUSHER_APP_CLUSTER']) ? $_ENV['PUSHER_APP_CLUSTER'] : 'ap1');
+        $app_id  = getenv('PUSHER_APP_ID') ?: (isset($_ENV['PUSHER_APP_ID']) ? $_ENV['PUSHER_APP_ID'] : '2159937');
+        $app_key = getenv('PUSHER_KEY') ?: (isset($_ENV['PUSHER_KEY']) ? $_ENV['PUSHER_KEY'] : '430b3850d19e9367913c');
+        $app_sec = getenv('PUSHER_SECRET') ?: (isset($_ENV['PUSHER_SECRET']) ? $_ENV['PUSHER_SECRET'] : '5e024e565d9097cc3d04');
+        $app_clu = getenv('PUSHER_CLUSTER') ?: (isset($_ENV['PUSHER_CLUSTER']) ? $_ENV['PUSHER_CLUSTER'] : 'ap1');
 
         if (file_exists(FCPATH . 'vendor/autoload.php')) {
             try {

@@ -27,9 +27,9 @@ class Message extends MY_Controller {
         $msg = $this->Message_model->get_message_by_id($msg_id);
         if (!$msg) return;
 
-        $app_id  = getenv('PUSHER_APP_ID') ?: (isset($_ENV['PUSHER_APP_ID']) ? $_ENV['PUSHER_APP_ID'] : '');
-        $key     = getenv('PUSHER_KEY') ?: (isset($_ENV['PUSHER_KEY']) ? $_ENV['PUSHER_KEY'] : '');
-        $secret  = getenv('PUSHER_SECRET') ?: (isset($_ENV['PUSHER_SECRET']) ? $_ENV['PUSHER_SECRET'] : '');
+        $app_id  = getenv('PUSHER_APP_ID') ?: (isset($_ENV['PUSHER_APP_ID']) ? $_ENV['PUSHER_APP_ID'] : '2159937');
+        $key     = getenv('PUSHER_KEY') ?: (isset($_ENV['PUSHER_KEY']) ? $_ENV['PUSHER_KEY'] : '430b3850d19e9367913c');
+        $secret  = getenv('PUSHER_SECRET') ?: (isset($_ENV['PUSHER_SECRET']) ? $_ENV['PUSHER_SECRET'] : '5e024e565d9097cc3d04');
         $cluster = getenv('PUSHER_CLUSTER') ?: (isset($_ENV['PUSHER_CLUSTER']) ? $_ENV['PUSHER_CLUSTER'] : 'ap1');
 
         if ($app_id && $key && $secret) {
