@@ -22,6 +22,9 @@ Chúng tôi vừa nâng cấp hệ thống lên một tầm cao mới với các
 - 📄 **Tải Lên & Xem Trước PDF (PDF Reader)**: Hỗ trợ người dùng đính kèm file PDF tài liệu học tập, giáo trình trực quan khi đăng bài. Người mua có thể đọc thử ngay trên trình duyệt thông qua khung iframe lớn.
 - 🏷️ **Lọc & Cấu hình Tình Trạng Sách**: Phân chia chi tiết tài liệu theo trạng thái "Mới" (New) hoặc "Đã sử dụng" (Used) đi kèm bộ lọc nâng cao trên thanh header.
 - 💬 **Hội thoại Realtime 100% & Popup Chat thông minh**: Đồng bộ kép real-time thời gian thực (Pusher Channels + Polling 3 giây dự phòng) đảm bảo nhắn tin không trễ trên localhost. Bóng bóng Chat popup góc phải màn hình hiển thị đầy đủ thời gian nhận tin (`HH:MM DD/MM`) và tích xanh trạng thái cực kỳ chuyên nghiệp.
+- 🛡️ **Bảng Điều Khiển Quản Trị (Admin Dashboard) Toàn Diện**: Giao diện và các chức năng dành cho Quản trị viên được nâng cấp toàn diện giúp dễ dàng cấu hình hệ thống, duyệt bài đăng và xử lý người dùng vi phạm nhanh chóng.
+- 🔒 **Nâng Cấp Bảo Mật & Hiệu Năng Tối Đa**: Xử lý triệt để các lỗ hổng XSS, khắc phục tình trạng Race Conditions trong các luồng thanh toán đồng thời, và tối ưu hóa hệ thống sinh mã OTP/QR.
+- 🔍 **Thuật Toán Tìm Kiếm Thông Minh (Smart Search)**: Cải tiến logic tìm kiếm linh hoạt với Partial Matching. Cho phép đối chiếu chính xác các phần của từ khóa giúp sinh viên dễ dàng tìm thấy giáo trình (ví dụ: tìm kiếm `'lập trình c++'` vẫn sẽ truy xuất chuẩn xác mọi tài liệu chứa từ `'c++'`).
 
 ---
 
